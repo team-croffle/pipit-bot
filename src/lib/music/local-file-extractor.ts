@@ -9,17 +9,31 @@ import { formatDurationFromSeconds } from './track-format.js';
 
 const LOCAL_PREFIX = 'local:';
 
+function isSafeRelativePcmPath(relativePath: string): boolean {
+  const normalized = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  return (
+    normalized.length > 0 &&
+    !normalized.includes('..') &&
+    !normalized.includes(':') &&
+    normalized.endsWith('.pcm')
+  );
+}
+
 function resolveRelativeFile(query: string): string | null {
-  if (!query.startsWith(LOCAL_PREFIX)) {
+  const trimmed = query.trim();
+  if (!trimmed) {
     return null;
   }
 
-  const relativePath = query.slice(LOCAL_PREFIX.length).trim();
-  if (!relativePath || relativePath.includes('..') || relativePath.includes(':')) {
+  const relativePath = trimmed.startsWith(LOCAL_PREFIX)
+    ? trimmed.slice(LOCAL_PREFIX.length).trim()
+    : trimmed;
+
+  if (!isSafeRelativePcmPath(relativePath)) {
     return null;
   }
 
-  return relativePath.replace(/\\/g, '/');
+  return relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
 }
 
 export class LocalFileExtractor extends BaseExtractor {
@@ -32,7 +46,7 @@ export class LocalFileExtractor extends BaseExtractor {
   }
 
   public override async validate(query: string) {
-    return query.startsWith(LOCAL_PREFIX);
+    return resolveRelativeFile(query) !== null;
   }
 
   public override async handle(query: string, _: unknown): Promise<ExtractorInfo> {
