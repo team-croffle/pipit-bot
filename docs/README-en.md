@@ -1,0 +1,28 @@
+# pipit-hub (pipit-bot)
+
+<div align="center">
+  <img height="150" width="150" src="./img/bot-icon-wt.png" alt="bot-icon"/>
+</div>
+
+**Pipit** is a Discord bot built with Sapphire and discord-player.
+
+Music is provided by a **pluggable worker** that writes audio to a shared volume; the bot only streams local files. See [music-backend.md](./music-backend.md).
+
+## Environment
+
+```ini
+BOT_TOKEN=
+COMMAND_CHANNEL_ID=
+STREAM_ROOT=/streams
+API_PORT=3000
+INTERNAL_TOKEN=
+MUSIC_WORKER_URL=http://music-worker:8080
+PIPIT_API_URL=http://127.0.0.1:3000
+```
+
+## Commands
+
+- `!p <query>` — opaque query sent to the music worker
+- Standard queue commands (`!skip`, `!pause`, `!queue`, …)
+
+English README for the legacy monolith layout is deprecated; use the root [README.md](../README.md).

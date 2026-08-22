@@ -1,0 +1,14 @@
+.git
+.github
+
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+.dockerignore
+
+.env
+
+node_modules
+dist
+
+vendor/

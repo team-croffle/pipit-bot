@@ -1,0 +1,105 @@
+import { join } from 'node:path';
+
+import { setup } from '@skyra/env-utilities';
+
+import { rootDir } from './constants.js';
+
+export type BotRole = 'main' | 'edge';
+
+export interface EnvConfig {
+  botToken: string;
+  role: BotRole;
+  commandChannelId: string | undefined;
+  streamRoot: string;
+  musicWorkerUrl: string;
+  pipitApiUrl: string;
+  apiPort: number;
+  internalToken: string;
+  nodeEnv: string;
+  isMain: boolean;
+  isEdge: boolean;
+}
+
+function parseRole(raw: string | undefined): BotRole {
+  const value = (raw ?? 'main').toLowerCase();
+  if (value === 'main' || value === 'edge') {
+    return value;
+  }
+
+  throw new Error(`Invalid ROLE="${raw}". Expected "main" or "edge".`);
+}
+
+function parsePort(raw: string | undefined, fallback: number): number {
+  const value = Number(raw ?? fallback);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`Invalid port value: ${raw}`);
+  }
+
+  return value;
+}
+
+export function loadEnv(): EnvConfig {
+  setup({ path: join(rootDir, '.env') });
+
+  const botToken = process.env.BOT_TOKEN;
+  if (!botToken) {
+    throw new Error('BOT_TOKEN is required');
+  }
+
+  const streamRoot = process.env.STREAM_ROOT;
+  if (!streamRoot) {
+    throw new Error('STREAM_ROOT is required');
+  }
+
+  const musicWorkerUrl = process.env.MUSIC_WORKER_URL;
+  if (!musicWorkerUrl) {
+    throw new Error('MUSIC_WORKER_URL is required');
+  }
+
+  const internalToken = process.env.INTERNAL_TOKEN;
+  if (!internalToken) {
+    throw new Error('INTERNAL_TOKEN is required');
+  }
+
+  const apiPort = parsePort(process.env.API_PORT, 3000);
+  const pipitApiUrl = (process.env.PIPIT_API_URL ?? `http://127.0.0.1:${apiPort}`).replace(
+    /\/$/,
+    '',
+  );
+
+  const role = parseRole(process.env.ROLE);
+
+  return {
+    botToken,
+    role,
+    commandChannelId: process.env.COMMAND_CHANNEL_ID || undefined,
+    streamRoot,
+    musicWorkerUrl: musicWorkerUrl.replace(/\/$/, ''),
+    pipitApiUrl,
+    apiPort,
+    internalToken,
+    nodeEnv: process.env.NODE_ENV ?? 'development',
+    isMain: role === 'main',
+    isEdge: role === 'edge',
+  };
+}
+
+let cached: EnvConfig | undefined;
+
+export function getEnv(): EnvConfig {
+  if (!cached) {
+    cached = loadEnv();
+  }
+
+  return cached;
+}
+
+export function setEnvConfig(config: EnvConfig): void {
+  cached = config;
+}
+
+declare module '@sapphire/pieces' {
+  interface Container {
+    config: EnvConfig;
+  }
+}
