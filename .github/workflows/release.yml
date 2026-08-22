@@ -1,6 +1,6 @@
 # Container image release (GHCR) + GitHub Release draft
 #
-# Trigger: Actions → "Pipit Hub Release" → Run workflow
+# Trigger: Actions → "Pipit Bot Release" → Run workflow
 #   - release_type: rc | patch | minor | major
 #   - version: optional exact semver (no leading v). If empty, bump from package.json.
 #   - version_suffix: optional prerelease id (e.g. rc.1, beta.2).
@@ -8,7 +8,7 @@
 #
 # Order: bump+tag → push image to GHCR → create a draft GitHub Release.
 
-name: Pipit Hub Release
+name: Pipit Bot Release
 
 on:
   workflow_dispatch:
@@ -44,7 +44,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: pipit-hub-release-${{ github.ref }}
+  group: pipit-bot-release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
