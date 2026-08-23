@@ -128,8 +128,8 @@
 </script>
 
 <template>
-  <div class="grid">
-    <p v-if="readOnly" class="banner">View only — you can open settings but cannot save changes.</p>
+  <div class="settings-grid">
+    <p v-if="readOnly" class="banner">View only — settings cannot be changed.</p>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="saved" class="empty">{{ saved }}</p>
     <p v-if="loading" class="empty">Loading…</p>

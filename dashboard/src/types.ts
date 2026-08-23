@@ -61,3 +61,37 @@ export interface BotRuntimeConfig {
   commandChannelId?: string | null;
   role?: string;
 }
+
+export interface PlaybackCurrentTrack {
+  title: string;
+  durationMs: number;
+  positionMs: number;
+  progress: number;
+  durationLabel: string;
+  positionLabel: string;
+}
+
+export interface PlaybackTrackItem {
+  index: number;
+  title: string;
+  duration: string | null;
+}
+
+export type PlaybackRepeatMode = 'off' | 'track' | 'queue' | 'autoplay';
+
+export interface PlaybackState {
+  active: boolean;
+  paused: boolean;
+  repeatMode: PlaybackRepeatMode;
+  voiceChannelId: string | null;
+  voiceChannelName: string | null;
+  current: PlaybackCurrentTrack | null;
+  tracks: PlaybackTrackItem[];
+  pendingCount: number;
+  durationFormatted: string | null;
+}
+
+export interface PlaybackActionResult {
+  ok: boolean;
+  message: string;
+}

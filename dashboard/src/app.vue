@@ -22,18 +22,19 @@
 
 <template>
   <div class="shell">
-    <header class="top">
-      <div>
+    <header class="topbar">
+      <div class="brand-block">
         <h1>Pipit</h1>
         <nav class="nav">
           <RouterLink to="/">Overview</RouterLink>
           <RouterLink to="/settings">Settings</RouterLink>
         </nav>
       </div>
-      <div v-if="me" class="meta">
-        <span
-          >{{ me.user ?? 'anonymous' }} · {{ me.canWriteSettings ? 'admin' : 'view only' }}</span
-        >
+      <div v-if="me" class="user-chip">
+        <span>{{ me.user ?? 'anonymous' }}</span>
+        <span class="role-badge" :class="{ admin: me.canWriteSettings }">
+          {{ me.canWriteSettings ? 'admin' : 'member' }}
+        </span>
         <button class="ghost logout" type="button" @click="logout">Log out</button>
       </div>
     </header>
@@ -41,16 +42,3 @@
     <RouterView v-if="me" :me="me" />
   </div>
 </template>
-
-<style scoped>
-  .meta {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .logout {
-    padding: 0.25rem 0.6rem;
-    font-size: 0.85rem;
-  }
-</style>
