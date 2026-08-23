@@ -1,6 +1,7 @@
-import type { Events } from '@sapphire/framework';
-import { Listener } from '@sapphire/framework';
-import type { Message } from 'discord.js';
+import type { Events } from "@sapphire/framework";
+import { Listener } from "@sapphire/framework";
+import type { Message } from "discord.js";
+import { getRuntimeConfig } from "../lib/runtime-config.js";
 
 export class UserEvent extends Listener<typeof Events.MentionPrefixOnly> {
   public override run(message: Message) {
@@ -9,11 +10,11 @@ export class UserEvent extends Listener<typeof Events.MentionPrefixOnly> {
       return;
     }
 
-    const prefix = this.container.client.options.defaultPrefix;
+    const prefix = getRuntimeConfig().prefix;
     return message.channel.send(
       prefix
         ? `My prefix in this guild is: \`${prefix}\``
-        : 'Cannot find any Prefix for Message Commands.',
+        : "Cannot find any Prefix for Message Commands.",
     );
   }
 }
