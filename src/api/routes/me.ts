@@ -1,4 +1,4 @@
-import { getDashboardIdentity } from '../auth/dashboard.js';
+import { requireDashboardViewer } from '../auth/dashboard.js';
 import { sendJson } from '../http.js';
 import type { RouteHandler } from '../types.js';
 
@@ -7,6 +7,11 @@ export const handleMe: RouteHandler = ({ method, url, req, res, config }) => {
     return false;
   }
 
-  sendJson(res, 200, getDashboardIdentity(req, config));
+  const identity = requireDashboardViewer(req, res, config);
+  if (!identity) {
+    return true;
+  }
+
+  sendJson(res, 200, identity);
   return true;
 };

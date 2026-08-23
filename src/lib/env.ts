@@ -22,7 +22,6 @@ export interface EnvConfig {
   nodeEnv: string;
   isMain: boolean;
   isEdge: boolean;
-  dashboardToken: string;
 }
 
 function parseRole(raw: string | undefined): BotRole {
@@ -92,11 +91,6 @@ export function loadEnv(): EnvConfig {
     '',
   );
 
-  const dashboardToken = process.env.DASHBOARD_TOKEN;
-  if (!dashboardToken) {
-    throw new Error('DASHBOARD_TOKEN is required');
-  }
-
   const role = parseRole(process.env.ROLE);
 
   return {
@@ -113,7 +107,6 @@ export function loadEnv(): EnvConfig {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     isMain: role === 'main',
     isEdge: role === 'edge',
-    dashboardToken,
   };
 }
 

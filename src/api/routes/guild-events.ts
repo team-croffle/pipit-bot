@@ -5,7 +5,7 @@ import {
   saveGuildEventSettings,
 } from '../../lib/guild-event-settings.js';
 import { syncReactionRoleEmojis } from '../../lib/reaction-roles.js';
-import { getDashboardIdentity, sendCapabilityForbidden } from '../auth/dashboard.js';
+import { requireDashboardViewer, requireDashboardWrite } from '../auth/dashboard.js';
 import { readJson, sendJson } from '../http.js';
 import type { RouteHandler } from '../types.js';
 
@@ -15,14 +15,16 @@ export const handleGuildEvents: RouteHandler = async ({ method, url, req, res, c
   }
 
   if (method === 'GET') {
+    if (!requireDashboardViewer(req, res, config)) {
+      return true;
+    }
+
     sendJson(res, 200, getGuildEventSettings());
     return true;
   }
 
   if (method === 'PUT') {
-    const identity = getDashboardIdentity(req, config);
-    if (!identity.canWriteSettings) {
-      sendCapabilityForbidden(res);
+    if (!requireDashboardWrite(req, res, config)) {
       return true;
     }
 

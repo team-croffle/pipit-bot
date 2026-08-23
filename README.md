@@ -33,7 +33,7 @@ DASHBOARD_DEV_ROLE=admin
 
 Production dashboard auth is **Authentik forward-auth** on the public vhost (`/` and `/api` only). Do not expose `/internal/*` through that host. The API should listen on localhost or the Docker network.
 
-`DASHBOARD_ADMIN_GROUPS` maps Authentik `X-Authentik-Groups` to write access (settings and future playback controls). Viewers still see every page; mutating controls stay disabled. `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` mock `/api/me` when Authentik headers are absent outside production. Dashboard guild data comes from the bot's Discord cache.
+Dashboard `/api/*` reads Authentik `X-Authentik-Username` and `X-Authentik-Groups`. `DASHBOARD_ADMIN_GROUPS` maps those groups to write access (bot config, guild events, playback). Viewers still see every page; mutating controls stay disabled. `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` mock identity when Authentik headers are absent outside production. Music worker callbacks stay on `INTERNAL_TOKEN`. Dashboard guild data comes from the bot's Discord cache.
 
 Guild join/leave logs, join roles, and reaction roles persist in `data/guild-events.json` (gitignored). Mount `data/` in production. Prefix, command channel, and RSS are a separate bot-config surface and must not use `/api/guild-events`.
 

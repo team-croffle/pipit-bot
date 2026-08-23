@@ -1,5 +1,5 @@
 import { getRuntimeConfig, updateRuntimeConfig } from '../../lib/runtime-config.js';
-import { isDashboardAuthorized } from '../auth/dashboard.js';
+import { requireDashboardViewer, requireDashboardWrite } from '../auth/dashboard.js';
 import { readJson, sendJson } from '../http.js';
 import type { RouteHandler } from '../types.js';
 
@@ -8,17 +8,20 @@ export const handleConfig: RouteHandler = async ({ method, url, req, res, config
     return false;
   }
 
-  if (!isDashboardAuthorized(req, config.dashboardToken)) {
-    sendJson(res, 401, { error: 'Unauthorized' });
-    return true;
-  }
-
   if (method === 'GET') {
+    if (!requireDashboardViewer(req, res, config)) {
+      return true;
+    }
+
     sendJson(res, 200, { ...getRuntimeConfig(), role: config.role });
     return true;
   }
 
   if (method === 'PUT') {
+    if (!requireDashboardWrite(req, res, config)) {
+      return true;
+    }
+
     const body = await readJson<{
       prefix?: string;
       commandChannelId?: string | null;

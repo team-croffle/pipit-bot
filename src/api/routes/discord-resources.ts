@@ -3,16 +3,21 @@ import {
   listAssignableRoles,
   listTextChannels,
 } from '../../lib/discord-guild.js';
+import { requireDashboardViewer } from '../auth/dashboard.js';
 import { sendJson } from '../http.js';
 import type { RouteHandler } from '../types.js';
 
-export const handleDiscordResources: RouteHandler = ({ method, url, res }) => {
+export const handleDiscordResources: RouteHandler = ({ method, url, req, res, config }) => {
   if (method !== 'GET') {
     return false;
   }
 
   if (url.pathname !== '/api/discord/channels' && url.pathname !== '/api/discord/roles') {
     return false;
+  }
+
+  if (!requireDashboardViewer(req, res, config)) {
+    return true;
   }
 
   const guild = getConfiguredGuild();

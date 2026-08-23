@@ -3,6 +3,7 @@
 
   import { fetchJson, putJson } from '../api';
   import type {
+    BotRuntimeConfig,
     DashboardIdentity,
     DiscordChannel,
     DiscordRole,
@@ -20,6 +21,10 @@
     joinRoleIds: [],
     reactionRoles: [],
   });
+  const botConfig = ref<BotRuntimeConfig>({
+    prefix: '!',
+    commandChannelId: null,
+  });
   const channels = ref<DiscordChannel[]>([]);
   const roles = ref<DiscordRole[]>([]);
   const error = ref('');
@@ -32,8 +37,9 @@
 
   onMounted(async () => {
     try {
-      const [loaded, channelBody, roleBody] = await Promise.all([
+      const [loaded, configBody, channelBody, roleBody] = await Promise.all([
         fetchJson<GuildEventSettings>('/api/guild-events'),
+        fetchJson<BotRuntimeConfig>('/api/config'),
         fetchJson<{ channels: DiscordChannel[] }>('/api/discord/channels'),
         fetchJson<{ roles: DiscordRole[] }>('/api/discord/roles'),
       ]);
@@ -41,6 +47,11 @@
         ...loaded,
         joinMessages: loaded.joinMessages.length > 0 ? loaded.joinMessages : [''],
         leaveMessages: loaded.leaveMessages.length > 0 ? loaded.leaveMessages : [''],
+      };
+      botConfig.value = {
+        prefix: configBody.prefix || '!',
+        commandChannelId: configBody.commandChannelId ?? null,
+        role: configBody.role,
       };
       channels.value = channelBody.channels;
       roles.value = roleBody.roles;
@@ -90,7 +101,19 @@
           (row) => row.channelId && row.messageId && row.emoji.trim() && row.roleId,
         ),
       };
-      settings.value = await putJson<GuildEventSettings>('/api/guild-events', payload);
+      const [savedEvents, savedConfig] = await Promise.all([
+        putJson<GuildEventSettings>('/api/guild-events', payload),
+        putJson<BotRuntimeConfig>('/api/config', {
+          prefix: botConfig.value.prefix,
+          commandChannelId: botConfig.value.commandChannelId || null,
+        }),
+      ]);
+      settings.value = savedEvents;
+      botConfig.value = {
+        prefix: savedConfig.prefix || '!',
+        commandChannelId: savedConfig.commandChannelId ?? null,
+        role: savedConfig.role ?? botConfig.value.role,
+      };
       if (settings.value.joinMessages.length === 0) {
         settings.value.joinMessages = [''];
       }
@@ -219,19 +242,21 @@
       </button>
     </section>
 
-    <section class="card">
+    <section v-if="!loading" class="card">
       <h2>Bot settings</h2>
-      <p class="empty">
-        Prefix, command channel, and RSS registration will be wired after the Discord config
-        commands land.
-      </p>
+      <p class="empty">Prefix and command channel apply immediately. RSS is not wired yet.</p>
       <div class="field">
         <label for="prefix">Command prefix</label>
-        <input id="prefix" value="!" disabled placeholder="Coming soon" />
+        <input id="prefix" v-model="botConfig.prefix" :disabled="readOnly" placeholder="!" />
       </div>
       <div class="field">
         <label for="channel">Command channel</label>
-        <input id="channel" disabled placeholder="Coming soon" />
+        <select id="channel" v-model="botConfig.commandChannelId" :disabled="readOnly">
+          <option :value="null">Any channel</option>
+          <option v-for="channel in channels" :key="channel.id" :value="channel.id">
+            {{ channel.name }}
+          </option>
+        </select>
       </div>
       <div class="field">
         <label for="rss">Blog RSS feed</label>

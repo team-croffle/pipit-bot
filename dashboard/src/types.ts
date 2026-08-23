@@ -55,3 +55,9 @@ export interface DiscordRole {
   id: string;
   name: string;
 }
+
+export interface BotRuntimeConfig {
+  prefix: string;
+  commandChannelId?: string | null;
+  role?: string;
+}
