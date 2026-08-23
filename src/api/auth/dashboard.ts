@@ -25,7 +25,7 @@ function withCapabilities(
     user,
     groups,
     canWriteSettings: isAdmin,
-    canControlPlayback: isAdmin,
+    canControlPlayback: true,
   };
 }
 
@@ -83,20 +83,6 @@ export const dashboardWrite = createMiddleware<{
 }>(async (c, next) => {
   const identity = c.get('identity');
   if (!identity.canWriteSettings) {
-    return c.json({ error: 'Read-only: this action requires dashboard admin.' }, 403);
-  }
-
-  return next();
-});
-
-export const playbackControl = createMiddleware<{
-  Variables: {
-    config: EnvConfig;
-    identity: DashboardIdentity;
-  };
-}>(async (c, next) => {
-  const identity = c.get('identity');
-  if (!identity.canControlPlayback) {
     return c.json({ error: 'Read-only: this action requires dashboard admin.' }, 403);
   }
 

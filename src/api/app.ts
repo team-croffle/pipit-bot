@@ -14,14 +14,16 @@ import {
   parseGuildEventSettings,
   saveGuildEventSettings,
 } from '../lib/guild-event-settings.js';
+import {
+  getPlaybackState,
+  pausePlayback,
+  resumePlayback,
+  skipPlayback,
+} from '../lib/music/playback.js';
+import { schedulePlayWhenReady, submitMusicJob } from '../lib/music/prepare-track.js';
 import { syncReactionRoleEmojis } from '../lib/reaction-roles.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
-import {
-  dashboardViewer,
-  dashboardWrite,
-  playbackControl,
-  resolveDashboardIdentity,
-} from './auth/dashboard.js';
+import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
 import { internalAuth } from './auth/internal.js';
 import { buildLoginRedirect, buildLogoutRedirect, exchangeAuthorizationCode } from './auth/oidc.js';
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from './auth/session.js';
@@ -29,7 +31,6 @@ import type { ApiVariables } from './context.js';
 import {
   getJob,
   listJobs,
-  registerJob,
   resolveFailed,
   resolveReady,
   type TrackMeta,
@@ -226,6 +227,23 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json({ roles: listAssignableRoles(guild) });
   });
 
+  app.get('/api/music/playback', dashboardViewer, (c) => c.json(getPlaybackState()));
+
+  app.post('/api/music/playback/pause', dashboardViewer, (c) => {
+    const result = pausePlayback();
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/resume', dashboardViewer, (c) => {
+    const result = resumePlayback();
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/skip', dashboardViewer, (c) => {
+    const result = skipPlayback();
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
   app.get('/api/music/jobs', dashboardViewer, (c) => c.json({ jobs: listJobs() }));
 
   app.get('/api/music/jobs/:jobId', dashboardViewer, (c) => {
@@ -237,14 +255,21 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json(job);
   });
 
-  app.post('/api/music/jobs', dashboardViewer, playbackControl, async (c) => {
+  app.post('/api/music/jobs', dashboardViewer, async (c) => {
     const body = await c.req.json<{ jobId?: string; query?: string }>();
     if (!body.jobId || !body.query?.trim()) {
       return c.json({ error: 'jobId and query are required' }, 400);
     }
 
-    const job = registerJob(body.jobId, body.query.trim());
-    return c.json(job, 201);
+    try {
+      const job = await submitMusicJob(body.jobId, body.query.trim());
+      schedulePlayWhenReady(body.jobId);
+      return c.json(job, 201);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to enqueue job';
+      resolveFailed(body.jobId, message);
+      return c.json({ error: message }, 503);
+    }
   });
 
   app.post('/internal/music/jobs/:jobId/ready', internalAuth, async (c) => {

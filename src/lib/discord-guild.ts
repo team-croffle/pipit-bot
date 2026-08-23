@@ -3,7 +3,7 @@ import { ChannelType, type Guild } from 'discord.js';
 
 export function getConfiguredGuild(): Guild | undefined {
   const { client } = container;
-  if (!client.isReady()) {
+  if (!client?.isReady()) {
     return undefined;
   }
 
