@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { rootDir } from './constants.js';
+import { dataDir } from './constants.js';
 
 export interface ReactionRoleMapping {
   channelId: string;
@@ -19,8 +19,8 @@ export interface GuildEventSettings {
   reactionRoles: ReactionRoleMapping[];
 }
 
-const eventsPath = join(rootDir, 'data', 'guild-events.json');
-const legacyPath = join(rootDir, 'data', 'guild-settings.json');
+const eventsPath = join(dataDir, 'guild-events.json');
+const legacyPath = join(dataDir, 'guild-settings.json');
 const snowflake = /^\d{17,20}$/;
 
 function emptySettings(): GuildEventSettings {
@@ -146,7 +146,7 @@ export async function saveGuildEventSettings(
   next: GuildEventSettings,
 ): Promise<GuildEventSettings> {
   const parsed = parseGuildEventSettings(next);
-  await mkdir(join(rootDir, 'data'), { recursive: true });
+  await mkdir(dataDir, { recursive: true });
   await writeFile(eventsPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
   cache = parsed;
   return parsed;
