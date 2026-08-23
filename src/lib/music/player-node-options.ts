@@ -10,7 +10,6 @@ export const PLAYER_NODE_OPTIONS = {
   leaveOnEnd: true,
   leaveOnEmptyCooldown: 30_000,
   leaveOnEndCooldown: 30_000,
-  disableVolume: true,
   disableEqualizer: true,
   disableBiquad: true,
   disableResampler: true,
