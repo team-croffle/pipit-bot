@@ -13,7 +13,6 @@ import {
 } from '../../api/jobs/pending-registry.js';
 import { enqueueMusicJob } from './backend-client.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
-import { canEnqueuePlayback } from './playback.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
 import { ensureBotVoiceChannel } from './voice-connection.js';
 
@@ -33,10 +32,6 @@ export async function submitMusicJob(jobId: string, query: string): Promise<JobR
   const trimmed = query.trim();
   if (!trimmed) {
     throw new Error('Provide something to play.');
-  }
-
-  if (!canEnqueuePlayback()) {
-    throw new Error('Bot is not in a voice channel.');
   }
 
   registerJob(jobId, trimmed);

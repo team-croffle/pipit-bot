@@ -6,6 +6,7 @@ import type { Message } from 'discord.js';
 import { toLocalPlayQuery } from '../../lib/music/local-file-extractor.js';
 import { PLAYER_NODE_OPTIONS } from '../../lib/music/player-node-options.js';
 import { prepareTrack } from '../../lib/music/prepare-track.js';
+import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Plays music in your current voice channel',
@@ -40,6 +41,7 @@ export class UserCommand extends Command {
     try {
       const feedbackMessage = await message.channel.send(`Preparing \`${query.trim()}\`...`);
 
+      await connectPlayerToChannel(voiceChannel);
       const trackMeta = await prepareTrack(query);
       const playQuery = toLocalPlayQuery(trackMeta.file);
 
