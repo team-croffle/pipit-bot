@@ -173,12 +173,63 @@ th {
   font-size: 0.85rem;
 }
 
-.field input {
+.field input,
+.field select,
+.field textarea {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
+}
+
+.field textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stack-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.role-list {
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.reaction-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.7fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 800px) {
+  .reaction-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .primary {

@@ -30,3 +30,28 @@ export interface HealthResponse {
 export interface JobsResponse {
   jobs: JobRecord[];
 }
+
+export interface ReactionRoleMapping {
+  channelId: string;
+  messageId: string;
+  emoji: string;
+  roleId: string;
+}
+
+export interface GuildEventSettings {
+  logChannelId: string | null;
+  joinMessages: string[];
+  leaveMessages: string[];
+  joinRoleIds: string[];
+  reactionRoles: ReactionRoleMapping[];
+}
+
+export interface DiscordChannel {
+  id: string;
+  name: string;
+}
+
+export interface DiscordRole {
+  id: string;
+  name: string;
+}
