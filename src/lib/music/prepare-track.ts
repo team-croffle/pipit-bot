@@ -14,6 +14,7 @@ import {
 import { getConfiguredGuild } from '../discord-guild.js';
 import { enqueueMusicJob } from './backend-client.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
+import { canEnqueuePlayback } from './playback.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
 
 const trackMetaByFile = new Map<string, TrackMeta>();
@@ -32,6 +33,10 @@ export async function submitMusicJob(jobId: string, query: string): Promise<JobR
   const trimmed = query.trim();
   if (!trimmed) {
     throw new Error('Provide something to play.');
+  }
+
+  if (!canEnqueuePlayback()) {
+    throw new Error('Bot is not in a voice channel.');
   }
 
   registerJob(jobId, trimmed);

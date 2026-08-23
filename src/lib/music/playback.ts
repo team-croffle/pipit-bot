@@ -1,5 +1,6 @@
 import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 
+import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 
 const QUEUE_PREVIEW_LIMIT = 20;
@@ -20,8 +21,11 @@ export interface PlaybackCurrentTrack {
 }
 
 export type PlaybackRepeatMode = 'off' | 'track' | 'queue' | 'autoplay';
+export type PlaybackStatus = 'loading' | 'playing' | 'paused' | 'ready' | 'idle';
 
 export interface PlaybackState {
+  status: PlaybackStatus;
+  canEnqueue: boolean;
   active: boolean;
   paused: boolean;
   repeatMode: PlaybackRepeatMode;
@@ -51,23 +55,64 @@ function repeatModeLabel(mode: number): PlaybackRepeatMode {
   }
 }
 
-function inactiveState(): PlaybackState {
-  return {
-    active: false,
-    paused: false,
-    repeatMode: 'off',
-    voiceChannelId: null,
-    voiceChannelName: null,
-    current: null,
-    tracks: [],
-    pendingCount: 0,
-    durationFormatted: null,
-  };
-}
-
 function formatTrackTitle(track: Track): string {
   const title = track.title?.trim();
   return title || 'Unknown';
+}
+
+function getVoiceChannel(guild: NonNullable<ReturnType<typeof getConfiguredGuild>>) {
+  return guild.members.me?.voice.channel ?? null;
+}
+
+function hasPendingJobs(): boolean {
+  return listJobs().some((job) => job.status === 'pending');
+}
+
+function resolveStatus(
+  voiceChannelId: string | null,
+  active: boolean,
+  paused: boolean,
+): PlaybackStatus {
+  if (hasPendingJobs()) {
+    return 'loading';
+  }
+  if (active && !paused) {
+    return 'playing';
+  }
+  if (active && paused) {
+    return 'paused';
+  }
+  if (voiceChannelId) {
+    return 'ready';
+  }
+  return 'idle';
+}
+
+function buildState(
+  voiceChannelId: string | null,
+  voiceChannelName: string | null,
+  active: boolean,
+  paused: boolean,
+  repeatMode: PlaybackRepeatMode,
+  current: PlaybackCurrentTrack | null,
+  tracks: PlaybackTrackItem[],
+  pendingCount: number,
+  durationFormatted: string | null,
+): PlaybackState {
+  const status = resolveStatus(voiceChannelId, active, paused);
+  return {
+    status,
+    canEnqueue: voiceChannelId !== null,
+    active,
+    paused,
+    repeatMode,
+    voiceChannelId,
+    voiceChannelName,
+    current,
+    tracks,
+    pendingCount,
+    durationFormatted,
+  };
 }
 
 function getGuildQueue() {
@@ -81,23 +126,31 @@ function getGuildQueue() {
 
 export function getPlaybackState(): PlaybackState {
   const guild = getConfiguredGuild();
+  if (!guild) {
+    return buildState(null, null, false, false, 'off', null, [], 0, null);
+  }
+
+  const voiceChannel = getVoiceChannel(guild);
+  const voiceChannelId = voiceChannel?.id ?? null;
+  const voiceChannelName = voiceChannel?.name ?? null;
+
   const queue = getGuildQueue();
   const current = queue?.currentTrack;
 
-  if (!guild || !queue || !current) {
-    return inactiveState();
+  if (!queue || !current) {
+    return buildState(voiceChannelId, voiceChannelName, false, false, 'off', null, [], 0, null);
   }
 
   const timestamp = queue.node.getTimestamp();
-  const voiceChannel = guild.members.me?.voice.channel;
+  const paused = queue.node.isPaused();
 
-  return {
-    active: true,
-    paused: queue.node.isPaused(),
-    repeatMode: repeatModeLabel(queue.repeatMode),
-    voiceChannelId: voiceChannel?.id ?? null,
-    voiceChannelName: voiceChannel?.name ?? null,
-    current: timestamp
+  return buildState(
+    voiceChannelId,
+    voiceChannelName,
+    true,
+    paused,
+    repeatModeLabel(queue.repeatMode),
+    timestamp
       ? {
           title: formatTrackTitle(current),
           durationMs: timestamp.total.value,
@@ -114,14 +167,18 @@ export function getPlaybackState(): PlaybackState {
           durationLabel: current.duration ?? '—',
           positionLabel: '0:00',
         },
-    tracks: queue.tracks.store.slice(0, QUEUE_PREVIEW_LIMIT).map((track, index) => ({
+    queue.tracks.store.slice(0, QUEUE_PREVIEW_LIMIT).map((track, index) => ({
       index: index + 1,
       title: formatTrackTitle(track),
       duration: track.duration ?? null,
     })),
-    pendingCount: queue.tracks.size,
-    durationFormatted: queue.tracks.size > 0 ? queue.durationFormatted : null,
-  };
+    queue.tracks.size,
+    queue.tracks.size > 0 ? queue.durationFormatted : null,
+  );
+}
+
+export function canEnqueuePlayback(): boolean {
+  return getPlaybackState().canEnqueue;
 }
 
 export function pausePlayback(): PlaybackActionResult {

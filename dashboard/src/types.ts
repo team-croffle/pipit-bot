@@ -78,8 +78,11 @@ export interface PlaybackTrackItem {
 }
 
 export type PlaybackRepeatMode = 'off' | 'track' | 'queue' | 'autoplay';
+export type PlaybackStatus = 'loading' | 'playing' | 'paused' | 'ready' | 'idle';
 
 export interface PlaybackState {
+  status: PlaybackStatus;
+  canEnqueue: boolean;
   active: boolean;
   paused: boolean;
   repeatMode: PlaybackRepeatMode;

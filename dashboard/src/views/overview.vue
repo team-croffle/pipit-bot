@@ -22,17 +22,16 @@
 </script>
 
 <template>
-  <div class="overview">
-    <p v-if="!me.canWriteSettings" class="banner">View only — settings cannot be changed.</p>
+  <div class="flex flex-col gap-4">
+    <p
+      v-if="!me.canWriteSettings"
+      class="rounded-xl border border-line-soft bg-readonly px-4 py-3 text-sm text-muted"
+    >
+      View only — settings cannot be changed.
+    </p>
 
-    <div class="overview-grid">
-      <div class="overview-main">
-        <PlaybackPanel />
-      </div>
-      <div class="overview-side">
-        <HealthBadge :status="health" />
-        <JobsTable />
-      </div>
-    </div>
+    <HealthBadge :status="health" />
+    <PlaybackPanel />
+    <JobsTable />
   </div>
 </template>

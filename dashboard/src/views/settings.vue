@@ -31,6 +31,14 @@
   const saved = ref('');
   const loading = ref(true);
 
+  const fieldClass =
+    'w-full rounded-xl border border-line bg-bg-elevated px-3 py-2.5 text-sm text-text outline-none transition focus:border-accent';
+  const labelClass = 'mb-1.5 block text-sm font-medium text-text';
+  const ghostBtnClass =
+    'rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text disabled:opacity-55';
+  const cardClass =
+    'rounded-2xl border border-line-soft bg-panel p-4 shadow-[0_10px_30px_rgba(0,0,0,0.22)] sm:p-5';
+
   function emptyMapping(): ReactionRoleMapping {
     return { channelId: '', messageId: '', emoji: '', roleId: '' };
   }
@@ -128,37 +136,57 @@
 </script>
 
 <template>
-  <div class="settings-grid">
-    <p v-if="readOnly" class="banner">View only — settings cannot be changed.</p>
-    <p v-if="error" class="error">{{ error }}</p>
-    <p v-if="saved" class="empty">{{ saved }}</p>
-    <p v-if="loading" class="empty">Loading…</p>
+  <div class="flex flex-col gap-4">
+    <p
+      v-if="readOnly"
+      class="rounded-xl border border-line-soft bg-readonly px-4 py-3 text-sm text-muted"
+    >
+      View only — settings cannot be changed.
+    </p>
+    <p v-if="error" class="text-sm text-bad">{{ error }}</p>
+    <p v-if="saved" class="text-sm text-muted">{{ saved }}</p>
+    <p v-if="loading" class="text-sm text-muted">Loading…</p>
 
-    <section v-if="!loading" class="card">
-      <h2>Join / leave</h2>
-      <p class="empty">
-        Placeholders: <code>{user}</code> <code>{username}</code> <code>{inviter}</code>
-        <code>{invite}</code>. Multiple join/leave lines pick one at random.
+    <section v-if="!loading" :class="cardClass">
+      <h2 class="mb-3 mt-0 text-base font-semibold">Join / leave</h2>
+      <p class="mb-4 text-sm text-muted">
+        Placeholders:
+        <code class="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-accent">{user}</code>
+        <code class="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-accent">{username}</code>
+        <code class="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-accent">{inviter}</code>
+        <code class="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-accent">{invite}</code>.
+        Multiple join/leave lines pick one at random.
       </p>
-      <div class="field">
-        <label for="log-channel">Log channel</label>
-        <select id="log-channel" v-model="settings.logChannelId" :disabled="readOnly">
+      <div class="mb-4">
+        <label for="log-channel" :class="labelClass">Log channel</label>
+        <select
+          id="log-channel"
+          v-model="settings.logChannelId"
+          :class="fieldClass"
+          :disabled="readOnly"
+        >
           <option :value="null">Not set</option>
           <option v-for="channel in channels" :key="channel.id" :value="channel.id">
             {{ channel.name }}
           </option>
         </select>
       </div>
-      <div class="field">
-        <span class="label">Join messages</span>
-        <div v-for="(_, index) in settings.joinMessages" :key="`join-${index}`" class="stack-row">
+      <div class="mb-4">
+        <span :class="labelClass">Join messages</span>
+        <div
+          v-for="(_, index) in settings.joinMessages"
+          :key="`join-${index}`"
+          class="mb-2 flex flex-col gap-2 sm:flex-row"
+        >
           <textarea
             v-model="settings.joinMessages[index]"
+            :class="fieldClass"
             :disabled="readOnly"
             placeholder="{user} joined (invited by {inviter})"
+            rows="2"
           ></textarea>
           <button
-            class="ghost"
+            :class="ghostBtnClass"
             type="button"
             :disabled="readOnly"
             @click="removeMessage('joinMessages', index)"
@@ -167,7 +195,7 @@
           </button>
         </div>
         <button
-          class="ghost"
+          :class="ghostBtnClass"
           type="button"
           :disabled="readOnly"
           @click="addMessage('joinMessages')"
@@ -175,16 +203,22 @@
           Add join message
         </button>
       </div>
-      <div class="field">
-        <span class="label">Leave messages</span>
-        <div v-for="(_, index) in settings.leaveMessages" :key="`leave-${index}`" class="stack-row">
+      <div class="mb-4">
+        <span :class="labelClass">Leave messages</span>
+        <div
+          v-for="(_, index) in settings.leaveMessages"
+          :key="`leave-${index}`"
+          class="mb-2 flex flex-col gap-2 sm:flex-row"
+        >
           <textarea
             v-model="settings.leaveMessages[index]"
+            :class="fieldClass"
             :disabled="readOnly"
             placeholder="{username} left"
+            rows="2"
           ></textarea>
           <button
-            class="ghost"
+            :class="ghostBtnClass"
             type="button"
             :disabled="readOnly"
             @click="removeMessage('leaveMessages', index)"
@@ -193,7 +227,7 @@
           </button>
         </div>
         <button
-          class="ghost"
+          :class="ghostBtnClass"
           type="button"
           :disabled="readOnly"
           @click="addMessage('leaveMessages')"
@@ -201,12 +235,13 @@
           Add leave message
         </button>
       </div>
-      <div class="field">
-        <span class="label">Roles on join</span>
-        <div class="role-list">
-          <label v-for="role in roles" :key="role.id" class="check">
+      <div>
+        <span :class="labelClass">Roles on join</span>
+        <div class="flex flex-wrap gap-3">
+          <label v-for="role in roles" :key="role.id" class="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              class="accent-accent"
               :checked="settings.joinRoleIds.includes(role.id)"
               :disabled="readOnly"
               @change="toggleJoinRole(role.id)"
@@ -217,55 +252,89 @@
       </div>
     </section>
 
-    <section v-if="!loading" class="card">
-      <h2>Reaction roles</h2>
-      <p class="empty">Reacting adds the role; removing the reaction takes it away.</p>
-      <div v-for="(row, index) in settings.reactionRoles" :key="`rr-${index}`" class="reaction-row">
-        <select v-model="row.channelId" :disabled="readOnly">
+    <section v-if="!loading" :class="cardClass">
+      <h2 class="mb-3 mt-0 text-base font-semibold">Reaction roles</h2>
+      <p class="mb-4 text-sm text-muted">
+        Reacting adds the role; removing the reaction takes it away.
+      </p>
+      <div
+        v-for="(row, index) in settings.reactionRoles"
+        :key="`rr-${index}`"
+        class="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_1fr_auto]"
+      >
+        <select v-model="row.channelId" :class="fieldClass" :disabled="readOnly">
           <option value="">Channel</option>
           <option v-for="channel in channels" :key="channel.id" :value="channel.id">
             {{ channel.name }}
           </option>
         </select>
-        <input v-model="row.messageId" :disabled="readOnly" placeholder="Message ID" />
-        <input v-model="row.emoji" :disabled="readOnly" placeholder="Emoji" />
-        <select v-model="row.roleId" :disabled="readOnly">
+        <input
+          v-model="row.messageId"
+          :class="fieldClass"
+          :disabled="readOnly"
+          placeholder="Message ID"
+        />
+        <input v-model="row.emoji" :class="fieldClass" :disabled="readOnly" placeholder="Emoji" />
+        <select v-model="row.roleId" :class="fieldClass" :disabled="readOnly">
           <option value="">Role</option>
           <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
         </select>
-        <button class="ghost" type="button" :disabled="readOnly" @click="removeReactionRow(index)">
+        <button
+          :class="ghostBtnClass"
+          type="button"
+          :disabled="readOnly"
+          @click="removeReactionRow(index)"
+        >
           Remove
         </button>
       </div>
-      <button class="ghost" type="button" :disabled="readOnly" @click="addReactionRow">
+      <button :class="ghostBtnClass" type="button" :disabled="readOnly" @click="addReactionRow">
         Add reaction role
       </button>
     </section>
 
-    <section v-if="!loading" class="card">
-      <h2>Bot settings</h2>
-      <p class="empty">Prefix and command channel apply immediately. RSS is not wired yet.</p>
-      <div class="field">
-        <label for="prefix">Command prefix</label>
-        <input id="prefix" v-model="botConfig.prefix" :disabled="readOnly" placeholder="!" />
+    <section v-if="!loading" :class="cardClass">
+      <h2 class="mb-3 mt-0 text-base font-semibold">Bot settings</h2>
+      <p class="mb-4 text-sm text-muted">
+        Prefix and command channel apply immediately. RSS is not wired yet.
+      </p>
+      <div class="mb-4">
+        <label for="prefix" :class="labelClass">Command prefix</label>
+        <input
+          id="prefix"
+          v-model="botConfig.prefix"
+          :class="fieldClass"
+          :disabled="readOnly"
+          placeholder="!"
+        />
       </div>
-      <div class="field">
-        <label for="channel">Command channel</label>
-        <select id="channel" v-model="botConfig.commandChannelId" :disabled="readOnly">
+      <div class="mb-4">
+        <label for="channel" :class="labelClass">Command channel</label>
+        <select
+          id="channel"
+          v-model="botConfig.commandChannelId"
+          :class="fieldClass"
+          :disabled="readOnly"
+        >
           <option :value="null">Any channel</option>
           <option v-for="channel in channels" :key="channel.id" :value="channel.id">
             {{ channel.name }}
           </option>
         </select>
       </div>
-      <div class="field">
-        <label for="rss">Blog RSS feed</label>
-        <input id="rss" disabled placeholder="Coming soon" />
+      <div>
+        <label for="rss" :class="labelClass">Blog RSS feed</label>
+        <input id="rss" :class="fieldClass" disabled placeholder="Coming soon" />
       </div>
     </section>
 
     <div>
-      <button class="primary" type="button" :disabled="readOnly || loading" @click="save">
+      <button
+        type="button"
+        class="rounded-xl border border-accent/50 bg-accent-soft px-4 py-2.5 text-sm font-medium text-accent transition hover:bg-accent/20 disabled:opacity-55"
+        :disabled="readOnly || loading"
+        @click="save"
+      >
         Save
       </button>
     </div>

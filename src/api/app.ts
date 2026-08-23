@@ -15,6 +15,7 @@ import {
   saveGuildEventSettings,
 } from '../lib/guild-event-settings.js';
 import {
+  canEnqueuePlayback,
   getPlaybackState,
   pausePlayback,
   resumePlayback,
@@ -259,6 +260,10 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     const body = await c.req.json<{ jobId?: string; query?: string }>();
     if (!body.jobId || !body.query?.trim()) {
       return c.json({ error: 'jobId and query are required' }, 400);
+    }
+
+    if (!canEnqueuePlayback()) {
+      return c.json({ error: 'Bot is not in a voice channel.' }, 400);
     }
 
     try {
