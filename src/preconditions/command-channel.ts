@@ -6,14 +6,14 @@ import type {
   Message,
 } from 'discord.js';
 
-import { getEnv } from '../lib/env.js';
+import { getRuntimeConfig } from '../lib/runtime-config.js';
 
 @ApplyOptions<AllFlowsPrecondition.Options>({
   name: 'CommandChannel',
 })
 export class UserPrecondition extends AllFlowsPrecondition {
   public override messageRun(message: Message) {
-    const channelId = getEnv().commandChannelId;
+    const channelId = getRuntimeConfig().commandChannelId;
     if (!channelId) {
       return this.ok();
     }

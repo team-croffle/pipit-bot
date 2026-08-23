@@ -11,7 +11,6 @@ export type DashboardDevRole = 'viewer' | 'admin';
 export interface EnvConfig {
   botToken: string;
   role: BotRole;
-  commandChannelId: string | undefined;
   streamRoot: string;
   musicWorkerUrl: string;
   pipitApiUrl: string;
@@ -20,7 +19,6 @@ export interface EnvConfig {
   dashboardAdminGroups: string[];
   dashboardDevUser: string;
   dashboardDevRole: DashboardDevRole;
-  guildId: string | undefined;
   nodeEnv: string;
   isMain: boolean;
   isEdge: boolean;
@@ -104,7 +102,6 @@ export function loadEnv(): EnvConfig {
   return {
     botToken,
     role,
-    commandChannelId: process.env.COMMAND_CHANNEL_ID || undefined,
     streamRoot,
     musicWorkerUrl: musicWorkerUrl.replace(/\/$/, ''),
     pipitApiUrl,
@@ -113,7 +110,6 @@ export function loadEnv(): EnvConfig {
     dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
     dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
-    guildId: process.env.GUILD_ID?.trim() || undefined,
     nodeEnv: process.env.NODE_ENV ?? 'development',
     isMain: role === 'main',
     isEdge: role === 'edge',

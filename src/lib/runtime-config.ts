@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export interface RuntimeConfig {
   prefix: string;
@@ -20,22 +20,21 @@ function readFromDisk(): Partial<RuntimeConfig> {
   }
 
   try {
-    return JSON.parse(readFileSync(filePath, "utf8")) as Partial<RuntimeConfig>;
+    return JSON.parse(readFileSync(filePath, 'utf8')) as Partial<RuntimeConfig>;
   } catch {
     return {};
   }
 }
 
 function writeToDisk(data: RuntimeConfig): void {
-  if (!filePath) return;
+  if (!filePath) {
+    return;
+  }
   mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-export function initRuntimeConfig(
-  path: string,
-  defaults: RuntimeConfig,
-): RuntimeConfig {
+export function initRuntimeConfig(path: string, defaults: RuntimeConfig): RuntimeConfig {
   filePath = path;
   const stored = readFromDisk();
 

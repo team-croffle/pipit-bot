@@ -22,7 +22,7 @@ container.config = env;
 
 initRuntimeConfig(join(env.streamRoot, "runtime-config.json"), {
   prefix: "!",
-  commandChannelId: env.commandChannelId,
+  commandChannelId: undefined,
 });
 
 colorette.createColors({ useColor: true });

@@ -21,7 +21,6 @@ Copy `.env.example` to `.env` (and optionally `.env.development.local` for `yarn
 
 ```ini
 BOT_TOKEN=
-COMMAND_CHANNEL_ID=
 STREAM_ROOT=/streams
 API_PORT=3000
 INTERNAL_TOKEN=
@@ -30,12 +29,11 @@ PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
 DASHBOARD_DEV_USER=dev
 DASHBOARD_DEV_ROLE=admin
-GUILD_ID=
 ```
 
 Production dashboard auth is **Authentik forward-auth** on the public vhost (`/` and `/api` only). Do not expose `/internal/*` through that host. The API should listen on localhost or the Docker network.
 
-`DASHBOARD_ADMIN_GROUPS` maps Authentik `X-Authentik-Groups` to write access (settings and future playback controls). Viewers still see every page; mutating controls stay disabled. `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` mock `/api/me` when Authentik headers are absent outside production. Optional `GUILD_ID` pins the dashboard to one server; otherwise the first cached guild is used.
+`DASHBOARD_ADMIN_GROUPS` maps Authentik `X-Authentik-Groups` to write access (settings and future playback controls). Viewers still see every page; mutating controls stay disabled. `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` mock `/api/me` when Authentik headers are absent outside production. Dashboard guild data comes from the bot's Discord cache.
 
 Guild join/leave logs, join roles, and reaction roles persist in `data/guild-events.json` (gitignored). Mount `data/` in production. Prefix, command channel, and RSS are a separate bot-config surface and must not use `/api/guild-events`.
 

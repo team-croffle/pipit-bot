@@ -1,17 +1,10 @@
 import { container } from '@sapphire/framework';
 import { ChannelType, type Guild } from 'discord.js';
 
-import { getEnv } from './env.js';
-
 export function getConfiguredGuild(): Guild | undefined {
   const { client } = container;
   if (!client.isReady()) {
     return undefined;
-  }
-
-  const guildId = getEnv().guildId;
-  if (guildId) {
-    return client.guilds.cache.get(guildId);
   }
 
   return client.guilds.cache.first();
