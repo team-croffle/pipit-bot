@@ -23,7 +23,7 @@
   });
   const botConfig = ref<BotRuntimeConfig>({
     prefix: '!',
-    commandChannelId: null,
+    musicChannelIds: [],
   });
   const channels = ref<DiscordChannel[]>([]);
   const roles = ref<DiscordRole[]>([]);
@@ -58,7 +58,7 @@
       };
       botConfig.value = {
         prefix: configBody.prefix || '!',
-        commandChannelId: configBody.commandChannelId ?? null,
+        musicChannelIds: configBody.musicChannelIds ?? [],
         role: configBody.role,
       };
       channels.value = channelBody.channels;
@@ -96,6 +96,13 @@
       : [...current, roleId];
   }
 
+  function toggleMusicChannel(channelId: string): void {
+    const current = botConfig.value.musicChannelIds;
+    botConfig.value.musicChannelIds = current.includes(channelId)
+      ? current.filter((id) => id !== channelId)
+      : [...current, channelId];
+  }
+
   async function save(): Promise<void> {
     error.value = '';
     saved.value = '';
@@ -113,13 +120,13 @@
         putJson<GuildEventSettings>('/api/guild-events', payload),
         putJson<BotRuntimeConfig>('/api/config', {
           prefix: botConfig.value.prefix,
-          commandChannelId: botConfig.value.commandChannelId || null,
+          musicChannelIds: botConfig.value.musicChannelIds,
         }),
       ]);
       settings.value = savedEvents;
       botConfig.value = {
         prefix: savedConfig.prefix || '!',
-        commandChannelId: savedConfig.commandChannelId ?? null,
+        musicChannelIds: savedConfig.musicChannelIds ?? [],
         role: savedConfig.role ?? botConfig.value.role,
       };
       if (settings.value.joinMessages.length === 0) {
@@ -294,10 +301,34 @@
     </section>
 
     <section v-if="!loading" :class="cardClass">
-      <h2 class="mb-3 mt-0 text-base font-semibold">Bot settings</h2>
+      <h2 class="mb-3 mt-0 text-base font-semibold">Music</h2>
       <p class="mb-4 text-sm text-muted">
-        Prefix and command channel apply immediately. RSS is not wired yet.
+        Restrict music commands to selected text channels. Leave all unchecked to allow any channel.
       </p>
+      <div>
+        <span :class="labelClass">Music channels</span>
+        <div class="flex flex-wrap gap-3">
+          <label
+            v-for="channel in channels"
+            :key="channel.id"
+            class="flex items-center gap-2 text-sm"
+          >
+            <input
+              type="checkbox"
+              class="accent-accent"
+              :checked="botConfig.musicChannelIds.includes(channel.id)"
+              :disabled="readOnly"
+              @change="toggleMusicChannel(channel.id)"
+            />
+            {{ channel.name }}
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="!loading" :class="cardClass">
+      <h2 class="mb-3 mt-0 text-base font-semibold">Bot settings</h2>
+      <p class="mb-4 text-sm text-muted">Prefix applies immediately. RSS is not wired yet.</p>
       <div class="mb-4">
         <label for="prefix" :class="labelClass">Command prefix</label>
         <input
@@ -307,20 +338,6 @@
           :disabled="readOnly"
           placeholder="!"
         />
-      </div>
-      <div class="mb-4">
-        <label for="channel" :class="labelClass">Command channel</label>
-        <select
-          id="channel"
-          v-model="botConfig.commandChannelId"
-          :class="fieldClass"
-          :disabled="readOnly"
-        >
-          <option :value="null">Any channel</option>
-          <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-            {{ channel.name }}
-          </option>
-        </select>
       </div>
       <div>
         <label for="rss" :class="labelClass">Blog RSS feed</label>

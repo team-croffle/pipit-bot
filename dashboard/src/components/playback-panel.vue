@@ -2,7 +2,12 @@
   import { onMounted, onUnmounted, ref } from 'vue';
 
   import { fetchJson, postJson } from '../api';
-  import type { PlaybackActionResult, PlaybackState, PlaybackStatus } from '../types';
+  import type {
+    PlaybackActionResult,
+    PlaybackRepeatMode,
+    PlaybackState,
+    PlaybackStatus,
+  } from '../types';
 
   const playback = ref<PlaybackState | null>(null);
   const query = ref('');
@@ -18,6 +23,15 @@
     ready: 'border-blue-500/30 bg-blue-500/15 text-blue-400',
     idle: 'border-zinc-500/30 bg-zinc-500/15 text-zinc-400',
   };
+
+  const loopModes: { value: PlaybackRepeatMode; label: string }[] = [
+    { value: 'off', label: 'Off' },
+    { value: 'track', label: 'Track' },
+    { value: 'queue', label: 'Queue' },
+  ];
+
+  const transportBtnClass =
+    'rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text disabled:opacity-55';
 
   function formatStatus(status: PlaybackStatus): string {
     return status.charAt(0).toUpperCase() + status.slice(1);
@@ -52,6 +66,32 @@
         return;
       }
       error.value = cause instanceof Error ? cause.message : 'Action failed';
+    } finally {
+      busy.value = false;
+    }
+  }
+
+  async function setLoop(mode: PlaybackRepeatMode): Promise<void> {
+    if (playback.value?.repeatMode === mode) {
+      return;
+    }
+
+    busy.value = true;
+    actionMessage.value = '';
+    try {
+      const result = await postJson<PlaybackActionResult>('/api/music/playback/loop', { mode });
+      actionMessage.value = result.message;
+      if (!result.ok) {
+        error.value = result.message;
+      } else {
+        error.value = '';
+      }
+      await refresh();
+    } catch (cause) {
+      if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
+        return;
+      }
+      error.value = cause instanceof Error ? cause.message : 'Failed to set loop mode';
     } finally {
       busy.value = false;
     }
@@ -161,7 +201,7 @@
     <div class="mb-4 flex flex-wrap gap-2">
       <button
         type="button"
-        class="rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text disabled:opacity-55"
+        :class="transportBtnClass"
         :disabled="busy || !playback?.active || playback.paused"
         @click="runAction('/api/music/playback/pause')"
       >
@@ -169,7 +209,7 @@
       </button>
       <button
         type="button"
-        class="rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text disabled:opacity-55"
+        :class="transportBtnClass"
         :disabled="busy || !playback?.active || !playback.paused"
         @click="runAction('/api/music/playback/resume')"
       >
@@ -177,12 +217,49 @@
       </button>
       <button
         type="button"
-        class="rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text disabled:opacity-55"
+        :class="transportBtnClass"
         :disabled="busy || !playback?.active"
         @click="runAction('/api/music/playback/skip')"
       >
         Skip
       </button>
+      <button
+        type="button"
+        :class="transportBtnClass"
+        :disabled="busy || !playback?.active"
+        @click="runAction('/api/music/playback/stop')"
+      >
+        Stop
+      </button>
+      <button
+        type="button"
+        :class="transportBtnClass"
+        :disabled="busy || !playback?.active || playback.pendingCount === 0"
+        @click="runAction('/api/music/playback/clear')"
+      >
+        Clear queue
+      </button>
+    </div>
+
+    <div v-if="playback?.active" class="mb-4 flex flex-wrap items-center gap-2">
+      <span class="text-sm text-muted">Loop</span>
+      <div class="flex flex-wrap gap-1">
+        <button
+          v-for="mode in loopModes"
+          :key="mode.value"
+          type="button"
+          class="rounded-lg border px-3 py-1.5 text-sm transition disabled:opacity-55"
+          :class="
+            playback.repeatMode === mode.value
+              ? 'border-accent/50 bg-accent-soft text-accent'
+              : 'border-line bg-transparent text-muted hover:border-line hover:bg-panel-hover hover:text-text'
+          "
+          :disabled="busy"
+          @click="setLoop(mode.value)"
+        >
+          {{ mode.label }}
+        </button>
+      </div>
     </div>
 
     <div v-if="playback?.active" class="border-t border-line-soft pt-4">

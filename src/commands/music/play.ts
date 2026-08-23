@@ -10,7 +10,7 @@ import { prepareTrack } from '../../lib/music/prepare-track.js';
 @ApplyOptions<Command.Options>({
   description: 'Plays music in your current voice channel',
   aliases: ['p'],
-  preconditions: ['MainOnly', 'CommandChannel'],
+  preconditions: ['MainOnly', 'MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args) {

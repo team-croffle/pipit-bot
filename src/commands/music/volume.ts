@@ -14,7 +14,7 @@ type VolumeLevel = keyof typeof VOLUME_LEVELS;
 @ApplyOptions<Command.Options>({
   description: 'Set volume: low (30), mid (50), high (100)',
   aliases: ['vol', '볼륨'],
-  preconditions: ['MainOnly', 'CommandChannel'],
+  preconditions: ['MainOnly', 'MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args): Promise<void> {

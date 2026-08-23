@@ -58,7 +58,7 @@ export interface DiscordRole {
 
 export interface BotRuntimeConfig {
   prefix: string;
-  commandChannelId?: string | null;
+  musicChannelIds: string[];
   role?: string;
 }
 

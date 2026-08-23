@@ -3,24 +3,40 @@ import { dirname } from 'node:path';
 
 export interface RuntimeConfig {
   prefix: string;
-  commandChannelId: string | undefined;
+  musicChannelIds: string[];
 }
 
 interface RuntimeConfigPatch {
   prefix?: string;
-  commandChannelId?: string | null; // null = 해제(clear)
+  musicChannelIds?: string[];
+}
+
+interface StoredRuntimeConfig extends Partial<RuntimeConfig> {
+  commandChannelId?: string;
 }
 
 let filePath: string | undefined;
 let cached: RuntimeConfig;
 
-function readFromDisk(): Partial<RuntimeConfig> {
+function normalizeMusicChannelIds(stored: StoredRuntimeConfig, fallback: string[]): string[] {
+  if (Array.isArray(stored.musicChannelIds)) {
+    return stored.musicChannelIds.filter((id) => typeof id === 'string' && id.trim());
+  }
+
+  if (typeof stored.commandChannelId === 'string' && stored.commandChannelId.trim()) {
+    return [stored.commandChannelId.trim()];
+  }
+
+  return fallback;
+}
+
+function readFromDisk(): StoredRuntimeConfig {
   if (!filePath || !existsSync(filePath)) {
     return {};
   }
 
   try {
-    return JSON.parse(readFileSync(filePath, 'utf8')) as Partial<RuntimeConfig>;
+    return JSON.parse(readFileSync(filePath, 'utf8')) as StoredRuntimeConfig;
   } catch {
     return {};
   }
@@ -40,10 +56,15 @@ export function initRuntimeConfig(path: string, defaults: RuntimeConfig): Runtim
 
   cached = {
     prefix: stored.prefix ?? defaults.prefix,
-    commandChannelId: stored.commandChannelId ?? defaults.commandChannelId,
+    musicChannelIds: normalizeMusicChannelIds(stored, defaults.musicChannelIds),
   };
 
-  if (!existsSync(filePath)) {
+  const migratedFromLegacy =
+    !Array.isArray(stored.musicChannelIds) &&
+    typeof stored.commandChannelId === 'string' &&
+    stored.commandChannelId.trim().length > 0;
+
+  if (!existsSync(filePath) || migratedFromLegacy) {
     writeToDisk(cached);
   }
 
@@ -57,10 +78,10 @@ export function getRuntimeConfig(): RuntimeConfig {
 export function updateRuntimeConfig(patch: RuntimeConfigPatch): RuntimeConfig {
   cached = {
     prefix: patch.prefix?.trim() || cached.prefix,
-    commandChannelId:
-      patch.commandChannelId === null
-        ? undefined
-        : (patch.commandChannelId ?? cached.commandChannelId),
+    musicChannelIds:
+      patch.musicChannelIds !== undefined
+        ? patch.musicChannelIds.filter((id) => id.trim())
+        : cached.musicChannelIds,
   };
 
   writeToDisk(cached);

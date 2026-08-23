@@ -7,7 +7,7 @@ import { getEnv } from '../../lib/env.js';
 @ApplyOptions<Command.Options>({
   description: 'Show this edge node status',
   aliases: ['node'],
-  preconditions: ['EdgeOnly', 'CommandChannel'],
+  preconditions: ['EdgeOnly'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message) {

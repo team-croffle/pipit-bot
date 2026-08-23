@@ -237,3 +237,54 @@ export function skipPlayback(): PlaybackActionResult {
 
   return { ok: false, message: 'Failed to skip the track.' };
 }
+
+export function stopPlayback(): PlaybackActionResult {
+  const queue = getGuildQueue();
+
+  if (!queue) {
+    return { ok: false, message: 'No active music session found.' };
+  }
+
+  if (queue.node.stop()) {
+    return { ok: true, message: 'Stopped playback and cleared the queue.' };
+  }
+
+  return { ok: false, message: 'Failed to stop playback.' };
+}
+
+export function clearQueue(): PlaybackActionResult {
+  const queue = getGuildQueue();
+
+  if (!queue) {
+    return { ok: false, message: 'No active music session found.' };
+  }
+
+  if (queue.tracks.size === 0) {
+    return { ok: false, message: 'The queue is empty.' };
+  }
+
+  queue.tracks.clear();
+  return { ok: true, message: 'Queue cleared.' };
+}
+
+export type LoopMode = 'track' | 'queue' | 'off';
+
+export function setLoopMode(mode: LoopMode): PlaybackActionResult {
+  const queue = getGuildQueue();
+
+  if (!queue) {
+    return { ok: false, message: 'No active music session found.' };
+  }
+
+  switch (mode) {
+    case 'track':
+      queue.setRepeatMode(QueueRepeatMode.TRACK);
+      return { ok: true, message: 'Repeat mode set to track.' };
+    case 'queue':
+      queue.setRepeatMode(QueueRepeatMode.QUEUE);
+      return { ok: true, message: 'Repeat mode set to queue.' };
+    case 'off':
+      queue.setRepeatMode(QueueRepeatMode.OFF);
+      return { ok: true, message: 'Repeat mode off.' };
+  }
+}

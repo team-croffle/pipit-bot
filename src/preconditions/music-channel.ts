@@ -9,22 +9,22 @@ import type {
 import { getRuntimeConfig } from '../lib/runtime-config.js';
 
 @ApplyOptions<AllFlowsPrecondition.Options>({
-  name: 'CommandChannel',
+  name: 'MusicChannel',
 })
 export class UserPrecondition extends AllFlowsPrecondition {
   public override messageRun(message: Message) {
-    const channelId = getRuntimeConfig().commandChannelId;
-    if (!channelId) {
+    const channelIds = getRuntimeConfig().musicChannelIds;
+    if (channelIds.length === 0) {
       return this.ok();
     }
 
-    if (message.channelId === channelId) {
+    if (channelIds.includes(message.channelId)) {
       return this.ok();
     }
 
     return this.error({
-      identifier: 'CommandChannel',
-      message: 'This command can only be used in the designated command channel.',
+      identifier: 'MusicChannel',
+      message: 'Music commands can only be used in a designated music channel.',
     });
   }
 
@@ -39,6 +39,6 @@ export class UserPrecondition extends AllFlowsPrecondition {
 
 declare module '@sapphire/framework' {
   interface Preconditions {
-    CommandChannel: never;
+    MusicChannel: never;
   }
 }

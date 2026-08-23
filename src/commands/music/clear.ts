@@ -6,7 +6,7 @@ import type { Message } from 'discord.js';
 @ApplyOptions<Command.Options>({
   description: 'Clear all tracks from the queue',
   aliases: ['c'],
-  preconditions: ['MainOnly', 'CommandChannel'],
+  preconditions: ['MainOnly', 'MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message) {

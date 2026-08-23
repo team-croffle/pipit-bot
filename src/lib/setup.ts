@@ -16,7 +16,7 @@ container.config = env;
 
 initRuntimeConfig(migrateRuntimeConfigFromStreamRoot(env.streamRoot), {
   prefix: '!',
-  commandChannelId: undefined,
+  musicChannelIds: [],
 });
 
 colorette.createColors({ useColor: true });

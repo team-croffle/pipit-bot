@@ -11,11 +11,11 @@ import {
   type JobRecord,
   type TrackMeta,
 } from '../../api/jobs/pending-registry.js';
-import { getConfiguredGuild } from '../discord-guild.js';
 import { enqueueMusicJob } from './backend-client.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
 import { canEnqueuePlayback } from './playback.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
+import { ensureBotVoiceChannel } from './voice-connection.js';
 
 const trackMetaByFile = new Map<string, TrackMeta>();
 
@@ -45,15 +45,7 @@ export async function submitMusicJob(jobId: string, query: string): Promise<JobR
 }
 
 async function playPreparedTrack(track: TrackMeta): Promise<void> {
-  const guild = getConfiguredGuild();
-  if (!guild) {
-    throw new Error('Discord guild is not ready.');
-  }
-
-  const voiceChannel = guild.members.me?.voice.channel;
-  if (!voiceChannel) {
-    throw new Error('Bot is not in a voice channel. Join a voice channel with the bot first.');
-  }
+  const { voiceChannel } = await ensureBotVoiceChannel();
 
   const player = useMainPlayer();
   const playQuery = toLocalPlayQuery(track.file);

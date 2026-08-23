@@ -5,7 +5,7 @@ import type { Message } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Skip to a track in the queue by 1-based index',
-  preconditions: ['MainOnly', 'CommandChannel'],
+  preconditions: ['MainOnly', 'MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args): Promise<void> {

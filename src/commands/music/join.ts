@@ -1,11 +1,12 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { joinVoiceChannel } from 'discord-player';
 import type { Message } from 'discord.js';
+
+import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Joins the voice channel you are currently in',
-  preconditions: ['MainOnly', 'CommandChannel'],
+  preconditions: ['MainOnly', 'MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message): Promise<void> {
@@ -23,11 +24,7 @@ export class UserCommand extends Command {
     }
 
     try {
-      joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: guild.id,
-        adapterCreator: guild.voiceAdapterCreator,
-      });
+      await connectPlayerToChannel(voiceChannel);
 
       if (message.channel.isSendable()) {
         await message.channel.send('Joined your voice channel successfully!');
