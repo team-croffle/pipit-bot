@@ -71,12 +71,21 @@ export async function buildLoginRedirect(config: EnvConfig): Promise<{
 
 export async function exchangeAuthorizationCode(
   config: EnvConfig,
-  currentUrl: URL,
+  requestUrl: URL,
   state: string,
   codeVerifier: string,
 ): Promise<{ user: string; groups: string[] }> {
+  if (!config.oidc) {
+    throw new Error('OIDC is not configured');
+  }
+
+  // WHY: behind a reverse proxy c.req.url is often http://internal:3000/...; token
+  // exchange redirect_uri must match the registered public callback URL.
+  const callbackUrl = new URL(config.oidc.redirectUri);
+  callbackUrl.search = requestUrl.search;
+
   const oidcConfig = await getOidcConfiguration(config);
-  const tokens = await client.authorizationCodeGrant(oidcConfig, currentUrl, {
+  const tokens = await client.authorizationCodeGrant(oidcConfig, callbackUrl, {
     pkceCodeVerifier: codeVerifier,
     expectedState: state,
   });

@@ -142,7 +142,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     deleteCookie(c, SESSION_COOKIE, base);
 
     if (cfg.oidc) {
-      const redirectUri = `${new URL(c.req.url).origin}/`;
+      const redirectUri = `${new URL(cfg.oidc.redirectUri).origin}/`;
       const endSession = await buildLogoutRedirect(cfg, redirectUri);
       if (endSession) {
         return c.redirect(endSession.href, 302);

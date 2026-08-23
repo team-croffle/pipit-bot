@@ -77,6 +77,8 @@ function parseOidc(nodeEnv: string): OidcConfig | null {
     return null;
   }
 
+  const normalizedIssuer = issuer.endsWith('/') ? issuer : `${issuer}/`;
+
   const clientId = process.env.OIDC_CLIENT_ID?.trim();
   const clientSecret = process.env.OIDC_CLIENT_SECRET?.trim();
   const redirectUri = process.env.OIDC_REDIRECT_URI?.trim();
@@ -98,7 +100,7 @@ function parseOidc(nodeEnv: string): OidcConfig | null {
     throw new Error('DASHBOARD_SESSION_SECRET is required when OIDC_ISSUER is set');
   }
 
-  return { issuer, clientId, clientSecret, redirectUri, sessionSecret };
+  return { issuer: normalizedIssuer, clientId, clientSecret, redirectUri, sessionSecret };
 }
 
 export function loadEnv(): EnvConfig {
