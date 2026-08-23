@@ -18,7 +18,12 @@ API_PORT=3000
 INTERNAL_TOKEN=
 MUSIC_WORKER_URL=http://music-worker:8080
 PIPIT_API_URL=http://127.0.0.1:3000
+DASHBOARD_ADMIN_GROUPS=pipit-admins
+DASHBOARD_DEV_USER=dev
+DASHBOARD_DEV_ROLE=admin
 ```
+
+Dashboard login is Authentik forward-auth on `/` and `/api`. Keep `/internal/*` on the Docker network. Local `/api/me` uses `DASHBOARD_DEV_ROLE` when Authentik headers are missing.
 
 ## Commands
 

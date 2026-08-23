@@ -27,7 +27,14 @@ API_PORT=3000
 INTERNAL_TOKEN=
 MUSIC_WORKER_URL=http://music-worker:8080
 PIPIT_API_URL=http://127.0.0.1:3000
+DASHBOARD_ADMIN_GROUPS=pipit-admins
+DASHBOARD_DEV_USER=dev
+DASHBOARD_DEV_ROLE=admin
 ```
+
+Production dashboard auth is **Authentik forward-auth** on the public vhost (`/` and `/api` only). Do not expose `/internal/*` through that host. The API should listen on localhost or the Docker network.
+
+`DASHBOARD_ADMIN_GROUPS` maps Authentik `X-Authentik-Groups` to write access (settings and future playback controls). Viewers still see every page; mutating controls stay disabled. `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` mock `/api/me` when Authentik headers are absent outside production.
 
 ## Development
 
@@ -37,6 +44,14 @@ From `pipit-bot/`:
 yarn install
 yarn watch:start
 ```
+
+Dashboard (Vite + Vue) in `dashboard/`:
+
+```sh
+yarn dashboard:dev
+```
+
+Opens `http://127.0.0.1:5173/` and proxies `/api` to the bot. For production, `yarn dashboard:build` then the bot serves `dashboard/dist` at `GET /`.
 
 With the full stack (bot + music worker), use the workspace compose at the repo root:
 

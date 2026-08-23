@@ -154,10 +154,13 @@
       }
     },
     {
-      "files": ["**/apps/dashboard/**/*.{vue,ts,tsx}"],
+      "files": ["**/dashboard/**/*.{vue,ts,tsx}"],
       "env": {
         "browser": true,
         "node": false
+      },
+      "rules": {
+        "import/no-unassigned-import": "off"
       }
     }
   ]

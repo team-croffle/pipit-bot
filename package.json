@@ -35,8 +35,13 @@
     "start": "node dist/index.js",
     "start:dev": "node --env-file=.env.development.local dist/index.js",
     "dev": "yarn build && yarn start:dev",
-    "watch:start": "tsc-watch --onSuccess \"yarn start:dev\""
+    "watch:start": "tsc-watch --onSuccess \"yarn start:dev\"",
+    "dashboard:dev": "yarn workspace dashboard dev",
+    "dashboard:build": "yarn workspace dashboard build"
   },
+  "workspaces": [
+    "dashboard"
+  ],
   "dependencies": {
     "@discord-player/extractor": "^7.2.0",
     "@discordjs/opus": "^0.10.0",

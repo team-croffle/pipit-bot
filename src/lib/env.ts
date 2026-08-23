@@ -1,10 +1,12 @@
-import { join } from "node:path";
+import { join } from 'node:path';
 
-import { setup } from "@skyra/env-utilities";
+import { setup } from '@skyra/env-utilities';
 
-import { rootDir } from "./constants.js";
+import { rootDir } from './constants.js';
 
-export type BotRole = "main" | "edge";
+export type BotRole = 'main' | 'edge';
+
+export type DashboardDevRole = 'viewer' | 'admin';
 
 export interface EnvConfig {
   botToken: string;
@@ -15,6 +17,9 @@ export interface EnvConfig {
   pipitApiUrl: string;
   apiPort: number;
   internalToken: string;
+  dashboardAdminGroups: string[];
+  dashboardDevUser: string;
+  dashboardDevRole: DashboardDevRole;
   nodeEnv: string;
   isMain: boolean;
   isEdge: boolean;
@@ -22,8 +27,8 @@ export interface EnvConfig {
 }
 
 function parseRole(raw: string | undefined): BotRole {
-  const value = (raw ?? "main").toLowerCase();
-  if (value === "main" || value === "edge") {
+  const value = (raw ?? 'main').toLowerCase();
+  if (value === 'main' || value === 'edge') {
     return value;
   }
 
@@ -39,37 +44,58 @@ function parsePort(raw: string | undefined, fallback: number): number {
   return value;
 }
 
+function parseGroupList(raw: string | undefined, fallback: string[]): string[] {
+  if (!raw?.trim()) {
+    return fallback;
+  }
+
+  return raw
+    .split(',')
+    .map((group) => group.trim())
+    .filter((group) => group.length > 0);
+}
+
+function parseDashboardDevRole(raw: string | undefined): DashboardDevRole {
+  const value = (raw ?? 'admin').toLowerCase();
+  if (value === 'viewer' || value === 'admin') {
+    return value;
+  }
+
+  throw new Error(`Invalid DASHBOARD_DEV_ROLE="${raw}". Expected "viewer" or "admin".`);
+}
+
 export function loadEnv(): EnvConfig {
-  setup({ path: join(rootDir, ".env") });
+  setup({ path: join(rootDir, '.env') });
 
   const botToken = process.env.BOT_TOKEN;
   if (!botToken) {
-    throw new Error("BOT_TOKEN is required");
+    throw new Error('BOT_TOKEN is required');
   }
 
   const streamRoot = process.env.STREAM_ROOT;
   if (!streamRoot) {
-    throw new Error("STREAM_ROOT is required");
+    throw new Error('STREAM_ROOT is required');
   }
 
   const musicWorkerUrl = process.env.MUSIC_WORKER_URL;
   if (!musicWorkerUrl) {
-    throw new Error("MUSIC_WORKER_URL is required");
+    throw new Error('MUSIC_WORKER_URL is required');
   }
 
   const internalToken = process.env.INTERNAL_TOKEN;
   if (!internalToken) {
-    throw new Error("INTERNAL_TOKEN is required");
+    throw new Error('INTERNAL_TOKEN is required');
   }
 
   const apiPort = parsePort(process.env.API_PORT, 3000);
-  const pipitApiUrl = (
-    process.env.PIPIT_API_URL ?? `http://127.0.0.1:${apiPort}`
-  ).replace(/\/$/, "");
+  const pipitApiUrl = (process.env.PIPIT_API_URL ?? `http://127.0.0.1:${apiPort}`).replace(
+    /\/$/,
+    '',
+  );
 
   const dashboardToken = process.env.DASHBOARD_TOKEN;
   if (!dashboardToken) {
-    throw new Error("DASHBOARD_TOKEN is required");
+    throw new Error('DASHBOARD_TOKEN is required');
   }
 
   const role = parseRole(process.env.ROLE);
@@ -79,13 +105,16 @@ export function loadEnv(): EnvConfig {
     role,
     commandChannelId: process.env.COMMAND_CHANNEL_ID || undefined,
     streamRoot,
-    musicWorkerUrl: musicWorkerUrl.replace(/\/$/, ""),
+    musicWorkerUrl: musicWorkerUrl.replace(/\/$/, ''),
     pipitApiUrl,
     apiPort,
     internalToken,
-    nodeEnv: process.env.NODE_ENV ?? "development",
-    isMain: role === "main",
-    isEdge: role === "edge",
+    dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
+    dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
+    dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
+    nodeEnv: process.env.NODE_ENV ?? 'development',
+    isMain: role === 'main',
+    isEdge: role === 'edge',
     dashboardToken,
   };
 }
@@ -104,7 +133,7 @@ export function setEnvConfig(config: EnvConfig): void {
   cached = config;
 }
 
-declare module "@sapphire/pieces" {
+declare module '@sapphire/pieces' {
   interface Container {
     config: EnvConfig;
   }
