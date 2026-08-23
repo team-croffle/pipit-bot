@@ -8,6 +8,14 @@ export type BotRole = 'main' | 'edge';
 
 export type DashboardDevRole = 'viewer' | 'admin';
 
+export interface OidcConfig {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  sessionSecret: string;
+}
+
 export interface EnvConfig {
   botToken: string;
   role: BotRole;
@@ -19,6 +27,7 @@ export interface EnvConfig {
   dashboardAdminGroups: string[];
   dashboardDevUser: string;
   dashboardDevRole: DashboardDevRole;
+  oidc: OidcConfig | null;
   nodeEnv: string;
   isMain: boolean;
   isEdge: boolean;
@@ -62,6 +71,36 @@ function parseDashboardDevRole(raw: string | undefined): DashboardDevRole {
   throw new Error(`Invalid DASHBOARD_DEV_ROLE="${raw}". Expected "viewer" or "admin".`);
 }
 
+function parseOidc(nodeEnv: string): OidcConfig | null {
+  const issuer = process.env.OIDC_ISSUER?.trim();
+  if (!issuer) {
+    return null;
+  }
+
+  const clientId = process.env.OIDC_CLIENT_ID?.trim();
+  const clientSecret = process.env.OIDC_CLIENT_SECRET?.trim();
+  const redirectUri = process.env.OIDC_REDIRECT_URI?.trim();
+  const sessionSecret = process.env.DASHBOARD_SESSION_SECRET?.trim();
+
+  if (!clientId) {
+    throw new Error('OIDC_CLIENT_ID is required when OIDC_ISSUER is set');
+  }
+  if (!clientSecret) {
+    throw new Error('OIDC_CLIENT_SECRET is required when OIDC_ISSUER is set');
+  }
+  if (!redirectUri) {
+    throw new Error('OIDC_REDIRECT_URI is required when OIDC_ISSUER is set');
+  }
+  if (!sessionSecret) {
+    if (nodeEnv === 'production') {
+      throw new Error('DASHBOARD_SESSION_SECRET is required when OIDC is enabled in production');
+    }
+    throw new Error('DASHBOARD_SESSION_SECRET is required when OIDC_ISSUER is set');
+  }
+
+  return { issuer, clientId, clientSecret, redirectUri, sessionSecret };
+}
+
 export function loadEnv(): EnvConfig {
   setup({ path: join(rootDir, '.env') });
 
@@ -92,6 +131,7 @@ export function loadEnv(): EnvConfig {
   );
 
   const role = parseRole(process.env.ROLE);
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
 
   return {
     botToken,
@@ -104,7 +144,8 @@ export function loadEnv(): EnvConfig {
     dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
     dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
-    nodeEnv: process.env.NODE_ENV ?? 'development',
+    oidc: parseOidc(nodeEnv),
+    nodeEnv,
     isMain: role === 'main',
     isEdge: role === 'edge',
   };
