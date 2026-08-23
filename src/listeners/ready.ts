@@ -4,6 +4,7 @@ import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 
 import { getEnv } from '../lib/env.js';
+import { refreshGuildInvites } from '../lib/invite-cache.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -11,9 +12,17 @@ const dev = process.env.NODE_ENV !== 'production';
 export class UserEvent extends Listener {
   private readonly style = dev ? yellow : blue;
 
-  public override run() {
+  public override async run() {
     this.printBanner();
     this.printStoreDebugInformation();
+
+    if (!getEnv().isMain) {
+      return;
+    }
+
+    for (const guild of this.container.client.guilds.cache.values()) {
+      await refreshGuildInvites(guild);
+    }
   }
 
   private printBanner() {
