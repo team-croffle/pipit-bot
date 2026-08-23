@@ -22,9 +22,9 @@ DASHBOARD_DEV_USER=dev
 DASHBOARD_DEV_ROLE=admin
 ```
 
-Dashboard `/api` uses Authentik forward-auth headers. Keep `/internal/*` on the Docker network. Local identity uses `DASHBOARD_DEV_ROLE` when Authentik headers are missing. Music worker callbacks use `INTERNAL_TOKEN`.
+Dashboard `/api` uses Authentik OIDC (app is the client). Keep `/internal/*` on the Docker network. Without OIDC env, local identity uses `DASHBOARD_DEV_ROLE`. Music worker callbacks use `INTERNAL_TOKEN`.
 
-Enable **Server Members Intent**. Join/leave and reaction-role settings live in `data/guild-events.json` (`GET`/`PUT /api/guild-events`).
+Settings live in `data/runtime-config.json` and `data/guild-events.json`.
 
 ## Commands
 

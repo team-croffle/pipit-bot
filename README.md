@@ -29,13 +29,18 @@ PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
 DASHBOARD_DEV_USER=dev
 DASHBOARD_DEV_ROLE=admin
+OIDC_ISSUER=
+OIDC_CLIENT_ID=
+OIDC_CLIENT_SECRET=
+OIDC_REDIRECT_URI=
+DASHBOARD_SESSION_SECRET=
 ```
 
-Production dashboard auth is **Authentik forward-auth** on the public vhost (`/` and `/api` only). Do not expose `/internal/*` through that host. The API should listen on localhost or the Docker network.
+Production dashboard auth is **Authentik OIDC** (Authorization Code + PKCE). The bot is the OIDC client — no outpost container in this compose. Set `OIDC_*` and `DASHBOARD_SESSION_SECRET` in production. Do not expose `/internal/*` on the public host. Music worker callbacks use `INTERNAL_TOKEN`.
 
-Dashboard `/api/*` reads Authentik `X-Authentik-Username` and `X-Authentik-Groups`. `DASHBOARD_ADMIN_GROUPS` maps those groups to write access (bot config, guild events, playback). Viewers still see every page; mutating controls stay disabled. `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` mock identity when Authentik headers are absent outside production. Music worker callbacks stay on `INTERNAL_TOKEN`. Dashboard guild data comes from the bot's Discord cache.
+When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback).
 
-Guild join/leave logs, join roles, and reaction roles persist in `data/guild-events.json` (gitignored). Mount `data/` in production. Prefix, command channel, and RSS are a separate bot-config surface and must not use `/api/guild-events`.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
 
