@@ -21,9 +21,12 @@ PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
 DASHBOARD_DEV_USER=dev
 DASHBOARD_DEV_ROLE=admin
+GUILD_ID=
 ```
 
 Dashboard login is Authentik forward-auth on `/` and `/api`. Keep `/internal/*` on the Docker network. Local `/api/me` uses `DASHBOARD_DEV_ROLE` when Authentik headers are missing.
+
+Enable **Server Members Intent**. Join/leave and reaction-role settings live in `data/guild-events.json` (`GET`/`PUT /api/guild-events`).
 
 ## Commands
 
