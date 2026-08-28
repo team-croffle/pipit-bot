@@ -6,7 +6,7 @@ import type { Message } from 'discord.js';
 @ApplyOptions<Command.Options>({
   description: 'Remove a track from the queue by 1-based index',
   aliases: ['remove', 'rm'],
-  preconditions: ['MainOnly', 'MusicChannel'],
+  preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args): Promise<void> {

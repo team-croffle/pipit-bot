@@ -10,7 +10,7 @@ const MAX_MESSAGE_LENGTH = 1900;
 @ApplyOptions<Command.Options>({
   description: '현재 대기열에 있는 곡들을 보여줍니다.',
   aliases: ['l', '목록', '대기열', 'queue'],
-  preconditions: ['MainOnly', 'MusicChannel'],
+  preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message): Promise<void> {

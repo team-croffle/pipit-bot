@@ -9,7 +9,7 @@ type LoopMode = (typeof VALID_MODES)[number];
 @ApplyOptions<Command.Options>({
   description: 'Set repeat mode: track, queue, or off',
   aliases: ['repeat', '반복'],
-  preconditions: ['MainOnly', 'MusicChannel'],
+  preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args): Promise<void> {

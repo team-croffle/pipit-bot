@@ -2,7 +2,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import { Events, type GuildMember } from 'discord.js';
 
-import { getEnv } from '../lib/env.js';
 import {
   formatTemplate,
   getGuildEventSettings,
@@ -13,7 +12,7 @@ import { consumeUsedInvite } from '../lib/invite-cache.js';
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberAdd })
 export class UserEvent extends Listener {
   public override async run(member: GuildMember) {
-    if (!getEnv().isMain || member.user.bot) {
+    if (member.user.bot) {
       return;
     }
 

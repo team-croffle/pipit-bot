@@ -3,7 +3,6 @@ import { Listener } from '@sapphire/framework';
 import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 
-import { getEnv } from '../lib/env.js';
 import { refreshGuildInvites } from '../lib/invite-cache.js';
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -16,10 +15,6 @@ export class UserEvent extends Listener {
     this.printBanner();
     this.printStoreDebugInformation();
 
-    if (!getEnv().isMain) {
-      return;
-    }
-
     for (const guild of this.container.client.guilds.cache.values()) {
       await refreshGuildInvites(guild);
     }
@@ -29,13 +24,12 @@ export class UserEvent extends Listener {
     const success = green('+');
     const llc = dev ? magentaBright : white;
     const blc = dev ? magenta : blue;
-    const { role } = getEnv();
     const pad = ' '.repeat(7);
 
     this.container.logger.info(
       String.raw`
 ${llc('')} ${pad}${blc('pipit-hub')} ${blc('1.0.0')}
-${llc('')} ${pad}[${success}] Gateway  ROLE=${llc(role)}
+${llc('')} ${pad}[${success}] Gateway
 ${dev ? ` ${pad}${blc('<')}${llc('/')}${blc('>')} ${llc('DEVELOPMENT MODE')}` : ''}
 		`.trim(),
     );

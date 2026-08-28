@@ -2,7 +2,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import { Events, type GuildMember, type PartialGuildMember } from 'discord.js';
 
-import { getEnv } from '../lib/env.js';
 import {
   formatTemplate,
   getGuildEventSettings,
@@ -12,7 +11,7 @@ import {
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberRemove })
 export class UserEvent extends Listener {
   public override async run(member: GuildMember | PartialGuildMember) {
-    if (!getEnv().isMain || member.user?.bot) {
+    if (member.user?.bot) {
       return;
     }
 

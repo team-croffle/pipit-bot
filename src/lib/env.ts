@@ -4,8 +4,6 @@ import { setup } from '@skyra/env-utilities';
 
 import { rootDir } from './constants.js';
 
-export type BotRole = 'main' | 'edge';
-
 export type DashboardDevRole = 'viewer' | 'admin';
 
 export interface OidcConfig {
@@ -18,7 +16,6 @@ export interface OidcConfig {
 
 export interface EnvConfig {
   botToken: string;
-  role: BotRole;
   streamRoot: string;
   musicWorkerUrl: string;
   pipitApiUrl: string;
@@ -29,17 +26,6 @@ export interface EnvConfig {
   dashboardDevRole: DashboardDevRole;
   oidc: OidcConfig | null;
   nodeEnv: string;
-  isMain: boolean;
-  isEdge: boolean;
-}
-
-function parseRole(raw: string | undefined): BotRole {
-  const value = (raw ?? 'main').toLowerCase();
-  if (value === 'main' || value === 'edge') {
-    return value;
-  }
-
-  throw new Error(`Invalid ROLE="${raw}". Expected "main" or "edge".`);
 }
 
 function parsePort(raw: string | undefined, fallback: number): number {
@@ -132,12 +118,10 @@ export function loadEnv(): EnvConfig {
     '',
   );
 
-  const role = parseRole(process.env.ROLE);
   const nodeEnv = process.env.NODE_ENV ?? 'development';
 
   return {
     botToken,
-    role,
     streamRoot,
     musicWorkerUrl: musicWorkerUrl.replace(/\/$/, ''),
     pipitApiUrl,
@@ -148,8 +132,6 @@ export function loadEnv(): EnvConfig {
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
     oidc: parseOidc(nodeEnv),
     nodeEnv,
-    isMain: role === 'main',
-    isEdge: role === 'edge',
   };
 }
 
@@ -161,10 +143,6 @@ export function getEnv(): EnvConfig {
   }
 
   return cached;
-}
-
-export function setEnvConfig(config: EnvConfig): void {
-  cached = config;
 }
 
 declare module '@sapphire/pieces' {

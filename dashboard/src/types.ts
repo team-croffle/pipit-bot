@@ -59,7 +59,6 @@ export interface DiscordRole {
 export interface BotRuntimeConfig {
   prefix: string;
   musicChannelIds: string[];
-  role?: string;
 }
 
 export interface PlaybackCurrentTrack {

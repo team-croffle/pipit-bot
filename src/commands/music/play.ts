@@ -11,7 +11,7 @@ import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
 @ApplyOptions<Command.Options>({
   description: 'Plays music in your current voice channel',
   aliases: ['p'],
-  preconditions: ['MainOnly', 'MusicChannel'],
+  preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args) {

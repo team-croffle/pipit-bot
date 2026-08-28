@@ -6,7 +6,7 @@ import type { Message } from 'discord.js';
 @ApplyOptions<Command.Options>({
   description: 'Resume the paused track',
   aliases: ['unpause'],
-  preconditions: ['MainOnly', 'MusicChannel'],
+  preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message): Promise<void> {

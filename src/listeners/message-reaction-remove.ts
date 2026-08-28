@@ -8,7 +8,6 @@ import {
   type User,
 } from 'discord.js';
 
-import { getEnv } from '../lib/env.js';
 import { getGuildEventSettings } from '../lib/guild-event-settings.js';
 import { reactionMatchesMapping } from '../lib/reaction-roles.js';
 
@@ -18,10 +17,6 @@ export class UserEvent extends Listener {
     reaction: MessageReaction | PartialMessageReaction,
     user: User | PartialUser,
   ) {
-    if (!getEnv().isMain) {
-      return;
-    }
-
     const fullReaction = reaction.partial ? await reaction.fetch() : reaction;
     const fullUser = user.partial ? await user.fetch() : user;
     if (fullUser.bot) {

@@ -8,7 +8,7 @@ import { LocalFileExtractor } from './music/local-file-extractor.js';
 import { getRuntimeConfig } from './runtime-config.js';
 
 export class CustomClient extends SapphireClient {
-  public player: Player | null = null;
+  public readonly player: Player;
 
   public override fetchPrefix: SapphirePrefixHook = () => {
     return getRuntimeConfig().prefix;
@@ -35,32 +35,26 @@ export class CustomClient extends SapphireClient {
       loadMessageCommandListeners: true,
     });
 
-    if (config.isMain) {
-      this.player = new Player(this as unknown as ConstructorParameters<typeof Player>[0], {
-        skipFFmpeg: true,
-        connectionTimeout: 30000,
-        probeTimeout: 0,
-      });
+    this.player = new Player(this as unknown as ConstructorParameters<typeof Player>[0], {
+      skipFFmpeg: true,
+      connectionTimeout: 30000,
+      probeTimeout: 0,
+    });
 
-      this.player.events.on('playerError', (_, error) => {
-        container.logger.error('[player]', error);
-      });
+    this.player.events.on('playerError', (_, error) => {
+      container.logger.error('[player]', error);
+    });
 
-      this.player.events.on('error', (_, error) => {
-        container.logger.error('[queue]', error);
-      });
-    }
+    this.player.events.on('error', (_, error) => {
+      container.logger.error('[queue]', error);
+    });
   }
 
   public override async login(token?: string) {
-    if (this.config.isMain && this.player) {
-      await this.player.extractors.register(LocalFileExtractor, {});
-      container.logger.info(
-        `Loaded ${this.player.extractors.store.size} extractors: ${[...this.player.extractors.store.keys()].join(', ')}`,
-      );
-    } else {
-      container.logger.info(`Running in ROLE=${this.config.role}; music player disabled.`);
-    }
+    await this.player.extractors.register(LocalFileExtractor, {});
+    container.logger.info(
+      `Loaded ${this.player.extractors.store.size} extractors: ${[...this.player.extractors.store.keys()].join(', ')}`,
+    );
 
     return super.login(token ?? this.config.botToken);
   }

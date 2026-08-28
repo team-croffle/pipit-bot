@@ -2,7 +2,6 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 import type { Message } from 'discord.js';
 
-import { getEnv } from '../lib/env.js';
 import { getRuntimeConfig } from '../lib/runtime-config.js';
 
 const MAX_MESSAGE_LENGTH = 1900;
@@ -23,12 +22,11 @@ export class UserCommand extends Command {
   private buildHelp(): string {
     const prefix = getRuntimeConfig().prefix;
     const prefixText = typeof prefix === 'string' ? prefix : '!';
-    const { isMain, isEdge } = getEnv();
 
     const lines = ['**Commands**'];
-    const commands = [...this.container.stores.get('commands').values()]
-      .filter((command) => this.isAvailable(command, isMain, isEdge))
-      .toSorted((a, b) => a.name.localeCompare(b.name));
+    const commands = [...this.container.stores.get('commands').values()].toSorted((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     for (const command of commands) {
       const aliases =
@@ -39,22 +37,6 @@ export class UserCommand extends Command {
     }
 
     return joinWithinLimit(lines);
-  }
-
-  private isAvailable(command: Command, isMain: boolean, isEdge: boolean): boolean {
-    const names = command.preconditions.entries.flatMap((entry) =>
-      'name' in entry && typeof entry.name === 'string' ? [entry.name] : [],
-    );
-
-    if (isMain && names.includes('EdgeOnly')) {
-      return false;
-    }
-
-    if (isEdge && names.includes('MainOnly')) {
-      return false;
-    }
-
-    return true;
   }
 }
 

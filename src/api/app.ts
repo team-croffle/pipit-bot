@@ -164,9 +164,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json(identity);
   });
 
-  app.get('/api/config', dashboardViewer, (c) =>
-    c.json({ ...getRuntimeConfig(), role: config.role }),
-  );
+  app.get('/api/config', dashboardViewer, (c) => c.json(getRuntimeConfig()));
 
   app.put('/api/config', dashboardViewer, dashboardWrite, async (c) => {
     const body = await c.req.json<{ prefix?: string; musicChannelIds?: string[] }>();

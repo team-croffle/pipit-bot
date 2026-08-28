@@ -19,7 +19,7 @@ const main = async () => {
       },
     });
 
-    container.logger.info(`Logging in as ROLE=${env.role}`);
+    container.logger.info('Logging in');
     await client.login();
     container.logger.info('Logged in');
   } catch (error) {

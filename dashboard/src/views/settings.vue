@@ -59,7 +59,6 @@
       botConfig.value = {
         prefix: configBody.prefix || '!',
         musicChannelIds: configBody.musicChannelIds ?? [],
-        role: configBody.role,
       };
       channels.value = channelBody.channels;
       roles.value = roleBody.roles;
@@ -127,7 +126,6 @@
       botConfig.value = {
         prefix: savedConfig.prefix || '!',
         musicChannelIds: savedConfig.musicChannelIds ?? [],
-        role: savedConfig.role ?? botConfig.value.role,
       };
       if (settings.value.joinMessages.length === 0) {
         settings.value.joinMessages = [''];

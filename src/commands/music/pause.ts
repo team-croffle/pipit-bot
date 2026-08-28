@@ -5,7 +5,7 @@ import type { Message } from 'discord.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Pause the currently playing track',
-  preconditions: ['MainOnly', 'MusicChannel'],
+  preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
   public override async messageRun(message: Message): Promise<void> {
