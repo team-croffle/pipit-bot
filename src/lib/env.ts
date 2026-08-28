@@ -21,6 +21,7 @@ export interface EnvConfig {
   pipitApiUrl: string;
   apiPort: number;
   internalToken: string;
+  githubWebhookSecret: string | null;
   dashboardAdminGroups: string[];
   dashboardDevUser: string;
   dashboardDevRole: DashboardDevRole;
@@ -127,6 +128,7 @@ export function loadEnv(): EnvConfig {
     pipitApiUrl,
     apiPort,
     internalToken,
+    githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET?.trim() || null,
     dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
     dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),

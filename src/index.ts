@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 
 import { startApiServer } from './api/server.js';
 import { CustomClient } from './lib/client.js';
+import { loadGithubNotifySettings } from './lib/github/settings.js';
 import { loadGuildEventSettings } from './lib/guild-event-settings.js';
 import { env } from './lib/setup.js';
 
@@ -10,6 +11,7 @@ const client = new CustomClient(env);
 const main = async () => {
   try {
     await loadGuildEventSettings();
+    await loadGithubNotifySettings();
     startApiServer(env, {
       info(message: string) {
         container.logger.info(message);

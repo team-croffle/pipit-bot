@@ -24,6 +24,7 @@ BOT_TOKEN=
 STREAM_ROOT=/streams
 API_PORT=3000
 INTERNAL_TOKEN=
+GITHUB_WEBHOOK_SECRET=
 MUSIC_WORKER_URL=http://music-worker:8080
 PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
@@ -40,7 +41,22 @@ Production dashboard auth is **Authentik OIDC** (Authorization Code + PKCE). The
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback).
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+
+## GitHub notifications
+
+PR and issue activity is delivered by a **GitHub App**. Register one app, install it on the repositories you want, and every installed repository reports to the same endpoint.
+
+| App setting            | Value                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| Webhook URL            | `https://<public-host>/webhooks/github`                                               |
+| Webhook secret         | same value as `GITHUB_WEBHOOK_SECRET`                                                 |
+| Repository permissions | `Pull requests: Read-only`, `Issues: Read-only`                                       |
+| Subscribe to events    | Pull request, Pull request review, Pull request review comment, Issues, Issue comment |
+
+`POST /webhooks/github` is the only route meant to be reachable from the internet; keep `/api/*` and `/internal/*` off the public host. Every delivery must carry a valid `X-Hub-Signature-256`, and the endpoint answers `404` while `GITHUB_WEBHOOK_SECRET` is unset.
+
+Routing lives in `data/github-notify.json`: a default channel plus per-repository overrides for the channel and which event types to report, and a GitHub-login-to-Discord-user map used for mentions. Unmapped logins appear as plain text. The feature ships disabled (`enabled: false`).
 
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
 

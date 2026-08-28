@@ -10,6 +10,11 @@ import { rootDir } from '../lib/constants.js';
 import { getConfiguredGuild, listAssignableRoles, listTextChannels } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
 import {
+  getGithubNotifySettings,
+  parseGithubNotifySettings,
+  saveGithubNotifySettings,
+} from '../lib/github/settings.js';
+import {
   getGuildEventSettings,
   parseGuildEventSettings,
   saveGuildEventSettings,
@@ -20,6 +25,7 @@ import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './aut
 import { buildLoginRedirect, buildLogoutRedirect, exchangeAuthorizationCode } from './auth/oidc.js';
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from './auth/session.js';
 import type { ApiVariables } from './context.js';
+import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
 import { mountMusicRoutes } from './routes/music.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
@@ -197,6 +203,18 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     }
   });
 
+  app.get('/api/github-notify', dashboardViewer, (c) => c.json(getGithubNotifySettings()));
+
+  app.put('/api/github-notify', dashboardViewer, dashboardWrite, async (c) => {
+    try {
+      const body = parseGithubNotifySettings(await c.req.json());
+      return c.json(await saveGithubNotifySettings(body));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Invalid settings';
+      return c.json({ error: message }, 400);
+    }
+  });
+
   app.get('/api/discord/channels', dashboardViewer, (c) => {
     const guild = getConfiguredGuild();
     if (!guild) {
@@ -215,6 +233,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json({ roles: listAssignableRoles(guild) });
   });
 
+  mountGithubWebhookRoutes(app);
   mountMusicRoutes(app);
 
   app.get('*', async (c) => {
@@ -223,7 +242,9 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
       pathname === '/api' ||
       pathname.startsWith('/api/') ||
       pathname === '/internal' ||
-      pathname.startsWith('/internal/')
+      pathname.startsWith('/internal/') ||
+      pathname === '/webhooks' ||
+      pathname.startsWith('/webhooks/')
     ) {
       return c.json({ error: 'Not found' }, 404);
     }
