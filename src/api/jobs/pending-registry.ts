@@ -53,9 +53,7 @@ export function getJob(jobId: string): JobRecord | undefined {
 }
 
 export function listJobs(limit = 50): JobRecord[] {
-  return [...jobs.values()]
-    .toSorted((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, limit);
+  return [...jobs.values()].toSorted((a, b) => b.updatedAt - a.updatedAt).slice(0, limit);
 }
 
 export function resolveReady(jobId: string, track: TrackMeta): JobRecord {
