@@ -1,8 +1,29 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
+  import { Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
+  import { onMounted, ref } from 'vue';
 
-  import { fetchJson, putJson } from '../api';
-  import { groupChannels } from '../channels';
+  import { fetchJson, putJson } from '@/api';
+  import ChannelSelect from '@/components/common/channel-select.vue';
+  import PageHeader from '@/components/common/page-header.vue';
+  import StateBlock from '@/components/common/state-block.vue';
+  import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+  import { Badge } from '@/components/ui/badge';
+  import { Button } from '@/components/ui/button';
+  import {
+    Card,
+    CardAction,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+  } from '@/components/ui/card';
+  import { Checkbox } from '@/components/ui/checkbox';
+  import { Input } from '@/components/ui/input';
+  import { Label } from '@/components/ui/label';
+  import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+  import { Separator } from '@/components/ui/separator';
+  import { Switch } from '@/components/ui/switch';
+  import { Textarea } from '@/components/ui/textarea';
   import type {
     DashboardIdentity,
     DiscordChannel,
@@ -13,7 +34,7 @@
     GithubEventToggles,
     GithubNotifySettings,
     GithubRepoRule,
-  } from '../types';
+  } from '@/types';
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
@@ -35,14 +56,14 @@
   ];
 
   const eventLabels: { key: keyof GithubEventToggles; label: string }[] = [
-    { key: 'pullRequestOpened', label: 'PR opened' },
-    { key: 'pullRequestUpdated', label: 'PR updated (new commits)' },
-    { key: 'pullRequestMerged', label: 'PR merged' },
-    { key: 'pullRequestAssigned', label: 'PR assigned / review requested' },
-    { key: 'issueOpened', label: 'Issue opened' },
-    { key: 'issueAssigned', label: 'Issue assigned' },
-    { key: 'reviewSubmitted', label: 'Review submitted' },
-    { key: 'commentCreated', label: 'Comment created' },
+    { key: 'pullRequestOpened', label: 'PR 등록' },
+    { key: 'pullRequestUpdated', label: 'PR 업데이트 (새 커밋 · rebase)' },
+    { key: 'pullRequestMerged', label: 'PR 머지' },
+    { key: 'pullRequestAssigned', label: 'PR 리뷰어 / 담당자 배정' },
+    { key: 'issueOpened', label: 'Issue 등록' },
+    { key: 'issueAssigned', label: 'Issue 담당자 배정' },
+    { key: 'reviewSubmitted', label: 'PR 리뷰 제출' },
+    { key: 'commentCreated', label: '코멘트 작성' },
   ];
 
   function emptyToggles(): GithubEventToggles {
@@ -68,20 +89,11 @@
     accounts: [],
   });
   const channels = ref<DiscordChannel[]>([]);
-  const channelGroups = computed(() => groupChannels(channels.value));
   const deliveries = ref<GithubDelivery[]>([]);
   const members = ref<DiscordMember[]>([]);
   const error = ref('');
   const saved = ref('');
   const loading = ref(true);
-
-  const fieldClass =
-    'w-full rounded-xl border border-line bg-bg-elevated px-3 py-2.5 text-sm text-text outline-none transition focus:border-accent';
-  const labelClass = 'mb-1.5 block text-sm font-medium text-text';
-  const ghostBtnClass =
-    'rounded-lg border border-line bg-transparent px-3 py-2 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text disabled:opacity-55';
-  const cardClass =
-    'rounded-2xl border border-line-soft bg-panel p-4 shadow-[0_10px_30px_rgba(0,0,0,0.22)] sm:p-5';
 
   onMounted(async () => {
     try {
@@ -104,7 +116,7 @@
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : 'Failed to load settings';
+      error.value = cause instanceof Error ? cause.message : '설정을 불러오지 못했습니다.';
     } finally {
       loading.value = false;
     }
@@ -120,13 +132,13 @@
 
   // WHY: `events: null` means the repository inherits the defaults. Turning the
   // override on seeds it from the current defaults so nothing silently changes.
-  function toggleRepoOverride(index: number): void {
+  function toggleRepoOverride(index: number, on: boolean): void {
     const row = settings.value.repos[index];
     if (!row) {
       return;
     }
 
-    row.events = row.events ? null : { ...settings.value.events };
+    row.events = on ? { ...settings.value.events } : null;
   }
 
   function addAccountRow(): void {
@@ -149,12 +161,14 @@
     }
   }
 
-  function outcomeClass(outcome: GithubDelivery['outcome']): string {
+  function outcomeVariant(
+    outcome: GithubDelivery['outcome'],
+  ): 'default' | 'secondary' | 'destructive' {
     if (outcome === 'sent') {
-      return 'text-ok';
+      return 'default';
     }
 
-    return outcome === 'failed' ? 'text-bad' : 'text-warn';
+    return outcome === 'failed' ? 'destructive' : 'secondary';
   }
 
   function formatTime(at: string): string {
@@ -197,7 +211,7 @@
       .filter((row) => row.repo);
     const badRepo = repos.find((row) => !repoPattern.test(row.repo));
     if (badRepo) {
-      error.value = `"${badRepo.repo}" is not in owner/name form.`;
+      error.value = `"${badRepo.repo}" 은(는) owner/name 형식이 아닙니다.`;
       return;
     }
 
@@ -206,13 +220,13 @@
       .filter((row) => row.githubLogin || row.discordUserId);
     const incomplete = accounts.find((row) => !row.githubLogin || !row.discordUserId);
     if (incomplete) {
-      error.value = 'Every mapping needs a GitHub login and a Discord user.';
+      error.value = '모든 매핑에는 GitHub 계정과 디스코드 사용자가 필요합니다.';
       return;
     }
 
     const badLogin = accounts.find((row) => !loginPattern.test(row.githubLogin));
     if (badLogin) {
-      error.value = `"${badLogin.githubLogin}" is not a valid GitHub login.`;
+      error.value = `"${badLogin.githubLogin}" 은(는) 올바른 GitHub 계정이 아닙니다.`;
       return;
     }
 
@@ -233,294 +247,334 @@
         repos: result.repos ?? [],
         accounts: result.accounts ?? [],
       };
-      saved.value = 'Saved.';
+      saved.value = '저장했습니다.';
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Failed to save';
+      error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
     }
   }
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <p
-      v-if="readOnly"
-      class="rounded-xl border border-line-soft bg-readonly px-4 py-3 text-sm text-muted"
+  <div class="flex flex-col gap-5">
+    <PageHeader
+      title="GitHub 리마인더"
+      description="GitHub App이 보낸 PR·이슈 활동을 디스코드 채널로 전달합니다"
     >
-      View only — settings cannot be changed.
+      <template #actions>
+        <Badge :variant="settings.enabled ? 'default' : 'secondary'">
+          {{ settings.enabled ? '활성' : '비활성' }}
+        </Badge>
+      </template>
+    </PageHeader>
+
+    <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
+      읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
     </p>
-    <p v-if="error" class="text-sm text-bad">{{ error }}</p>
-    <p v-if="saved" class="text-sm text-muted">{{ saved }}</p>
-    <p v-if="loading" class="text-sm text-muted">Loading…</p>
 
-    <section v-if="!loading" :class="cardClass">
-      <h2 class="mb-3 mt-0 text-base font-semibold">Notifications</h2>
-      <p class="mb-4 text-sm text-muted">
-        Pull request and issue activity from the GitHub App is posted to Discord. Deliveries are
-        only accepted while the webhook secret is configured on the server.
-      </p>
-      <label class="mb-4 flex items-center gap-2 text-sm">
-        <input
-          v-model="settings.enabled"
-          type="checkbox"
-          class="accent-accent"
-          :disabled="readOnly"
-        />
-        Enable notifications
-      </label>
-      <div>
-        <label for="gh-channel" :class="labelClass">Default channel</label>
-        <select
-          id="gh-channel"
-          v-model="settings.channelId"
-          :class="fieldClass"
-          :disabled="readOnly"
-        >
-          <option :value="null">Not set</option>
-          <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
-            <option
-              v-for="channel in group.channels"
-              :key="channel.id"
-              :value="channel.id"
-              :disabled="!channel.canPost"
+    <StateBlock :loading="loading" :error="loading ? '' : error && !saved ? error : ''">
+      <div class="flex flex-col gap-5">
+        <Alert v-if="error" variant="destructive">
+          <AlertTitle>저장하지 못했습니다</AlertTitle>
+          <AlertDescription>{{ error }}</AlertDescription>
+        </Alert>
+        <Alert v-else-if="saved">
+          <AlertDescription>{{ saved }}</AlertDescription>
+        </Alert>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">알림</CardTitle>
+            <CardDescription>
+              웹훅 시크릿이 서버에 설정되어 있는 동안에만 이벤트를 받습니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-4">
+            <div class="flex items-center justify-between gap-4">
+              <Label for="gh-enabled" class="flex-col items-start gap-1">
+                <span>알림 사용</span>
+                <span class="text-muted-foreground text-xs font-normal">
+                  끄면 모든 저장소의 알림이 즉시 중지됩니다
+                </span>
+              </Label>
+              <Switch id="gh-enabled" v-model="settings.enabled" :disabled="readOnly" />
+            </div>
+            <Separator />
+            <div class="flex flex-col gap-1.5">
+              <Label for="gh-channel">기본 채널</Label>
+              <ChannelSelect
+                id="gh-channel"
+                v-model="settings.channelId"
+                :channels="channels"
+                placeholder="지정 안 함"
+                :placeholder-value="null"
+                :disabled="readOnly"
+              />
+              <p class="text-muted-foreground text-xs">
+                저장소별 지정이 없으면 이 채널로 보냅니다. 카테고리가 함께 표시되어 이름이 같은
+                채널도 구분됩니다.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">기본 이벤트</CardTitle>
+            <CardDescription>
+              아래에서 저장소가 따로 지정하지 않는 한 모든 저장소에 적용됩니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div v-for="event in eventLabels" :key="event.key" class="flex items-center gap-2.5">
+                <Checkbox
+                  :id="`ev-${event.key}`"
+                  v-model="settings.events[event.key]"
+                  :disabled="readOnly"
+                />
+                <Label :for="`ev-${event.key}`" class="font-normal">{{ event.label }}</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">메시지 템플릿</CardTitle>
+            <CardDescription>
+              모든 알림이 사용할 기본 문구입니다. 이벤트를 체크하지 않으면 이 기본값을 따릅니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1.5">
+              <Label for="gh-template">기본 템플릿</Label>
+              <Textarea
+                id="gh-template"
+                v-model="settings.template"
+                rows="3"
+                class="font-mono"
+                :disabled="readOnly"
+              />
+            </div>
+
+            <details class="bg-muted/40 rounded-lg border px-3 py-2">
+              <summary class="text-muted-foreground cursor-pointer text-sm">
+                사용 가능한 변수
+              </summary>
+              <div class="text-muted-foreground mt-3 flex flex-col gap-2 text-sm">
+                <p class="font-mono text-xs">
+                  <span v-for="name in templateVariables" :key="name" class="mr-2">
+                    {{ '{' + name + '}' }}
+                  </span>
+                </p>
+                <p>
+                  <code>{name|있을 때|없을 때}</code> 형식으로 값 유무에 따라 문구를 바꿀 수
+                  있습니다. 첫 번째 분기는 값 뒤에 붙고, 안에 <code>{}</code> 를 넣으면 그 자리에
+                  값이 들어갑니다. 두 번째 분기는 값이 없을 때 전체를 대체합니다.
+                </p>
+                <p>
+                  예 — <code>{reviewers|: requested|updated} by {assignees}</code> 는 리뷰어가
+                  있으면 <em>@reviewer: requested by @author</em>, 없으면
+                  <em>updated by @author</em> 가 됩니다.
+                </p>
+              </div>
+            </details>
+
+            <div class="flex flex-col gap-3">
+              <div v-for="event in eventLabels" :key="event.key" class="flex flex-col gap-1.5">
+                <div class="flex items-center gap-2.5">
+                  <Checkbox
+                    :id="`tpl-${event.key}`"
+                    :model-value="settings.eventTemplates[event.key] !== undefined"
+                    :disabled="readOnly"
+                    @update:model-value="toggleOverride(event.key, $event === true)"
+                  />
+                  <Label :for="`tpl-${event.key}`" class="font-normal">
+                    {{ event.label }} 문구 따로 지정
+                  </Label>
+                </div>
+                <Textarea
+                  v-if="settings.eventTemplates[event.key] !== undefined"
+                  v-model="settings.eventTemplates[event.key]"
+                  rows="2"
+                  class="font-mono"
+                  :disabled="readOnly"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">저장소</CardTitle>
+            <CardDescription
+              >여기 없는 저장소는 기본 채널과 기본 이벤트를 사용합니다.</CardDescription
             >
-              {{ channel.name }}{{ channel.canPost ? '' : ' — bot cannot post here' }}
-            </option>
-          </optgroup>
-        </select>
-      </div>
-    </section>
+            <CardAction>
+              <Button variant="outline" size="sm" :disabled="readOnly" @click="addRepoRow">
+                <Plus />
+                추가
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-3">
+            <p v-if="settings.repos.length === 0" class="text-muted-foreground text-sm">
+              개별 설정된 저장소가 없습니다.
+            </p>
+            <div
+              v-for="(row, index) in settings.repos"
+              :key="`repo-${index}`"
+              class="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3"
+            >
+              <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <Input v-model="row.repo" :disabled="readOnly" placeholder="owner/name" />
+                <ChannelSelect
+                  v-model="row.channelId"
+                  :channels="channels"
+                  placeholder="기본 채널 사용"
+                  :placeholder-value="null"
+                  :disabled="readOnly"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  :disabled="readOnly"
+                  aria-label="저장소 삭제"
+                  @click="removeRepoRow(index)"
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <Checkbox
+                  :id="`repo-ov-${index}`"
+                  :model-value="row.events !== null"
+                  :disabled="readOnly"
+                  @update:model-value="toggleRepoOverride(index, $event === true)"
+                />
+                <Label :for="`repo-ov-${index}`" class="font-normal">
+                  이 저장소에서 이벤트 따로 지정
+                </Label>
+              </div>
+              <div v-if="row.events" class="grid gap-3 border-t pt-3 sm:grid-cols-2">
+                <div
+                  v-for="event in eventLabels"
+                  :key="event.key"
+                  class="flex items-center gap-2.5"
+                >
+                  <Checkbox
+                    :id="`repo-${index}-${event.key}`"
+                    v-model="row.events[event.key]"
+                    :disabled="readOnly"
+                  />
+                  <Label :for="`repo-${index}-${event.key}`" class="font-normal">
+                    {{ event.label }}
+                  </Label>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-    <section v-if="!loading" :class="cardClass">
-      <h2 class="mb-3 mt-0 text-base font-semibold">Default events</h2>
-      <p class="mb-4 text-sm text-muted">
-        Applies to every watched repository unless the repository overrides it below.
-      </p>
-      <div class="flex flex-wrap gap-3">
-        <label
-          v-for="event in eventLabels"
-          :key="event.key"
-          class="flex items-center gap-2 text-sm"
-        >
-          <input
-            v-model="settings.events[event.key]"
-            type="checkbox"
-            class="accent-accent"
-            :disabled="readOnly"
-          />
-          {{ event.label }}
-        </label>
-      </div>
-    </section>
-
-    <section v-if="!loading" :class="cardClass">
-      <h2 class="mb-3 mt-0 text-base font-semibold">Message template</h2>
-      <p class="mb-4 text-sm text-muted">
-        The wording every notification uses. Leave an event unchecked to follow this default.
-      </p>
-
-      <div class="mb-4">
-        <label for="gh-template" :class="labelClass">Default template</label>
-        <textarea
-          id="gh-template"
-          v-model="settings.template"
-          rows="3"
-          :class="[fieldClass, 'font-mono leading-relaxed']"
-          :disabled="readOnly"
-        ></textarea>
-      </div>
-
-      <details class="mb-4 rounded-xl border border-line-soft bg-bg-elevated px-3 py-2">
-        <summary class="cursor-pointer text-sm text-muted">Variables</summary>
-        <div class="mt-3 flex flex-col gap-2 text-sm text-muted">
-          <p class="m-0">
-            <code v-for="name in templateVariables" :key="name" class="mr-2">{{
-              '{' + name + '}'
-            }}</code>
-          </p>
-          <p class="m-0">
-            Write <code>{name|when set|when empty}</code> to change the wording depending on whether
-            a value exists. The first branch is appended after the value; put <code>{}</code> in it
-            to place the value somewhere else. The second branch replaces the whole thing when the
-            value is empty.
-          </p>
-          <p class="m-0">
-            Example — <code>{reviewers|: requested|updated} by {assignees}</code> reads
-            <em>@reviewer: requested by @author</em> with a reviewer, and
-            <em>updated by @author</em> without one.
-          </p>
-        </div>
-      </details>
-
-      <div class="flex flex-col gap-3">
-        <div v-for="event in eventLabels" :key="event.key" class="flex flex-col gap-1.5">
-          <label class="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              class="accent-accent"
-              :checked="settings.eventTemplates[event.key] !== undefined"
-              :disabled="readOnly"
-              @change="toggleOverride(event.key, ($event.target as HTMLInputElement).checked)"
-            />
-            Custom wording for {{ event.label }}
-          </label>
-          <textarea
-            v-if="settings.eventTemplates[event.key] !== undefined"
-            v-model="settings.eventTemplates[event.key]"
-            rows="2"
-            :class="[fieldClass, 'font-mono leading-relaxed']"
-            :disabled="readOnly"
-          ></textarea>
-        </div>
-      </div>
-    </section>
-
-    <section v-if="!loading" :class="cardClass">
-      <h2 class="mb-3 mt-0 text-base font-semibold">Repositories</h2>
-      <p class="mb-4 text-sm text-muted">
-        Repositories not listed here use the default channel and events. Listing one lets it post
-        somewhere else, or report a different set of events.
-      </p>
-      <div
-        v-for="(row, index) in settings.repos"
-        :key="`repo-${index}`"
-        class="mb-3 rounded-xl border border-line-soft bg-bg-elevated p-3"
-      >
-        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto]">
-          <input
-            v-model="row.repo"
-            :class="fieldClass"
-            :disabled="readOnly"
-            placeholder="owner/name"
-          />
-          <select v-model="row.channelId" :class="fieldClass" :disabled="readOnly">
-            <option :value="null">Default channel</option>
-            <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
-              <option
-                v-for="channel in group.channels"
-                :key="channel.id"
-                :value="channel.id"
-                :disabled="!channel.canPost"
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">계정 매핑</CardTitle>
+            <CardDescription>
+              연결된 사람은 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은 일반 텍스트로
+              표시됩니다.
+            </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
+                <Plus />
+                추가
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent class="flex flex-col gap-2">
+            <p v-if="settings.accounts.length === 0" class="text-muted-foreground text-sm">
+              연결된 계정이 없습니다.
+            </p>
+            <div
+              v-for="(row, index) in settings.accounts"
+              :key="`account-${index}`"
+              class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+            >
+              <Input
+                v-model="row.githubLogin"
+                :disabled="readOnly"
+                placeholder="GitHub 계정"
+                class="font-mono"
+              />
+              <NativeSelect v-model="row.discordUserId" :disabled="readOnly" class="w-full">
+                <NativeSelectOption value="">디스코드 사용자</NativeSelectOption>
+                <NativeSelectOption v-for="member in members" :key="member.id" :value="member.id">
+                  {{ member.name }}
+                </NativeSelectOption>
+              </NativeSelect>
+              <Button
+                variant="ghost"
+                size="icon"
+                :disabled="readOnly"
+                aria-label="매핑 삭제"
+                @click="removeAccountRow(index)"
               >
-                {{ channel.name }}{{ channel.canPost ? '' : ' — bot cannot post here' }}
-              </option>
-            </optgroup>
-          </select>
-          <label class="flex items-center gap-2 whitespace-nowrap text-sm">
-            <input
-              type="checkbox"
-              class="accent-accent"
-              :checked="row.events === null"
-              :disabled="readOnly"
-              @change="toggleRepoOverride(index)"
-            />
-            Default events
-          </label>
-          <button
-            :class="ghostBtnClass"
-            type="button"
-            :disabled="readOnly"
-            @click="removeRepoRow(index)"
-          >
-            Remove
-          </button>
-        </div>
-        <div v-if="row.events" class="mt-3 flex flex-wrap gap-3 border-t border-line-soft pt-3">
-          <label
-            v-for="event in eventLabels"
-            :key="event.key"
-            class="flex items-center gap-2 text-sm"
-          >
-            <input
-              v-model="row.events[event.key]"
-              type="checkbox"
-              class="accent-accent"
-              :disabled="readOnly"
-            />
-            {{ event.label }}
-          </label>
-        </div>
-      </div>
-      <button :class="ghostBtnClass" type="button" :disabled="readOnly" @click="addRepoRow">
-        Add repository
-      </button>
-    </section>
+                <Trash2 />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-    <section v-if="!loading" :class="cardClass">
-      <h2 class="mb-3 mt-0 text-base font-semibold">Account mapping</h2>
-      <p class="mb-4 text-sm text-muted">
-        Mapped people are mentioned in the notification. Unmapped GitHub logins appear as plain
-        text.
-      </p>
-      <div
-        v-for="(row, index) in settings.accounts"
-        :key="`account-${index}`"
-        class="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]"
-      >
-        <input
-          v-model="row.githubLogin"
-          :class="fieldClass"
-          :disabled="readOnly"
-          placeholder="GitHub login"
-        />
-        <select v-model="row.discordUserId" :class="fieldClass" :disabled="readOnly">
-          <option value="">Discord user</option>
-          <option v-for="member in members" :key="member.id" :value="member.id">
-            {{ member.name }}
-          </option>
-        </select>
-        <button
-          :class="ghostBtnClass"
-          type="button"
-          :disabled="readOnly"
-          @click="removeAccountRow(index)"
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">최근 발송</CardTitle>
+            <CardDescription>
+              봇이 처리한 최근 20건과 그 결과입니다. 봇을 재시작하면 비워집니다.
+            </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" @click="refreshDeliveries">
+                <RefreshCw />
+                새로고침
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <StateBlock
+              :empty="deliveries.length === 0"
+              empty-text="아직 없습니다 — 봇이 시작된 뒤 도착한 이벤트가 없습니다."
+            >
+              <ul class="flex list-none flex-col gap-2 p-0">
+                <li
+                  v-for="(delivery, index) in deliveries"
+                  :key="`${delivery.at}-${index}`"
+                  class="bg-muted/40 rounded-lg border px-3 py-2 text-sm"
+                >
+                  <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <Badge :variant="outcomeVariant(delivery.outcome)" class="shrink-0">
+                      {{ delivery.outcome }}
+                    </Badge>
+                    <span>{{ delivery.event }}</span>
+                    <code class="text-muted-foreground font-mono text-xs">{{ delivery.repo }}</code>
+                    <span class="text-muted-foreground ml-auto shrink-0 text-xs">
+                      {{ formatTime(delivery.at) }}
+                    </span>
+                  </div>
+                  <p v-if="delivery.detail" class="text-muted-foreground mt-1 text-xs">
+                    {{ delivery.detail }}
+                  </p>
+                </li>
+              </ul>
+            </StateBlock>
+          </CardContent>
+        </Card>
+
+        <!-- Long forms scroll well past the button, so it rides along at the bottom. -->
+        <div
+          class="bg-background/85 sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
         >
-          Remove
-        </button>
+          <Button :disabled="readOnly" @click="save">저장</Button>
+        </div>
       </div>
-      <button :class="ghostBtnClass" type="button" :disabled="readOnly" @click="addAccountRow">
-        Add mapping
-      </button>
-    </section>
-
-    <section v-if="!loading" :class="cardClass">
-      <div class="mb-3 flex items-center justify-between gap-3">
-        <h2 class="m-0 text-base font-semibold">Recent deliveries</h2>
-        <button type="button" :class="ghostBtnClass" @click="refreshDeliveries">Refresh</button>
-      </div>
-      <p class="mb-4 text-sm text-muted">
-        The last 20 events this bot handled, and what became of each. Cleared when the bot restarts.
-      </p>
-      <p v-if="deliveries.length === 0" class="m-0 text-sm text-muted">
-        Nothing yet — no event has arrived since the bot started.
-      </p>
-      <ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
-        <li
-          v-for="(delivery, index) in deliveries"
-          :key="`${delivery.at}-${index}`"
-          class="rounded-xl border border-line-soft bg-bg-elevated px-3 py-2 text-sm"
-        >
-          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span :class="['font-medium', outcomeClass(delivery.outcome)]">
-              {{ delivery.outcome }}
-            </span>
-            <span class="text-text">{{ delivery.event }}</span>
-            <code class="text-muted">{{ delivery.repo }}</code>
-            <span class="ml-auto text-xs text-muted">{{ formatTime(delivery.at) }}</span>
-          </div>
-          <p v-if="delivery.detail" class="mb-0 mt-1 text-sm text-muted">{{ delivery.detail }}</p>
-        </li>
-      </ul>
-    </section>
-
-    <div>
-      <button
-        type="button"
-        class="rounded-xl border border-accent/50 bg-accent-soft px-4 py-2.5 text-sm font-medium text-accent transition hover:bg-accent/20 disabled:opacity-55"
-        :disabled="readOnly || loading"
-        @click="save"
-      >
-        Save
-      </button>
-    </div>
+    </StateBlock>
   </div>
 </template>
