@@ -70,7 +70,7 @@
         "cases": {
           "kebabCase": true
         },
-        "ignore": ["\\.d\\.ts$"]
+        "ignore": ["\\.d\\.ts$", "dashboard/src/components/ui/**/*.vue"]
       }
     ],
     "unicorn/consistent-empty-array-spread": "error",
@@ -151,6 +151,14 @@
       "files": ["**/scripts/**/*.{ts,js}", "**/src/test/**/*.{ts,js}"],
       "rules": {
         "no-console": "off"
+      }
+    },
+    {
+      // Vendored shadcn-vue components: kept byte-identical to the upstream registry so
+      // `shadcn-vue add` keeps working. Upstream ships PascalCase filenames.
+      "files": ["**/dashboard/src/components/ui/**"],
+      "rules": {
+        "unicorn/filename-case": "off"
       }
     },
     {
