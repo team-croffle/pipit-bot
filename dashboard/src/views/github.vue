@@ -4,6 +4,7 @@
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
+  import MemberSelect from '@/components/common/member-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -98,16 +99,40 @@
   const channels = ref<DiscordChannel[]>([]);
   const deliveries = ref<GithubDelivery[]>([]);
   const members = ref<DiscordMember[]>([]);
+  const membersLoading = ref(false);
+  let membersRequested = false;
+
+  /**
+   * The guild member list is only filled by a bulk fetch on the bot side, so it is
+   * pulled the first time something actually needs it — opening the picker or adding
+   * a mapping — instead of on every visit to this page.
+   */
+  async function loadMembers(): Promise<void> {
+    if (membersRequested) {
+      return;
+    }
+
+    membersRequested = true;
+    membersLoading.value = true;
+    try {
+      const body = await fetchJson<{ members: DiscordMember[] }>('/api/discord/members');
+      members.value = body.members;
+    } catch {
+      // The picker says it has nothing; the rest of the page still works.
+      membersRequested = false;
+    } finally {
+      membersLoading.value = false;
+    }
+  }
   const error = ref('');
   const saved = ref('');
   const loading = ref(true);
 
   onMounted(async () => {
     try {
-      const [loaded, channelBody, memberBody] = await Promise.all([
+      const [loaded, channelBody] = await Promise.all([
         fetchJson<GithubNotifySettings>('/api/github-notify'),
         fetchJson<{ channels: DiscordChannel[] }>('/api/discord/channels'),
-        fetchJson<{ members: DiscordMember[] }>('/api/discord/members'),
       ]);
       settings.value = {
         ...loaded,
@@ -119,7 +144,11 @@
       fillDrafts();
       channels.value = channelBody.channels;
       await refreshDeliveries();
-      members.value = memberBody.members;
+      // Existing mappings only store an id, so the names behind them are fetched
+      // after the page is up rather than holding it back.
+      if (settings.value.accounts.length > 0) {
+        void loadMembers();
+      }
     } catch (cause) {
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
@@ -203,25 +232,14 @@
     row.events = on ? { ...settings.value.events } : null;
   }
 
-  // The mapping is driven from the member list rather than from free rows: every
-  // member is a line, and typing a login is what creates the mapping.
-  function loginFor(discordUserId: string): string {
-    return (
-      settings.value.accounts.find((row) => row.discordUserId === discordUserId)?.githubLogin ?? ''
-    );
+  function addAccountRow(): void {
+    void loadMembers();
+    settings.value.accounts = [...settings.value.accounts, { githubLogin: '', discordUserId: '' }];
   }
 
-  function setLogin(discordUserId: string, login: string): void {
-    const rest = settings.value.accounts.filter((row) => row.discordUserId !== discordUserId);
-    settings.value.accounts = login.trim()
-      ? [...rest, { discordUserId, githubLogin: login }]
-      : rest;
+  function removeAccountRow(index: number): void {
+    settings.value.accounts = settings.value.accounts.filter((_, item) => item !== index);
   }
-
-  function initials(name: string): string {
-    return name.slice(0, 2).toUpperCase();
-  }
-
   async function refreshDeliveries(): Promise<void> {
     try {
       const body = await fetchJson<{ deliveries: GithubDelivery[] }>(
@@ -532,7 +550,10 @@
                       </TableCell>
                     </TableRow>
                     <TableRow v-if="openRepos.has(index)" class="bg-muted/40 hover:bg-muted/40">
-                      <TableCell colspan="4" class="p-4">
+                      <TableCell
+                        colspan="4"
+                        class="p-4 has-[[role=checkbox]]:pr-4 *:[[role=checkbox]]:translate-y-0"
+                      >
                         <div class="flex flex-col gap-4">
                           <div class="grid gap-3 sm:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
@@ -624,47 +645,47 @@
           <CardHeader>
             <CardTitle class="text-base">계정 매핑</CardTitle>
             <CardDescription>
-              GitHub 계정을 적어두면 담당자 배정·리뷰 요청 알림에 그 멤버가 멘션됩니다. 비워두면
-              GitHub 계정이 일반 텍스트로 표시됩니다.
+              연결한 멤버는 담당자 배정·리뷰 요청 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은
+              일반 텍스트로 표시됩니다.
             </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
+                <Plus />
+                매핑 추가
+              </Button>
+            </CardAction>
           </CardHeader>
-          <CardContent>
-            <p v-if="members.length === 0" class="text-muted-foreground text-sm">
-              가져온 멤버가 없습니다.
+          <CardContent class="flex flex-col gap-2">
+            <p v-if="settings.accounts.length === 0" class="text-muted-foreground text-sm">
+              연결된 계정이 없습니다.
             </p>
-            <div v-else class="overflow-x-auto">
-              <Table class="min-w-120">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>디스코드 멤버</TableHead>
-                    <TableHead>GitHub 계정</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow v-for="member in members" :key="member.id">
-                    <TableCell>
-                      <span class="flex items-center gap-2.5">
-                        <span
-                          class="from-primary/70 to-primary/25 text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[0.7rem] font-semibold"
-                          aria-hidden="true"
-                        >
-                          {{ initials(member.name) }}
-                        </span>
-                        <span class="truncate">{{ member.name }}</span>
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        :model-value="loginFor(member.id)"
-                        :disabled="readOnly"
-                        placeholder="GitHub 계정"
-                        class="font-gothic max-w-64"
-                        @update:model-value="setLogin(member.id, String($event))"
-                      />
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            <div
+              v-for="(row, index) in settings.accounts"
+              :key="`account-${index}`"
+              class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+            >
+              <MemberSelect
+                v-model="row.discordUserId"
+                :members="members"
+                :loading="membersLoading"
+                :disabled="readOnly"
+                @open="loadMembers"
+              />
+              <Input
+                v-model="row.githubLogin"
+                :disabled="readOnly"
+                placeholder="GitHub 계정"
+                class="font-gothic"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                :disabled="readOnly"
+                aria-label="매핑 삭제"
+                @click="removeAccountRow(index)"
+              >
+                <Trash2 />
+              </Button>
             </div>
           </CardContent>
         </Card>

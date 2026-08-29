@@ -71,6 +71,8 @@ export interface DiscordRole {
 export interface DiscordMember {
   id: string;
   name: string;
+  /** Discord CDN URL; server avatar when set, otherwise the account avatar. */
+  avatarUrl?: string;
 }
 
 export interface GithubEventToggles {

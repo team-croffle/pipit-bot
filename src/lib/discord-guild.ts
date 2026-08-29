@@ -88,7 +88,14 @@ const memberFetchedAt = new Map<string, number>();
  * fetch fills it. That fetch is only needed by the dashboard, so it happens lazily
  * here rather than warming at boot the way invite-cache does.
  */
-export async function listGuildMembers(guild: Guild): Promise<{ id: string; name: string }[]> {
+export interface GuildMemberSummary {
+  id: string;
+  name: string;
+  /** Server avatar when the member set one, otherwise their account avatar. */
+  avatarUrl: string;
+}
+
+export async function listGuildMembers(guild: Guild): Promise<GuildMemberSummary[]> {
   const fetchedAt = memberFetchedAt.get(guild.id) ?? 0;
   if (Date.now() - fetchedAt > MEMBER_CACHE_TTL_MS) {
     try {
@@ -101,7 +108,13 @@ export async function listGuildMembers(guild: Guild): Promise<{ id: string; name
 
   return [...guild.members.cache.values()]
     .filter((member) => !member.user.bot)
-    .map((member) => ({ id: member.id, name: member.displayName }))
+    .map((member) => ({
+      id: member.id,
+      name: member.displayName,
+      // 64px is what the dashboard renders it at; asking for the default 128 would
+      // double the bytes for no visible gain.
+      avatarUrl: member.displayAvatarURL({ size: 64 }),
+    }))
     .toSorted((a, b) => a.name.localeCompare(b.name))
     .slice(0, MAX_MEMBERS);
 }
