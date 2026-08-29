@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
 
   import { fetchJson, putJson } from '../api';
+  import { groupChannels } from '../channels';
   import type {
     DashboardIdentity,
     DiscordChannel,
@@ -66,6 +67,7 @@
     accounts: [],
   });
   const channels = ref<DiscordChannel[]>([]);
+  const channelGroups = computed(() => groupChannels(channels.value));
   const members = ref<DiscordMember[]>([]);
   const error = ref('');
   const saved = ref('');
@@ -247,9 +249,11 @@
           :disabled="readOnly"
         >
           <option :value="null">Not set</option>
-          <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-            {{ channel.name }}
-          </option>
+          <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
+            <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
+              {{ channel.name }}
+            </option>
+          </optgroup>
         </select>
       </div>
     </section>
@@ -358,9 +362,11 @@
           />
           <select v-model="row.channelId" :class="fieldClass" :disabled="readOnly">
             <option :value="null">Default channel</option>
-            <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-              {{ channel.name }}
-            </option>
+            <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
+              <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
+                {{ channel.name }}
+              </option>
+            </optgroup>
           </select>
           <label class="flex items-center gap-2 whitespace-nowrap text-sm">
             <input

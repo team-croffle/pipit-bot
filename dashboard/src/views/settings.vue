@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
 
   import { fetchJson, putJson } from '../api';
+  import { groupChannels } from '../channels';
   import type {
     BotRuntimeConfig,
     DashboardIdentity,
@@ -26,6 +27,7 @@
     musicChannelIds: [],
   });
   const channels = ref<DiscordChannel[]>([]);
+  const channelGroups = computed(() => groupChannels(channels.value));
   const roles = ref<DiscordRole[]>([]);
   const error = ref('');
   const saved = ref('');
@@ -171,9 +173,11 @@
           :disabled="readOnly"
         >
           <option :value="null">Not set</option>
-          <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-            {{ channel.name }}
-          </option>
+          <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
+            <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
+              {{ channel.name }}
+            </option>
+          </optgroup>
         </select>
       </div>
       <div class="mb-4">
@@ -269,9 +273,11 @@
       >
         <select v-model="row.channelId" :class="fieldClass" :disabled="readOnly">
           <option value="">Channel</option>
-          <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-            {{ channel.name }}
-          </option>
+          <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
+            <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
+              {{ channel.name }}
+            </option>
+          </optgroup>
         </select>
         <input
           v-model="row.messageId"
@@ -305,21 +311,28 @@
       </p>
       <div>
         <span :class="labelClass">Music channels</span>
-        <div class="flex flex-wrap gap-3">
-          <label
-            v-for="channel in channels"
-            :key="channel.id"
-            class="flex items-center gap-2 text-sm"
-          >
-            <input
-              type="checkbox"
-              class="accent-accent"
-              :checked="botConfig.musicChannelIds.includes(channel.id)"
-              :disabled="readOnly"
-              @change="toggleMusicChannel(channel.id)"
-            />
-            {{ channel.name }}
-          </label>
+        <div class="flex flex-col gap-3">
+          <div v-for="group in channelGroups" :key="group.category">
+            <span class="mb-1.5 block text-xs uppercase tracking-wide text-muted">
+              {{ group.category }}
+            </span>
+            <div class="flex flex-wrap gap-3">
+              <label
+                v-for="channel in group.channels"
+                :key="channel.id"
+                class="flex items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  class="accent-accent"
+                  :checked="botConfig.musicChannelIds.includes(channel.id)"
+                  :disabled="readOnly"
+                  @change="toggleMusicChannel(channel.id)"
+                />
+                {{ channel.name }}
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -49,6 +49,8 @@ export interface GuildEventSettings {
 export interface DiscordChannel {
   id: string;
   name: string;
+  /** The category the channel sits in, or null when it sits above all of them. */
+  category: string | null;
 }
 
 export interface DiscordRole {

@@ -10,14 +10,39 @@ export function getConfiguredGuild(): Guild | undefined {
   return client.guilds.cache.first();
 }
 
-export function listTextChannels(guild: Guild): { id: string; name: string }[] {
+export interface ChannelOption {
+  id: string;
+  name: string;
+  /** The category the channel sits in, or null when it sits above all of them. */
+  category: string | null;
+}
+
+/**
+ * Lists the channels a dashboard picker can offer.
+ *
+ * WHY the category travels along: channel names only have to be unique within a
+ * category, so a guild can hold several `#general`s and the picker would show the
+ * same label several times with no way to tell them apart.
+ *
+ * Ordered the way Discord's own sidebar orders them rather than alphabetically, so
+ * the list reads like the app the operator just came from. Uncategorised channels
+ * sort first, which is also where Discord puts them.
+ */
+export function listTextChannels(guild: Guild): ChannelOption[] {
   return [...guild.channels.cache.values()]
     .filter(
       (channel) =>
         channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement,
     )
-    .map((channel) => ({ id: channel.id, name: `#${channel.name}` }))
-    .toSorted((a, b) => a.name.localeCompare(b.name));
+    .map((channel) => ({
+      id: channel.id,
+      name: `#${channel.name}`,
+      category: channel.parent?.name ?? null,
+      categoryPosition: channel.parent?.rawPosition ?? -1,
+      position: channel.rawPosition,
+    }))
+    .toSorted((a, b) => a.categoryPosition - b.categoryPosition || a.position - b.position)
+    .map(({ id, name, category }) => ({ id, name, category }));
 }
 
 export function listAssignableRoles(guild: Guild): { id: string; name: string }[] {
