@@ -2,24 +2,29 @@
   import { computed } from 'vue';
 
   import {
-    NativeSelect,
-    NativeSelectOptGroup,
-    NativeSelectOption,
-  } from '@/components/ui/native-select';
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+  } from '@/components/ui/select';
   import type { DiscordChannel } from '@/types';
 
   /**
-   * WHY a native select: channel names are only unique within a category, so the
-   * picker has to group them, and a channel the bot cannot post in stays visible but
-   * disabled — hiding it would leave an already-configured channel with no explanation.
+   * WHY the grouping: channel names are only unique within a category, so a picker
+   * listing bare names can show the same label twice with no way to tell them apart.
+   * A channel the bot cannot post in stays visible but disabled — hiding it would
+   * leave an already-configured channel with no explanation.
    */
   const props = defineProps<{
     modelValue: string | null;
     channels: DiscordChannel[];
-    /** Label for the "inherit / none" entry; omit to require a channel. */
+    /** Label for the "inherit / none" entry; omit to leave the picker without one. */
     placeholder?: string;
-    /** Value the placeholder carries — `null` for settings that store null. */
-    placeholderValue?: string | null;
+    /** What an unset picker stores — `null` for settings that persist null, `''` elsewhere. */
+    emptyValue?: string | null;
     disabled?: boolean;
     id?: string;
   }>();
@@ -27,6 +32,10 @@
   const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 
   const UNCATEGORIZED = '카테고리 없음';
+  // reka-ui carries the selection as a plain value, and an empty string reads as
+  // "nothing selected" to it. Both of our empty shapes (null and '') therefore ride
+  // through the component as this sentinel and are mapped back on the way out.
+  const EMPTY = '__none__';
 
   const groups = computed(() => {
     const result: { category: string; channels: DiscordChannel[] }[] = [];
@@ -44,26 +53,37 @@
     return result;
   });
 
-  const value = computed({
-    get: () => props.modelValue,
-    set: (next) => emit('update:modelValue', next),
+  const selected = computed({
+    get: () => props.modelValue ?? EMPTY,
+    set: (next: string) => {
+      emit('update:modelValue', next === EMPTY ? (props.emptyValue ?? null) : next);
+    },
+  });
+
+  const label = computed(() => {
+    const current = props.channels.find((channel) => channel.id === props.modelValue);
+    return current ? `#${current.name}` : (props.placeholder ?? '선택');
   });
 </script>
 
 <template>
-  <NativeSelect :id="id" v-model="value" :disabled="disabled" class="w-full">
-    <NativeSelectOption v-if="placeholder" :value="placeholderValue ?? null">
-      {{ placeholder }}
-    </NativeSelectOption>
-    <NativeSelectOptGroup v-for="group in groups" :key="group.category" :label="group.category">
-      <NativeSelectOption
-        v-for="channel in group.channels"
-        :key="channel.id"
-        :value="channel.id"
-        :disabled="!channel.canPost"
-      >
-        {{ channel.name }}{{ channel.canPost ? '' : ' — 봇이 글을 쓸 수 없음' }}
-      </NativeSelectOption>
-    </NativeSelectOptGroup>
-  </NativeSelect>
+  <Select v-model="selected" :disabled="disabled">
+    <SelectTrigger :id="id" class="w-full">
+      <SelectValue :placeholder="placeholder ?? '선택'">{{ label }}</SelectValue>
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem v-if="placeholder" :value="EMPTY">{{ placeholder }}</SelectItem>
+      <SelectGroup v-for="group in groups" :key="group.category">
+        <SelectLabel>{{ group.category }}</SelectLabel>
+        <SelectItem
+          v-for="channel in group.channels"
+          :key="channel.id"
+          :value="channel.id"
+          :disabled="!channel.canPost"
+        >
+          #{{ channel.name }}{{ channel.canPost ? '' : ' — 봇이 글을 쓸 수 없음' }}
+        </SelectItem>
+      </SelectGroup>
+    </SelectContent>
+  </Select>
 </template>
