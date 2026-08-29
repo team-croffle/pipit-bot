@@ -7,6 +7,7 @@
     DiscordChannel,
     DiscordMember,
     GithubAccountMapping,
+    GithubEventTemplates,
     GithubEventToggles,
     GithubNotifySettings,
     GithubRepoRule,
@@ -17,6 +18,19 @@
 
   const repoPattern = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
   const loginPattern = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
+
+  const templateVariables = [
+    'repo',
+    'pr_number',
+    'pr_url',
+    'pr_title',
+    'event',
+    'actor',
+    'author',
+    'assignees',
+    'reviewers',
+    'mentions',
+  ];
 
   const eventLabels: { key: keyof GithubEventToggles; label: string }[] = [
     { key: 'pullRequestOpened', label: 'PR opened' },
@@ -46,6 +60,8 @@
     enabled: false,
     channelId: null,
     events: emptyToggles(),
+    template: '',
+    eventTemplates: {},
     repos: [],
     accounts: [],
   });
@@ -73,6 +89,7 @@
       settings.value = {
         ...loaded,
         events: { ...emptyToggles(), ...loaded.events },
+        eventTemplates: { ...loaded.eventTemplates },
         repos: loaded.repos ?? [],
         accounts: loaded.accounts ?? [],
       };
@@ -115,6 +132,31 @@
     settings.value.accounts = settings.value.accounts.filter((_, item) => item !== index);
   }
 
+  // An override the operator emptied means "go back to the default", so blank
+  // entries are dropped rather than saved as an empty template.
+  function overriddenTemplates(): GithubEventTemplates {
+    const result: GithubEventTemplates = {};
+    for (const event of eventLabels) {
+      const text = settings.value.eventTemplates[event.key]?.trim();
+      if (text) {
+        result[event.key] = text;
+      }
+    }
+
+    return result;
+  }
+
+  function toggleOverride(key: keyof GithubEventToggles, on: boolean): void {
+    if (on) {
+      // Seeding with the current default keeps switching the box on from silently
+      // changing what gets posted.
+      settings.value.eventTemplates[key] = settings.value.template;
+      return;
+    }
+
+    delete settings.value.eventTemplates[key];
+  }
+
   async function save(): Promise<void> {
     error.value = '';
     saved.value = '';
@@ -150,12 +192,15 @@
         enabled: settings.value.enabled,
         channelId: settings.value.channelId,
         events: settings.value.events,
+        template: settings.value.template,
+        eventTemplates: overriddenTemplates(),
         repos,
         accounts,
       });
       settings.value = {
         ...result,
         events: { ...emptyToggles(), ...result.events },
+        eventTemplates: result.eventTemplates ?? {},
         repos: result.repos ?? [],
         accounts: result.accounts ?? [],
       };
@@ -228,6 +273,68 @@
           />
           {{ event.label }}
         </label>
+      </div>
+    </section>
+
+    <section v-if="!loading" :class="cardClass">
+      <h2 class="mb-3 mt-0 text-base font-semibold">Message template</h2>
+      <p class="mb-4 text-sm text-muted">
+        The wording every notification uses. Leave an event unchecked to follow this default.
+      </p>
+
+      <div class="mb-4">
+        <label for="gh-template" :class="labelClass">Default template</label>
+        <textarea
+          id="gh-template"
+          v-model="settings.template"
+          rows="3"
+          :class="[fieldClass, 'font-mono leading-relaxed']"
+          :disabled="readOnly"
+        ></textarea>
+      </div>
+
+      <details class="mb-4 rounded-xl border border-line-soft bg-bg-elevated px-3 py-2">
+        <summary class="cursor-pointer text-sm text-muted">Variables</summary>
+        <div class="mt-3 flex flex-col gap-2 text-sm text-muted">
+          <p class="m-0">
+            <code v-for="name in templateVariables" :key="name" class="mr-2">{{
+              '{' + name + '}'
+            }}</code>
+          </p>
+          <p class="m-0">
+            Write <code>{name|when set|when empty}</code> to change the wording depending on whether
+            a value exists. The first branch is appended after the value; put <code>{}</code> in it
+            to place the value somewhere else. The second branch replaces the whole thing when the
+            value is empty.
+          </p>
+          <p class="m-0">
+            Example — <code>{reviewers|: requested|updated} by {assignees}</code> reads
+            <em>@reviewer: requested by @author</em> with a reviewer, and
+            <em>updated by @author</em> without one.
+          </p>
+        </div>
+      </details>
+
+      <div class="flex flex-col gap-3">
+        <div v-for="event in eventLabels" :key="event.key" class="flex flex-col gap-1.5">
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              class="accent-accent"
+              :checked="settings.eventTemplates[event.key] !== undefined"
+              :disabled="readOnly"
+              @change="toggleOverride(event.key, ($event.target as HTMLInputElement).checked)"
+            />
+            Custom wording for {{ event.label }}
+          </label>
+          <textarea
+            v-if="settings.eventTemplates[event.key] !== undefined"
+            v-model="settings.eventTemplates[event.key]"
+            rows="2"
+            :class="[fieldClass, 'font-mono leading-relaxed']"
+            :disabled="readOnly"
+          ></textarea>
+        </div>
       </div>
     </section>
 

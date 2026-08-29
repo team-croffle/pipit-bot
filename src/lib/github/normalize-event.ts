@@ -17,6 +17,12 @@ export interface GithubNotification {
   title: string;
   isPullRequest: boolean;
   actor: string;
+  author?: string;
+  /** Roles as the payload states them — no self-suppression, so a template can
+   *  still say "updated by <the person who is also the assignee>". */
+  assignees: string[];
+  reviewers: string[];
+  /** Who is worth pinging: the roles this event is about, minus the actor. */
   targets: string[];
 }
 
@@ -43,6 +49,17 @@ const REVIEW_LABELS: Record<string, string> = {
   changes_requested: 'Changes Requested',
   commented: 'Reviewed',
 };
+
+function logins(users: GithubUser[] | undefined): string[] {
+  const unique: string[] = [];
+  for (const user of users ?? []) {
+    if (!unique.some((item) => item.toLowerCase() === user.login.toLowerCase())) {
+      unique.push(user.login);
+    }
+  }
+
+  return unique;
+}
 
 function build(
   context: EventContext,
@@ -80,6 +97,9 @@ function build(
     title: subject.title,
     isPullRequest: subject.isPullRequest,
     actor: context.actor.login,
+    author: subject.user?.login,
+    assignees: logins(subject.assignees),
+    reviewers: logins(subject.requestedReviewers),
     targets: unique,
   };
 }

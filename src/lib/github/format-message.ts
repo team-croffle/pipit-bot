@@ -1,7 +1,9 @@
 import { escapeMarkdown } from 'discord.js';
 
-import type { ResolvedMentions } from './mentions.js';
+import { resolveGithubMentions } from './mentions.js';
 import type { GithubNotification } from './normalize-event.js';
+import type { GithubAccountMapping } from './settings.js';
+import { renderTemplate, type TemplateValues } from './template.js';
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 1900;
@@ -15,6 +17,11 @@ const ESCAPE_OPTIONS = {
   numberedList: true,
   maskedLink: true,
 } as const;
+
+export interface RenderedMessage {
+  content: string;
+  userIds: string[];
+}
 
 /**
  * Neutralizes attacker-controlled text — anyone able to open a pull request picks
@@ -39,18 +46,47 @@ export function buildGithubIssueUrl(
   return `https://github.com/${repo}/${isPullRequest ? 'pull' : 'issues'}/${issueNumber}`;
 }
 
+/**
+ * Fills the operator's template.
+ *
+ * The template is trusted — an admin wrote it in the dashboard, so its markdown is
+ * kept. Every value put into it is not: each one is sanitized here, and only ids
+ * that came from the saved account mapping ever reach `userIds`.
+ */
 export function formatGithubNotification(
   notification: GithubNotification,
-  mentions: ResolvedMentions,
-): string {
-  const url = buildGithubIssueUrl(
-    notification.repo,
-    notification.number,
-    notification.isPullRequest,
-  );
-  const title = sanitizeGithubText(notification.title);
-  const headline = `**${notification.label}** · \`${notification.repo}\` [#${notification.number}](${url}) — ${title}`;
-  const content = mentions.text ? `${headline}\n${mentions.text}` : headline;
+  accounts: GithubAccountMapping[],
+  template: string,
+): RenderedMessage {
+  const userIds: string[] = [];
+  const mention = (logins: string[]): string => {
+    const resolved = resolveGithubMentions(logins, accounts);
+    for (const id of resolved.userIds) {
+      if (!userIds.includes(id)) {
+        userIds.push(id);
+      }
+    }
 
-  return content.length > MAX_CONTENT_LENGTH ? content.slice(0, MAX_CONTENT_LENGTH) : content;
+    return resolved.text;
+  };
+
+  const values: TemplateValues = {
+    repo: sanitizeGithubText(notification.repo),
+    pr_number: String(notification.number),
+    pr_url: buildGithubIssueUrl(notification.repo, notification.number, notification.isPullRequest),
+    pr_title: sanitizeGithubText(notification.title),
+    event: notification.label,
+    actor: mention([notification.actor]),
+    author: mention(notification.author ? [notification.author] : []),
+    assignees: mention(notification.assignees),
+    reviewers: mention(notification.reviewers),
+    mentions: mention(notification.targets),
+  };
+
+  const content = renderTemplate(template, values);
+
+  return {
+    content: content.length > MAX_CONTENT_LENGTH ? content.slice(0, MAX_CONTENT_LENGTH) : content,
+    userIds,
+  };
 }

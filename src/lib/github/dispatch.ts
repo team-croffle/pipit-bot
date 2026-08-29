@@ -1,10 +1,10 @@
 import { container } from '@sapphire/framework';
+import { MessageFlags } from 'discord.js';
 
 import { getConfiguredGuild } from '../discord-guild.js';
 import { formatGithubNotification } from './format-message.js';
-import { resolveGithubMentions } from './mentions.js';
 import type { GithubNotification } from './normalize-event.js';
-import { getGithubNotifySettings, resolveRepoRule } from './settings.js';
+import { getGithubNotifySettings, resolveRepoRule, resolveTemplate } from './settings.js';
 
 export async function dispatchGithubNotification(notification: GithubNotification): Promise<void> {
   const settings = getGithubNotifySettings();
@@ -29,13 +29,24 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     return;
   }
 
-  const mentions = resolveGithubMentions(notification.targets, settings.accounts);
+  const message = formatGithubNotification(
+    notification,
+    settings.accounts,
+    resolveTemplate(settings, notification.toggle),
+  );
+  if (!message.content) {
+    return;
+  }
+
   try {
     await channel.send({
-      content: formatGithubNotification(notification, mentions),
+      content: message.content,
       // WHY: the body carries attacker-controlled text, so nothing may be parsed
       // out of it. Only ids that passed snowflake validation on save can ping.
-      allowedMentions: { parse: [], users: mentions.userIds, roles: [] },
+      allowedMentions: { parse: [], users: message.userIds, roles: [] },
+      // WHY: the link is there to be clicked, not to unfurl a preview card that
+      // buries the next notification.
+      flags: MessageFlags.SuppressEmbeds,
     });
   } catch (error) {
     container.logger.error('[github]', error);

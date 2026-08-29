@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
+import { DEFAULT_TEMPLATE, parseTemplateMap, parseTemplateText } from './template.js';
 
 export interface GithubEventToggles {
   pullRequestOpened: boolean;
@@ -26,11 +27,17 @@ export interface GithubAccountMapping {
   discordUserId: string;
 }
 
+export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, string>>;
+
 // WHY: The webhook secret stays in env — a dashboard GET must never echo it back.
 export interface GithubNotifySettings {
   enabled: boolean;
   channelId: string | null;
   events: GithubEventToggles;
+  /** The message wording every event falls back to. */
+  template: string;
+  /** Per-event wording; a missing key inherits `template`. */
+  eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
 }
@@ -76,6 +83,8 @@ function emptySettings(): GithubNotifySettings {
     enabled: false,
     channelId: null,
     events: emptyToggles(),
+    template: DEFAULT_TEMPLATE,
+    eventTemplates: {},
     repos: [],
     accounts: [],
   };
@@ -194,6 +203,8 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
     enabled: body.enabled === true,
     channelId: asChannelId(body.channelId, 'channelId'),
     events: asToggles(body.events),
+    template: parseTemplateText(body.template, 'Template') ?? DEFAULT_TEMPLATE,
+    eventTemplates: parseTemplateMap(body.eventTemplates, TOGGLE_KEYS),
     repos: asRepoRules(body.repos ?? []),
     accounts: asAccountMappings(body.accounts ?? []),
   };
@@ -219,6 +230,14 @@ export function resolveRepoRule(
   }
 
   return { channelId, events: rule?.events ?? settings.events };
+}
+
+/** The wording for one event: its own override, else the global template. */
+export function resolveTemplate(
+  settings: GithubNotifySettings,
+  toggle: keyof GithubEventToggles,
+): string {
+  return settings.eventTemplates[toggle] ?? settings.template ?? DEFAULT_TEMPLATE;
 }
 
 export async function loadGithubNotifySettings(): Promise<GithubNotifySettings> {

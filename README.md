@@ -58,6 +58,8 @@ PR and issue activity is delivered by a **GitHub App**. Register one app, instal
 
 Routing lives in `data/github-notify.json`: a default channel plus per-repository overrides for the channel and which event types to report, and a GitHub-login-to-Discord-user map used for mentions. Unmapped logins appear as plain text. The feature ships disabled (`enabled: false`).
 
+Message wording is a template, edited on the same page. `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignees}`, `{reviewers}` and `{mentions}` are substituted; `{name|when set|when empty}` picks between two wordings depending on whether the value exists. One default applies to every event, and any event can override it. The template is the operator's own markdown, but everything substituted into it is escaped, so a pull request title cannot forge a mention or a link.
+
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
 
 ## Development

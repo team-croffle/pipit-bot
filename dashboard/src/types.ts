@@ -84,10 +84,14 @@ export interface GithubAccountMapping {
   discordUserId: string;
 }
 
+export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, string>>;
+
 export interface GithubNotifySettings {
   enabled: boolean;
   channelId: string | null;
   events: GithubEventToggles;
+  template: string;
+  eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
 }
