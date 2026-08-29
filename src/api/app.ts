@@ -14,6 +14,7 @@ import {
   listTextChannels,
 } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
+import { listDeliveries } from '../lib/github/delivery-log.js';
 import {
   getGithubNotifySettings,
   parseGithubNotifySettings,
@@ -209,6 +210,10 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   });
 
   app.get('/api/github-notify', dashboardViewer, (c) => c.json(getGithubNotifySettings()));
+
+  app.get('/api/github-notify/deliveries', dashboardViewer, (c) =>
+    c.json({ deliveries: listDeliveries() }),
+  );
 
   app.put('/api/github-notify', dashboardViewer, dashboardWrite, async (c) => {
     try {

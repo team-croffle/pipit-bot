@@ -8,6 +8,7 @@
     DiscordChannel,
     DiscordMember,
     GithubAccountMapping,
+    GithubDelivery,
     GithubEventTemplates,
     GithubEventToggles,
     GithubNotifySettings,
@@ -68,6 +69,7 @@
   });
   const channels = ref<DiscordChannel[]>([]);
   const channelGroups = computed(() => groupChannels(channels.value));
+  const deliveries = ref<GithubDelivery[]>([]);
   const members = ref<DiscordMember[]>([]);
   const error = ref('');
   const saved = ref('');
@@ -96,6 +98,7 @@
         accounts: loaded.accounts ?? [],
       };
       channels.value = channelBody.channels;
+      await refreshDeliveries();
       members.value = memberBody.members;
     } catch (cause) {
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
@@ -132,6 +135,30 @@
 
   function removeAccountRow(index: number): void {
     settings.value.accounts = settings.value.accounts.filter((_, item) => item !== index);
+  }
+
+  async function refreshDeliveries(): Promise<void> {
+    try {
+      const body = await fetchJson<{ deliveries: GithubDelivery[] }>(
+        '/api/github-notify/deliveries',
+      );
+      deliveries.value = body.deliveries;
+    } catch {
+      // A diagnostic panel that fails to load must not block the settings page.
+      deliveries.value = [];
+    }
+  }
+
+  function outcomeClass(outcome: GithubDelivery['outcome']): string {
+    if (outcome === 'sent') {
+      return 'text-ok';
+    }
+
+    return outcome === 'failed' ? 'text-bad' : 'text-warn';
+  }
+
+  function formatTime(at: string): string {
+    return new Date(at).toLocaleString();
   }
 
   // An override the operator emptied means "go back to the default", so blank
@@ -250,8 +277,13 @@
         >
           <option :value="null">Not set</option>
           <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
-            <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
-              {{ channel.name }}
+            <option
+              v-for="channel in group.channels"
+              :key="channel.id"
+              :value="channel.id"
+              :disabled="!channel.canPost"
+            >
+              {{ channel.name }}{{ channel.canPost ? '' : ' — bot cannot post here' }}
             </option>
           </optgroup>
         </select>
@@ -363,8 +395,13 @@
           <select v-model="row.channelId" :class="fieldClass" :disabled="readOnly">
             <option :value="null">Default channel</option>
             <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
-              <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
-                {{ channel.name }}
+              <option
+                v-for="channel in group.channels"
+                :key="channel.id"
+                :value="channel.id"
+                :disabled="!channel.canPost"
+              >
+                {{ channel.name }}{{ channel.canPost ? '' : ' — bot cannot post here' }}
               </option>
             </optgroup>
           </select>
@@ -443,6 +480,36 @@
       <button :class="ghostBtnClass" type="button" :disabled="readOnly" @click="addAccountRow">
         Add mapping
       </button>
+    </section>
+
+    <section v-if="!loading" :class="cardClass">
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <h2 class="m-0 text-base font-semibold">Recent deliveries</h2>
+        <button type="button" :class="ghostBtnClass" @click="refreshDeliveries">Refresh</button>
+      </div>
+      <p class="mb-4 text-sm text-muted">
+        The last 20 events this bot handled, and what became of each. Cleared when the bot restarts.
+      </p>
+      <p v-if="deliveries.length === 0" class="m-0 text-sm text-muted">
+        Nothing yet — no event has arrived since the bot started.
+      </p>
+      <ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
+        <li
+          v-for="(delivery, index) in deliveries"
+          :key="`${delivery.at}-${index}`"
+          class="rounded-xl border border-line-soft bg-bg-elevated px-3 py-2 text-sm"
+        >
+          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span :class="['font-medium', outcomeClass(delivery.outcome)]">
+              {{ delivery.outcome }}
+            </span>
+            <span class="text-text">{{ delivery.event }}</span>
+            <code class="text-muted">{{ delivery.repo }}</code>
+            <span class="ml-auto text-xs text-muted">{{ formatTime(delivery.at) }}</span>
+          </div>
+          <p v-if="delivery.detail" class="mb-0 mt-1 text-sm text-muted">{{ delivery.detail }}</p>
+        </li>
+      </ul>
     </section>
 
     <div>

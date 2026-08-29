@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import { MessageFlags } from 'discord.js';
 
 import { getConfiguredGuild } from '../discord-guild.js';
+import { recordDelivery } from './delivery-log.js';
 import { formatGithubNotification } from './format-message.js';
 import type { GithubNotification } from './normalize-event.js';
 import { getGithubNotifySettings, resolveRepoRule, resolveTemplate } from './settings.js';
@@ -14,18 +15,30 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     return;
   }
 
+  const skip = (detail: string): void => {
+    recordDelivery(notification.repo, notification.label, 'skipped', detail);
+  };
+
   const rule = resolveRepoRule(settings, notification.repo);
-  if (!rule?.events[notification.toggle]) {
+  if (!rule) {
+    skip('No channel is set for this repository or as the default.');
+    return;
+  }
+
+  if (!rule.events[notification.toggle]) {
+    skip(`The ${notification.toggle} event is switched off for this repository.`);
     return;
   }
 
   const guild = getConfiguredGuild();
   if (!guild) {
+    skip('Discord is not connected yet.');
     return;
   }
 
   const channel = guild.channels.cache.get(rule.channelId);
   if (!channel?.isTextBased() || !('send' in channel)) {
+    skip('The configured channel no longer exists, or is not one the bot can post in.');
     return;
   }
 
@@ -35,6 +48,7 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     resolveTemplate(settings, notification.toggle),
   );
   if (!message.content) {
+    skip('The template rendered an empty message.');
     return;
   }
 
@@ -48,7 +62,16 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
       // buries the next notification.
       flags: MessageFlags.SuppressEmbeds,
     });
+    recordDelivery(notification.repo, notification.label, 'sent');
   } catch (error) {
+    // WHY both: the log keeps the stack for a maintainer, the record gives the
+    // operator the one line that explains the silence.
     container.logger.error('[github]', error);
+    recordDelivery(
+      notification.repo,
+      notification.label,
+      'failed',
+      error instanceof Error ? error.message : 'Discord rejected the message.',
+    );
   }
 }

@@ -51,6 +51,16 @@ export interface DiscordChannel {
   name: string;
   /** The category the channel sits in, or null when it sits above all of them. */
   category: string | null;
+  /** False when the bot cannot actually post there. */
+  canPost: boolean;
+}
+
+export interface GithubDelivery {
+  at: string;
+  repo: string;
+  event: string;
+  outcome: 'sent' | 'failed' | 'skipped';
+  detail?: string;
 }
 
 export interface DiscordRole {

@@ -174,8 +174,13 @@
         >
           <option :value="null">Not set</option>
           <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
-            <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
-              {{ channel.name }}
+            <option
+              v-for="channel in group.channels"
+              :key="channel.id"
+              :value="channel.id"
+              :disabled="!channel.canPost"
+            >
+              {{ channel.name }}{{ channel.canPost ? '' : ' — bot cannot post here' }}
             </option>
           </optgroup>
         </select>
@@ -274,8 +279,13 @@
         <select v-model="row.channelId" :class="fieldClass" :disabled="readOnly">
           <option value="">Channel</option>
           <optgroup v-for="group in channelGroups" :key="group.category" :label="group.category">
-            <option v-for="channel in group.channels" :key="channel.id" :value="channel.id">
-              {{ channel.name }}
+            <option
+              v-for="channel in group.channels"
+              :key="channel.id"
+              :value="channel.id"
+              :disabled="!channel.canPost"
+            >
+              {{ channel.name }}{{ channel.canPost ? '' : ' — bot cannot post here' }}
             </option>
           </optgroup>
         </select>
@@ -321,12 +331,14 @@
                 v-for="channel in group.channels"
                 :key="channel.id"
                 class="flex items-center gap-2 text-sm"
+                :class="channel.canPost ? '' : 'text-muted'"
+                :title="channel.canPost ? '' : 'The bot cannot post in this channel.'"
               >
                 <input
                   type="checkbox"
                   class="accent-accent"
                   :checked="botConfig.musicChannelIds.includes(channel.id)"
-                  :disabled="readOnly"
+                  :disabled="readOnly || !channel.canPost"
                   @change="toggleMusicChannel(channel.id)"
                 />
                 {{ channel.name }}

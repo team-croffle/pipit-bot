@@ -1,5 +1,5 @@
 import { container } from '@sapphire/framework';
-import { ChannelType, type Guild } from 'discord.js';
+import { ChannelType, PermissionFlagsBits, type Guild, type GuildBasedChannel } from 'discord.js';
 
 export function getConfiguredGuild(): Guild | undefined {
   const { client } = container;
@@ -15,6 +15,29 @@ export interface ChannelOption {
   name: string;
   /** The category the channel sits in, or null when it sits above all of them. */
   category: string | null;
+  /** False when the bot cannot actually post there. */
+  canPost: boolean;
+}
+
+/**
+ * WHY this is reported rather than used to hide the channel: a channel already
+ * configured would silently disappear from the picker, leaving a control showing
+ * nothing and no clue why. Naming the problem beats hiding it — and posting is the
+ * one thing the picker exists to arrange, so an option that cannot do it should say
+ * so before it is chosen, not fail into the server log afterwards.
+ */
+function canBotPost(channel: GuildBasedChannel): boolean {
+  const me = channel.guild.members.me;
+  if (!me) {
+    // Unknown rather than denied — never present the whole guild as unusable.
+    return true;
+  }
+
+  const permissions = channel.permissionsFor(me);
+  return (
+    permissions?.has(PermissionFlagsBits.ViewChannel) === true &&
+    permissions.has(PermissionFlagsBits.SendMessages)
+  );
 }
 
 /**
@@ -38,11 +61,12 @@ export function listTextChannels(guild: Guild): ChannelOption[] {
       id: channel.id,
       name: `#${channel.name}`,
       category: channel.parent?.name ?? null,
+      canPost: canBotPost(channel),
       categoryPosition: channel.parent?.rawPosition ?? -1,
       position: channel.rawPosition,
     }))
     .toSorted((a, b) => a.categoryPosition - b.categoryPosition || a.position - b.position)
-    .map(({ id, name, category }) => ({ id, name, category }));
+    .map(({ id, name, category, canPost }) => ({ id, name, category, canPost }));
 }
 
 export function listAssignableRoles(guild: Guild): { id: string; name: string }[] {
