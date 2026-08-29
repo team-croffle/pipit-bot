@@ -130,7 +130,7 @@
                   v-model="row.messageId"
                   :disabled="readOnly"
                   placeholder="1234567890"
-                  class="font-mono"
+                  class="font-gothic"
                 />
               </div>
               <div class="flex flex-col gap-1.5">
@@ -167,7 +167,7 @@
         </Card>
 
         <div
-          class="bg-background/85 sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
+          class="bg-background sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
         >
           <Button :disabled="readOnly" @click="onSave">저장</Button>
         </div>

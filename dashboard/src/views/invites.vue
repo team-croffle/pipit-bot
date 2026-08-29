@@ -207,7 +207,7 @@
         </Card>
 
         <div
-          class="bg-background/85 sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
+          class="bg-background sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
         >
           <Button :disabled="readOnly" @click="onSave">저장</Button>
         </div>

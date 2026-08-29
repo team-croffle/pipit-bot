@@ -180,7 +180,7 @@
                         {{ delivery.outcome }}
                       </Badge>
                       <span class="truncate">{{ delivery.event }}</span>
-                      <code class="text-muted-foreground truncate font-mono text-xs">
+                      <code class="text-muted-foreground truncate font-gothic text-xs">
                         {{ delivery.repo }}
                       </code>
                       <span class="text-muted-foreground ml-auto shrink-0 text-xs">

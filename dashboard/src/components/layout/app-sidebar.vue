@@ -12,7 +12,7 @@
     <div class="flex items-center gap-2.5 px-1.5 pt-1">
       <BrandMark :size="36" />
       <div class="min-w-0 leading-tight">
-        <p class="truncate text-sm font-semibold tracking-tight">pipit-hub</p>
+        <p class="font-jua truncate text-base tracking-tight">pipit-hub</p>
         <p class="text-muted-foreground truncate text-xs">Team Croffle 관제 센터</p>
       </div>
     </div>
@@ -22,7 +22,10 @@
     </div>
 
     <div class="border-sidebar-border flex items-center justify-between gap-2 border-t px-1.5 pt-3">
-      <span class="text-muted-foreground font-mono text-xs">{{ version ?? 'dashboard' }}</span>
+      <span
+        class="text-muted-foreground font-gothic text-xs bg-muted rounded-sm px-2 py-1 border border-muted-foreground/10"
+        >{{ version ?? 'dashboard' }}</span
+      >
       <ThemeToggle />
     </div>
   </div>
