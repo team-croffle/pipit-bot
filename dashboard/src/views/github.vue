@@ -4,7 +4,6 @@
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
-  import OptionSelect from '@/components/common/option-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -23,6 +22,14 @@
   import { Label } from '@/components/ui/label';
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
+  import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+  } from '@/components/ui/table';
   import { Textarea } from '@/components/ui/textarea';
   import type {
     DashboardIdentity,
@@ -123,12 +130,66 @@
     }
   });
 
+  const openRepos = ref(new Set<number>());
+
+  function toggleOpen(index: number): void {
+    const next = new Set(openRepos.value);
+    if (next.has(index)) {
+      next.delete(index);
+    } else {
+      next.add(index);
+    }
+    openRepos.value = next;
+  }
+
   function addRepoRow(): void {
     settings.value.repos = [...settings.value.repos, { repo: '', channelId: null, events: null }];
+    // A row added from the table header would otherwise be an unexplained blank line.
+    toggleOpen(settings.value.repos.length - 1);
   }
 
   function removeRepoRow(index: number): void {
     settings.value.repos = settings.value.repos.filter((_, item) => item !== index);
+    openRepos.value = new Set();
+  }
+
+  function channelLabel(channelId: string | null): string {
+    if (!channelId) {
+      return '기본 채널 사용';
+    }
+
+    const channel = channels.value.find((item) => item.id === channelId);
+    if (!channel) {
+      return '알 수 없는 채널';
+    }
+
+    return `${channel.category ?? '카테고리 없음'} · #${channel.name}`;
+  }
+
+  function eventSummary(row: GithubRepoRule): string {
+    if (!row.events) {
+      return '기본값 사용';
+    }
+
+    const on = eventLabels.filter((event) => row.events?.[event.key]);
+    if (on.length === 0) {
+      return '알림 없음';
+    }
+    if (on.length === eventLabels.length) {
+      return '전체 이벤트';
+    }
+    if (on.length === 1) {
+      return `${on[0]?.label}만`;
+    }
+
+    return `${on.length}개 이벤트`;
+  }
+
+  function setRepoEvent(index: number, key: keyof GithubEventToggles, on: boolean): void {
+    const events = settings.value.repos[index]?.events;
+    if (events) {
+      events[key] = on;
+    }
   }
 
   // WHY: `events: null` means the repository inherits the defaults. Turning the
@@ -142,12 +203,23 @@
     row.events = on ? { ...settings.value.events } : null;
   }
 
-  function addAccountRow(): void {
-    settings.value.accounts = [...settings.value.accounts, { githubLogin: '', discordUserId: '' }];
+  // The mapping is driven from the member list rather than from free rows: every
+  // member is a line, and typing a login is what creates the mapping.
+  function loginFor(discordUserId: string): string {
+    return (
+      settings.value.accounts.find((row) => row.discordUserId === discordUserId)?.githubLogin ?? ''
+    );
   }
 
-  function removeAccountRow(index: number): void {
-    settings.value.accounts = settings.value.accounts.filter((_, item) => item !== index);
+  function setLogin(discordUserId: string, login: string): void {
+    const rest = settings.value.accounts.filter((row) => row.discordUserId !== discordUserId);
+    settings.value.accounts = login.trim()
+      ? [...rest, { discordUserId, githubLogin: login }]
+      : rest;
+  }
+
+  function initials(name: string): string {
+    return name.slice(0, 2).toUpperCase();
   }
 
   async function refreshDeliveries(): Promise<void> {
@@ -365,7 +437,7 @@
                 id="gh-template"
                 :model-value="settings.template"
                 rows="2"
-                class="font-mono"
+                class="font-gothic"
                 :disabled="readOnly"
                 @update:model-value="onBaseTemplateInput(String($event))"
               />
@@ -380,7 +452,7 @@
                 사용 가능한 변수
               </summary>
               <div class="text-muted-foreground mt-3 flex flex-col gap-2 text-sm">
-                <p class="font-mono text-xs">
+                <p class="font-gothic text-xs">
                   <span v-for="name in templateVariables" :key="name" class="mr-2">
                     {{ '{' + name + '}' }}
                   </span>
@@ -407,7 +479,7 @@
                   :id="`tpl-${event.key}`"
                   v-model="drafts[event.key]"
                   rows="2"
-                  class="font-mono"
+                  class="font-gothic"
                   :disabled="readOnly"
                 />
               </div>
@@ -417,72 +489,133 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">저장소</CardTitle>
-            <CardDescription
-              >여기 없는 저장소는 기본 채널과 기본 이벤트를 사용합니다.</CardDescription
-            >
+            <CardTitle class="text-base">저장소별 설정</CardTitle>
+            <CardDescription>
+              저장소마다 알림 채널과 이벤트 종류를 다르게 지정할 수 있습니다 · 행을 펼쳐서 편집
+            </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addRepoRow">
                 <Plus />
-                추가
+                저장소 추가
               </Button>
             </CardAction>
           </CardHeader>
-          <CardContent class="flex flex-col gap-3">
+          <CardContent>
             <p v-if="settings.repos.length === 0" class="text-muted-foreground text-sm">
-              개별 설정된 저장소가 없습니다.
+              개별 설정된 저장소가 없습니다. 모든 저장소가 기본 채널과 기본 이벤트를 사용합니다.
             </p>
-            <div
-              v-for="(row, index) in settings.repos"
-              :key="`repo-${index}`"
-              class="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3"
-            >
-              <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                <Input v-model="row.repo" :disabled="readOnly" placeholder="owner/name" />
-                <ChannelSelect
-                  v-model="row.channelId"
-                  :channels="channels"
-                  placeholder="기본 채널 사용"
-                  :empty-value="null"
-                  :disabled="readOnly"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  :disabled="readOnly"
-                  aria-label="저장소 삭제"
-                  @click="removeRepoRow(index)"
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-              <div class="flex items-center gap-2.5">
-                <Checkbox
-                  :id="`repo-ov-${index}`"
-                  :model-value="row.events !== null"
-                  :disabled="readOnly"
-                  @update:model-value="toggleRepoOverride(index, $event === true)"
-                />
-                <Label :for="`repo-ov-${index}`" class="font-normal">
-                  이 저장소에서 이벤트 따로 지정
-                </Label>
-              </div>
-              <div v-if="row.events" class="grid gap-3 border-t pt-3 sm:grid-cols-2">
-                <div
-                  v-for="event in eventLabels"
-                  :key="event.key"
-                  class="flex items-center gap-2.5"
-                >
-                  <Checkbox
-                    :id="`repo-${index}-${event.key}`"
-                    v-model="row.events[event.key]"
-                    :disabled="readOnly"
-                  />
-                  <Label :for="`repo-${index}-${event.key}`" class="font-normal">
-                    {{ event.label }}
-                  </Label>
-                </div>
-              </div>
+            <div v-else class="overflow-x-auto">
+              <Table class="min-w-160">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>저장소</TableHead>
+                    <TableHead class="w-56">채널</TableHead>
+                    <TableHead class="w-56">이벤트</TableHead>
+                    <TableHead class="w-28" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="(row, index) in settings.repos" :key="`repo-${index}`">
+                    <TableRow>
+                      <TableCell class="font-gothic font-medium">
+                        {{ row.repo || '(이름 없음)' }}
+                      </TableCell>
+                      <TableCell>{{ channelLabel(row.channelId) }}</TableCell>
+                      <TableCell>
+                        {{ eventSummary(row) }}
+                        <Badge v-if="row.events" variant="secondary" class="ml-1.5">override</Badge>
+                      </TableCell>
+                      <TableCell class="text-right">
+                        <Button variant="outline" size="sm" @click="toggleOpen(index)">
+                          {{ openRepos.has(index) ? '접기' : '편집' }}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow v-if="openRepos.has(index)" class="bg-muted/40 hover:bg-muted/40">
+                      <TableCell colspan="4" class="p-4">
+                        <div class="flex flex-col gap-4">
+                          <div class="grid gap-3 sm:grid-cols-2">
+                            <div class="flex flex-col gap-1.5">
+                              <Label :for="`repo-name-${index}`">저장소</Label>
+                              <Input
+                                :id="`repo-name-${index}`"
+                                v-model="row.repo"
+                                :disabled="readOnly"
+                                placeholder="owner/name"
+                                class="font-gothic"
+                              />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <Label :for="`repo-channel-${index}`">채널</Label>
+                              <ChannelSelect
+                                :id="`repo-channel-${index}`"
+                                v-model="row.channelId"
+                                :channels="channels"
+                                placeholder="기본 채널 사용"
+                                :empty-value="null"
+                                :disabled="readOnly"
+                              />
+                            </div>
+                          </div>
+
+                          <div class="flex items-center justify-between gap-4 border-t pt-4">
+                            <Label :for="`repo-ov-${index}`" class="flex-col items-start gap-1">
+                              <span>이 저장소에서 이벤트 재정의</span>
+                              <span class="text-muted-foreground text-xs font-normal">
+                                끄면 기본 알림 이벤트를 그대로 따릅니다
+                              </span>
+                            </Label>
+                            <Switch
+                              :id="`repo-ov-${index}`"
+                              :model-value="row.events !== null"
+                              :disabled="readOnly"
+                              @update:model-value="toggleRepoOverride(index, $event === true)"
+                            />
+                          </div>
+
+                          <div
+                            class="grid gap-3 sm:grid-cols-2"
+                            :class="row.events ? '' : 'pointer-events-none opacity-40'"
+                          >
+                            <div
+                              v-for="event in eventLabels"
+                              :key="event.key"
+                              class="flex items-center gap-2.5"
+                            >
+                              <Checkbox
+                                :id="`repo-${index}-${event.key}`"
+                                :model-value="
+                                  row.events ? row.events[event.key] : settings.events[event.key]
+                                "
+                                :disabled="readOnly || !row.events"
+                                @update:model-value="
+                                  setRepoEvent(index, event.key, $event === true)
+                                "
+                              />
+                              <Label :for="`repo-${index}-${event.key}`" class="font-normal">
+                                {{ event.label }}
+                              </Label>
+                            </div>
+                          </div>
+
+                          <div class="flex justify-end border-t pt-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              class="text-destructive hover:text-destructive"
+                              :disabled="readOnly"
+                              @click="removeRepoRow(index)"
+                            >
+                              <Trash2 />
+                              저장소 삭제
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
@@ -491,46 +624,47 @@
           <CardHeader>
             <CardTitle class="text-base">계정 매핑</CardTitle>
             <CardDescription>
-              연결된 사람은 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은 일반 텍스트로
-              표시됩니다.
+              GitHub 계정을 적어두면 담당자 배정·리뷰 요청 알림에 그 멤버가 멘션됩니다. 비워두면
+              GitHub 계정이 일반 텍스트로 표시됩니다.
             </CardDescription>
-            <CardAction>
-              <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
-                <Plus />
-                추가
-              </Button>
-            </CardAction>
           </CardHeader>
-          <CardContent class="flex flex-col gap-2">
-            <p v-if="settings.accounts.length === 0" class="text-muted-foreground text-sm">
-              연결된 계정이 없습니다.
+          <CardContent>
+            <p v-if="members.length === 0" class="text-muted-foreground text-sm">
+              가져온 멤버가 없습니다.
             </p>
-            <div
-              v-for="(row, index) in settings.accounts"
-              :key="`account-${index}`"
-              class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
-            >
-              <Input
-                v-model="row.githubLogin"
-                :disabled="readOnly"
-                placeholder="GitHub 계정"
-                class="font-mono"
-              />
-              <OptionSelect
-                v-model="row.discordUserId"
-                :options="members"
-                placeholder="디스코드 사용자"
-                :disabled="readOnly"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                :disabled="readOnly"
-                aria-label="매핑 삭제"
-                @click="removeAccountRow(index)"
-              >
-                <Trash2 />
-              </Button>
+            <div v-else class="overflow-x-auto">
+              <Table class="min-w-120">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>디스코드 멤버</TableHead>
+                    <TableHead>GitHub 계정</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="member in members" :key="member.id">
+                    <TableCell>
+                      <span class="flex items-center gap-2.5">
+                        <span
+                          class="from-primary/70 to-primary/25 text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[0.7rem] font-semibold"
+                          aria-hidden="true"
+                        >
+                          {{ initials(member.name) }}
+                        </span>
+                        <span class="truncate">{{ member.name }}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        :model-value="loginFor(member.id)"
+                        :disabled="readOnly"
+                        placeholder="GitHub 계정"
+                        class="font-gothic max-w-64"
+                        @update:model-value="setLogin(member.id, String($event))"
+                      />
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
@@ -564,7 +698,9 @@
                       {{ delivery.outcome }}
                     </Badge>
                     <span>{{ delivery.event }}</span>
-                    <code class="text-muted-foreground font-mono text-xs">{{ delivery.repo }}</code>
+                    <code class="text-muted-foreground font-gothic text-xs">{{
+                      delivery.repo
+                    }}</code>
                     <span class="text-muted-foreground ml-auto shrink-0 text-xs">
                       {{ formatTime(delivery.at) }}
                     </span>
@@ -580,7 +716,7 @@
 
         <!-- Long forms scroll well past the button, so it rides along at the bottom. -->
         <div
-          class="bg-background/85 sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
+          class="bg-background sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
         >
           <Button :disabled="readOnly" @click="save">저장</Button>
         </div>
