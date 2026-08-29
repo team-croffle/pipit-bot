@@ -550,10 +550,7 @@
                       </TableCell>
                     </TableRow>
                     <TableRow v-if="openRepos.has(index)" class="bg-muted/40 hover:bg-muted/40">
-                      <TableCell
-                        colspan="4"
-                        class="p-4 has-[[role=checkbox]]:pr-4 *:[[role=checkbox]]:translate-y-0"
-                      >
+                      <TableCell colspan="4" class="p-4">
                         <div class="flex flex-col gap-4">
                           <div class="grid gap-3 sm:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
