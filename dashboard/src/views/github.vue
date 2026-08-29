@@ -4,6 +4,7 @@
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
+  import OptionSelect from '@/components/common/option-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -20,7 +21,6 @@
   import { Checkbox } from '@/components/ui/checkbox';
   import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
-  import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
   import { Textarea } from '@/components/ui/textarea';
@@ -109,6 +109,7 @@
         repos: loaded.repos ?? [],
         accounts: loaded.accounts ?? [],
       };
+      fillDrafts();
       channels.value = channelBody.channels;
       await refreshDeliveries();
       members.value = memberBody.members;
@@ -175,13 +176,24 @@
     return new Date(at).toLocaleString();
   }
 
-  // An override the operator emptied means "go back to the default", so blank
-  // entries are dropped rather than saved as an empty template.
-  function overriddenTemplates(): GithubEventTemplates {
+  // Every event is edited directly, so the form always holds a full set of wordings.
+  // `template` stays the base the server falls back to, and an event left identical
+  // to it is stored as "inherit" rather than as a duplicate copy.
+  const drafts = ref<Record<string, string>>({});
+
+  function fillDrafts(): void {
+    const base = settings.value.template;
+    drafts.value = Object.fromEntries(
+      eventLabels.map((event) => [event.key, settings.value.eventTemplates[event.key] ?? base]),
+    );
+  }
+
+  function collectTemplates(): GithubEventTemplates {
+    const base = settings.value.template.trim();
     const result: GithubEventTemplates = {};
     for (const event of eventLabels) {
-      const text = settings.value.eventTemplates[event.key]?.trim();
-      if (text) {
+      const text = drafts.value[event.key]?.trim();
+      if (text && text !== base) {
         result[event.key] = text;
       }
     }
@@ -189,15 +201,15 @@
     return result;
   }
 
-  function toggleOverride(key: keyof GithubEventToggles, on: boolean): void {
-    if (on) {
-      // Seeding with the current default keeps switching the box on from silently
-      // changing what gets posted.
-      settings.value.eventTemplates[key] = settings.value.template;
-      return;
+  // Editing the base is only useful if the events still showing it follow along.
+  function onBaseTemplateInput(next: string): void {
+    const previous = settings.value.template;
+    settings.value.template = next;
+    for (const event of eventLabels) {
+      if (drafts.value[event.key] === previous) {
+        drafts.value[event.key] = next;
+      }
     }
-
-    delete settings.value.eventTemplates[key];
   }
 
   async function save(): Promise<void> {
@@ -236,7 +248,7 @@
         channelId: settings.value.channelId,
         events: settings.value.events,
         template: settings.value.template,
-        eventTemplates: overriddenTemplates(),
+        eventTemplates: collectTemplates(),
         repos,
         accounts,
       });
@@ -247,6 +259,7 @@
         repos: result.repos ?? [],
         accounts: result.accounts ?? [],
       };
+      fillDrafts();
       saved.value = '저장했습니다.';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
@@ -306,7 +319,7 @@
                 v-model="settings.channelId"
                 :channels="channels"
                 placeholder="지정 안 함"
-                :placeholder-value="null"
+                :empty-value="null"
                 :disabled="readOnly"
               />
               <p class="text-muted-foreground text-xs">
@@ -342,19 +355,24 @@
           <CardHeader>
             <CardTitle class="text-base">메시지 템플릿</CardTitle>
             <CardDescription>
-              모든 알림이 사용할 기본 문구입니다. 이벤트를 체크하지 않으면 이 기본값을 따릅니다.
+              이벤트마다 실제로 전송될 문구를 지정합니다. 기본 문구와 같게 두면 기본값을 따릅니다.
             </CardDescription>
           </CardHeader>
           <CardContent class="flex flex-col gap-4">
             <div class="flex flex-col gap-1.5">
-              <Label for="gh-template">기본 템플릿</Label>
+              <Label for="gh-template">기본 문구</Label>
               <Textarea
                 id="gh-template"
-                v-model="settings.template"
-                rows="3"
+                :model-value="settings.template"
+                rows="2"
                 class="font-mono"
                 :disabled="readOnly"
+                @update:model-value="onBaseTemplateInput(String($event))"
               />
+              <p class="text-muted-foreground text-xs">
+                아래 이벤트 문구의 출발점입니다. 이 값을 고치면 아직 따로 손대지 않은 이벤트도 함께
+                바뀝니다.
+              </p>
             </div>
 
             <details class="bg-muted/40 rounded-lg border px-3 py-2">
@@ -380,22 +398,14 @@
               </div>
             </details>
 
-            <div class="flex flex-col gap-3">
+            <Separator />
+
+            <div class="flex flex-col gap-4">
               <div v-for="event in eventLabels" :key="event.key" class="flex flex-col gap-1.5">
-                <div class="flex items-center gap-2.5">
-                  <Checkbox
-                    :id="`tpl-${event.key}`"
-                    :model-value="settings.eventTemplates[event.key] !== undefined"
-                    :disabled="readOnly"
-                    @update:model-value="toggleOverride(event.key, $event === true)"
-                  />
-                  <Label :for="`tpl-${event.key}`" class="font-normal">
-                    {{ event.label }} 문구 따로 지정
-                  </Label>
-                </div>
+                <Label :for="`tpl-${event.key}`">{{ event.label }}</Label>
                 <Textarea
-                  v-if="settings.eventTemplates[event.key] !== undefined"
-                  v-model="settings.eventTemplates[event.key]"
+                  :id="`tpl-${event.key}`"
+                  v-model="drafts[event.key]"
                   rows="2"
                   class="font-mono"
                   :disabled="readOnly"
@@ -433,7 +443,7 @@
                   v-model="row.channelId"
                   :channels="channels"
                   placeholder="기본 채널 사용"
-                  :placeholder-value="null"
+                  :empty-value="null"
                   :disabled="readOnly"
                 />
                 <Button
@@ -506,12 +516,12 @@
                 placeholder="GitHub 계정"
                 class="font-mono"
               />
-              <NativeSelect v-model="row.discordUserId" :disabled="readOnly" class="w-full">
-                <NativeSelectOption value="">디스코드 사용자</NativeSelectOption>
-                <NativeSelectOption v-for="member in members" :key="member.id" :value="member.id">
-                  {{ member.name }}
-                </NativeSelectOption>
-              </NativeSelect>
+              <OptionSelect
+                v-model="row.discordUserId"
+                :options="members"
+                placeholder="디스코드 사용자"
+                :disabled="readOnly"
+              />
               <Button
                 variant="ghost"
                 size="icon"
