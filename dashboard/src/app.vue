@@ -1,21 +1,47 @@
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
-  import { RouterLink, RouterView } from 'vue-router';
+  import { LogOut, Menu } from 'lucide-vue-next';
+  import { computed, onMounted, ref, watch } from 'vue';
+  import { RouterView, useRoute } from 'vue-router';
 
   import { fetchJson, logout } from './api';
-  import type { DashboardIdentity } from './types';
+  import AppSidebar from './components/layout/app-sidebar.vue';
+  import BrandMark from './components/layout/brand-mark.vue';
+  import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
+  import { Badge } from './components/ui/badge';
+  import { Button } from './components/ui/button';
+  import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetTitle,
+    SheetTrigger,
+  } from './components/ui/sheet';
+  import { Skeleton } from './components/ui/skeleton';
+  import type { DashboardIdentity, HealthResponse } from './types';
 
   const me = ref<DashboardIdentity | null>(null);
   const error = ref('');
+  const loading = ref(true);
+  const health = ref<'ok' | 'error' | 'unknown'>('unknown');
+  const mobileNavOpen = ref(false);
 
-  const navClass =
-    'rounded-full border border-transparent px-3 py-1.5 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text';
-  // WHY: "/" is a prefix of every route, so the home link has to match exactly or
-  // it stays highlighted on the other pages.
-  const navActiveClass =
-    '[&.router-link-active]:border-accent/40 [&.router-link-active]:bg-accent-soft [&.router-link-active]:text-accent';
-  const navExactActiveClass =
-    '[&.router-link-exact-active]:border-accent/40 [&.router-link-exact-active]:bg-accent-soft [&.router-link-exact-active]:text-accent';
+  const route = useRoute();
+
+  const healthLabel = computed(() => {
+    if (health.value === 'ok') {
+      return '온라인';
+    }
+
+    return health.value === 'error' ? '응답 없음' : '확인 중';
+  });
+
+  // Closing on navigation keeps the drawer from covering the page it just opened.
+  watch(
+    () => route.fullPath,
+    () => {
+      mobileNavOpen.value = false;
+    },
+  );
 
   onMounted(async () => {
     try {
@@ -24,45 +50,92 @@
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : 'Failed to load identity';
+      error.value = cause instanceof Error ? cause.message : '로그인 정보를 불러오지 못했습니다.';
+    } finally {
+      loading.value = false;
+    }
+
+    try {
+      const body = await fetchJson<HealthResponse>('/api/health');
+      health.value = body.status === 'ok' ? 'ok' : 'error';
+    } catch {
+      health.value = 'error';
     }
   });
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-4 pb-14 pt-5">
-    <header
-      class="sticky top-0 z-10 mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-soft bg-bg-elevated/90 px-4 py-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-md"
+  <div class="bg-background flex min-h-dvh">
+    <aside
+      class="border-sidebar-border bg-sidebar sticky top-0 hidden h-dvh w-60 shrink-0 border-r lg:block"
     >
-      <div>
-        <h1 class="m-0 text-lg tracking-tight">Pipit</h1>
-        <nav class="mt-2 flex flex-wrap gap-2">
-          <RouterLink to="/" :class="[navClass, navExactActiveClass]">Overview</RouterLink>
-          <RouterLink to="/settings" :class="[navClass, navActiveClass]">Settings</RouterLink>
-          <RouterLink to="/github" :class="[navClass, navActiveClass]">GitHub</RouterLink>
-        </nav>
-      </div>
-      <div
-        v-if="me"
-        class="flex flex-wrap items-center gap-2 rounded-xl border border-line-soft bg-panel px-3 py-2 text-sm"
+      <AppSidebar version="v0.6.4-dev" />
+    </aside>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header
+        class="bg-background/85 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur-md sm:px-6"
       >
-        <span>{{ me.user ?? 'anonymous' }}</span>
-        <span
-          class="rounded-full px-2 py-0.5 text-xs uppercase tracking-wide"
-          :class="me.canWriteSettings ? 'bg-accent-soft text-accent' : 'bg-panel-hover text-muted'"
-        >
-          {{ me.canWriteSettings ? 'admin' : 'member' }}
-        </span>
-        <button
-          type="button"
-          class="rounded-lg border border-line bg-transparent px-3 py-1.5 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text"
-          @click="logout"
-        >
-          Log out
-        </button>
-      </div>
-    </header>
-    <p v-if="error" class="mb-4 text-sm text-bad">{{ error }}</p>
-    <RouterView v-if="me" :me="me" />
+        <Sheet v-model:open="mobileNavOpen">
+          <SheetTrigger as-child>
+            <Button variant="ghost" size="icon" class="lg:hidden" aria-label="메뉴 열기">
+              <Menu />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" class="w-64 p-0">
+            <SheetTitle class="sr-only">내비게이션</SheetTitle>
+            <SheetDescription class="sr-only">대시보드 페이지 목록</SheetDescription>
+            <AppSidebar version="v0.6.4-dev" @navigate="mobileNavOpen = false" />
+          </SheetContent>
+        </Sheet>
+
+        <BrandMark :size="28" class="lg:hidden" />
+
+        <div class="ml-auto flex items-center gap-2 sm:gap-3">
+          <Badge variant="outline" class="gap-1.5 font-normal" :title="`API 상태: ${healthLabel}`">
+            <span
+              class="size-1.5 rounded-full"
+              :class="{
+                'bg-success': health === 'ok',
+                'bg-destructive': health === 'error',
+                'bg-muted-foreground': health === 'unknown',
+              }"
+              aria-hidden="true"
+            />
+            <span class="hidden sm:inline">Croffle Dev · </span>{{ healthLabel }}
+          </Badge>
+
+          <Skeleton v-if="loading" class="h-8 w-28" />
+          <template v-else-if="me">
+            <div class="flex items-center gap-2">
+              <span class="hidden max-w-32 truncate text-sm sm:inline">
+                {{ me.user ?? 'anonymous' }}
+              </span>
+              <Badge :variant="me.canWriteSettings ? 'default' : 'secondary'">
+                {{ me.canWriteSettings ? 'admin' : 'member' }}
+              </Badge>
+            </div>
+            <Button variant="ghost" size="icon" aria-label="로그아웃" @click="logout">
+              <LogOut />
+            </Button>
+          </template>
+        </div>
+      </header>
+
+      <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <Alert v-if="error" variant="destructive" class="mb-5">
+          <AlertTitle>불러오지 못했습니다</AlertTitle>
+          <AlertDescription>{{ error }}</AlertDescription>
+        </Alert>
+
+        <div v-else-if="loading" class="flex flex-col gap-4">
+          <Skeleton class="h-8 w-56" />
+          <Skeleton class="h-28 w-full" />
+          <Skeleton class="h-56 w-full" />
+        </div>
+
+        <RouterView v-else-if="me" :me="me" />
+      </main>
+    </div>
   </div>
 </template>
