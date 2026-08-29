@@ -13,6 +13,7 @@ export interface GithubIssueLike {
   assignees?: GithubUser[];
   requestedReviewers?: GithubUser[];
   isPullRequest: boolean;
+  isDraft: boolean;
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -66,5 +67,6 @@ export function readIssueLike(
     assignees: asUserList(row.assignees),
     requestedReviewers: asUserList(row.requested_reviewers),
     isPullRequest: forcePullRequest || asRecord(row.pull_request) !== undefined,
+    isDraft: row.draft === true,
   };
 }

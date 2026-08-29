@@ -97,6 +97,19 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
     ]);
   }
 
+  if (context.action === 'synchronize') {
+    // WHY: a draft is still being assembled — the commits piling up in one are not
+    // news to anybody yet.
+    if (pull.isDraft) {
+      return undefined;
+    }
+
+    return build(context, pull, 'pullRequestUpdated', 'PR Updated', [
+      ...(pull.requestedReviewers ?? []),
+      ...(pull.assignees ?? []),
+    ]);
+  }
+
   if (context.action === 'closed') {
     const merged = asRecord(context.payload.pull_request)?.merged;
     if (merged !== true) {

@@ -20,6 +20,7 @@
 
   const eventLabels: { key: keyof GithubEventToggles; label: string }[] = [
     { key: 'pullRequestOpened', label: 'PR opened' },
+    { key: 'pullRequestUpdated', label: 'PR updated (new commits)' },
     { key: 'pullRequestMerged', label: 'PR merged' },
     { key: 'pullRequestAssigned', label: 'PR assigned / review requested' },
     { key: 'issueOpened', label: 'Issue opened' },
@@ -31,6 +32,7 @@
   function emptyToggles(): GithubEventToggles {
     return {
       pullRequestOpened: false,
+      pullRequestUpdated: false,
       pullRequestMerged: false,
       pullRequestAssigned: false,
       issueOpened: false,

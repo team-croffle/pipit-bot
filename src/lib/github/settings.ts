@@ -5,6 +5,7 @@ import { dataDir } from '../constants.js';
 
 export interface GithubEventToggles {
   pullRequestOpened: boolean;
+  pullRequestUpdated: boolean;
   pullRequestMerged: boolean;
   pullRequestAssigned: boolean;
   issueOpened: boolean;
@@ -48,6 +49,7 @@ const githubLogin = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 
 const TOGGLE_KEYS = [
   'pullRequestOpened',
+  'pullRequestUpdated',
   'pullRequestMerged',
   'pullRequestAssigned',
   'issueOpened',
@@ -59,6 +61,7 @@ const TOGGLE_KEYS = [
 function emptyToggles(): GithubEventToggles {
   return {
     pullRequestOpened: false,
+    pullRequestUpdated: false,
     pullRequestMerged: false,
     pullRequestAssigned: false,
     issueOpened: false,

@@ -63,6 +63,7 @@ export interface DiscordMember {
 
 export interface GithubEventToggles {
   pullRequestOpened: boolean;
+  pullRequestUpdated: boolean;
   pullRequestMerged: boolean;
   pullRequestAssigned: boolean;
   issueOpened: boolean;
