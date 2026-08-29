@@ -8,6 +8,15 @@
   const me = ref<DashboardIdentity | null>(null);
   const error = ref('');
 
+  const navClass =
+    'rounded-full border border-transparent px-3 py-1.5 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text';
+  // WHY: "/" is a prefix of every route, so the home link has to match exactly or
+  // it stays highlighted on the other pages.
+  const navActiveClass =
+    '[&.router-link-active]:border-accent/40 [&.router-link-active]:bg-accent-soft [&.router-link-active]:text-accent';
+  const navExactActiveClass =
+    '[&.router-link-exact-active]:border-accent/40 [&.router-link-exact-active]:bg-accent-soft [&.router-link-exact-active]:text-accent';
+
   onMounted(async () => {
     try {
       me.value = await fetchJson<DashboardIdentity>('/api/me');
@@ -28,18 +37,9 @@
       <div>
         <h1 class="m-0 text-lg tracking-tight">Pipit</h1>
         <nav class="mt-2 flex flex-wrap gap-2">
-          <RouterLink
-            to="/"
-            class="rounded-full border border-transparent px-3 py-1.5 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text [&.router-link-active]:border-accent/40 [&.router-link-active]:bg-accent-soft [&.router-link-active]:text-accent"
-          >
-            Overview
-          </RouterLink>
-          <RouterLink
-            to="/settings"
-            class="rounded-full border border-transparent px-3 py-1.5 text-sm text-muted transition hover:border-line hover:bg-panel-hover hover:text-text [&.router-link-active]:border-accent/40 [&.router-link-active]:bg-accent-soft [&.router-link-active]:text-accent"
-          >
-            Settings
-          </RouterLink>
+          <RouterLink to="/" :class="[navClass, navExactActiveClass]">Overview</RouterLink>
+          <RouterLink to="/settings" :class="[navClass, navActiveClass]">Settings</RouterLink>
+          <RouterLink to="/github" :class="[navClass, navActiveClass]">GitHub</RouterLink>
         </nav>
       </div>
       <div

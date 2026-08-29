@@ -56,6 +56,41 @@ export interface DiscordRole {
   name: string;
 }
 
+export interface DiscordMember {
+  id: string;
+  name: string;
+}
+
+export interface GithubEventToggles {
+  pullRequestOpened: boolean;
+  pullRequestMerged: boolean;
+  pullRequestAssigned: boolean;
+  issueOpened: boolean;
+  issueAssigned: boolean;
+  reviewSubmitted: boolean;
+  commentCreated: boolean;
+}
+
+/** `null` on a field means "inherit the global default". */
+export interface GithubRepoRule {
+  repo: string;
+  channelId: string | null;
+  events: GithubEventToggles | null;
+}
+
+export interface GithubAccountMapping {
+  githubLogin: string;
+  discordUserId: string;
+}
+
+export interface GithubNotifySettings {
+  enabled: boolean;
+  channelId: string | null;
+  events: GithubEventToggles;
+  repos: GithubRepoRule[];
+  accounts: GithubAccountMapping[];
+}
+
 export interface BotRuntimeConfig {
   prefix: string;
   musicChannelIds: string[];

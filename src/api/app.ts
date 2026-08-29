@@ -7,7 +7,12 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { stream } from 'hono/streaming';
 
 import { rootDir } from '../lib/constants.js';
-import { getConfiguredGuild, listAssignableRoles, listTextChannels } from '../lib/discord-guild.js';
+import {
+  getConfiguredGuild,
+  listAssignableRoles,
+  listGuildMembers,
+  listTextChannels,
+} from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
 import {
   getGithubNotifySettings,
@@ -231,6 +236,15 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     }
 
     return c.json({ roles: listAssignableRoles(guild) });
+  });
+
+  app.get('/api/discord/members', dashboardViewer, async (c) => {
+    const guild = getConfiguredGuild();
+    if (!guild) {
+      return c.json({ error: 'Discord guild is not ready.' }, 503);
+    }
+
+    return c.json({ members: await listGuildMembers(guild) });
   });
 
   mountGithubWebhookRoutes(app);
