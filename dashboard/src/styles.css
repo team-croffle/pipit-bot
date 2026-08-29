@@ -1,43 +1,157 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
-@theme {
-  --color-bg: #0d0f14;
-  --color-bg-elevated: #141822;
-  --color-panel: #1a1f2b;
-  --color-panel-hover: #212736;
-  --color-line: #2a3142;
-  --color-line-soft: #222938;
-  --color-text: #eef1f6;
-  --color-muted: #8b95a8;
-  --color-accent: #6ea8ff;
-  --color-accent-soft: rgba(110, 168, 255, 0.14);
-  --color-ok: #34d399;
-  --color-warn: #fbbf24;
-  --color-bad: #f87171;
-  --color-readonly: #252b3a;
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Palette is derived from the pipit mascot: warm paper, charcoal outline, and the
+ * amber of the beak as the single accent. Every colour below is a token — components
+ * must not hardcode their own (AGENTS.md §4).
+ */
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.99 0.006 85);
+  --foreground: oklch(0.24 0.012 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.012 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.012 285);
+  --primary: oklch(0.58 0.128 63);
+  --primary-foreground: oklch(0.99 0.01 85);
+  --secondary: oklch(0.96 0.012 85);
+  --secondary-foreground: oklch(0.3 0.012 285);
+  --muted: oklch(0.96 0.01 85);
+  --muted-foreground: oklch(0.5 0.015 80);
+  --accent: oklch(0.94 0.028 80);
+  --accent-foreground: oklch(0.32 0.05 60);
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(0.99 0.01 85);
+  --border: oklch(0.9 0.012 80);
+  --input: oklch(0.9 0.012 80);
+  --ring: oklch(0.58 0.128 63);
+
+  /* Status — kept separate from the accent so "good/bad" never reads as branding. */
+  --success: oklch(0.55 0.13 155);
+  --success-foreground: oklch(0.99 0.01 85);
+  --warning: oklch(0.65 0.15 65);
+  --warning-foreground: oklch(0.22 0.04 60);
+  --info: oklch(0.55 0.11 240);
+  --info-foreground: oklch(0.99 0.01 85);
+
+  --sidebar: oklch(0.97 0.009 85);
+  --sidebar-foreground: oklch(0.24 0.012 285);
+  --sidebar-primary: oklch(0.58 0.128 63);
+  --sidebar-primary-foreground: oklch(0.99 0.01 85);
+  --sidebar-accent: oklch(0.93 0.03 80);
+  --sidebar-accent-foreground: oklch(0.32 0.05 60);
+  --sidebar-border: oklch(0.9 0.012 80);
+  --sidebar-ring: oklch(0.58 0.128 63);
+}
+
+.dark {
+  --background: oklch(0.18 0.008 285);
+  --foreground: oklch(0.94 0.01 85);
+  --card: oklch(0.21 0.009 285);
+  --card-foreground: oklch(0.94 0.01 85);
+  --popover: oklch(0.21 0.009 285);
+  --popover-foreground: oklch(0.94 0.01 85);
+  --primary: oklch(0.78 0.135 70);
+  --primary-foreground: oklch(0.22 0.04 60);
+  --secondary: oklch(0.26 0.01 285);
+  --secondary-foreground: oklch(0.92 0.01 85);
+  --muted: oklch(0.26 0.01 285);
+  --muted-foreground: oklch(0.68 0.014 80);
+  --accent: oklch(0.3 0.022 70);
+  --accent-foreground: oklch(0.88 0.05 75);
+  --destructive: oklch(0.63 0.19 25);
+  --destructive-foreground: oklch(0.98 0.01 85);
+  --border: oklch(0.3 0.01 285);
+  --input: oklch(0.32 0.01 285);
+  --ring: oklch(0.7 0.12 68);
+
+  --success: oklch(0.72 0.14 158);
+  --success-foreground: oklch(0.2 0.03 158);
+  --warning: oklch(0.79 0.14 70);
+  --warning-foreground: oklch(0.22 0.04 60);
+  --info: oklch(0.72 0.11 240);
+  --info-foreground: oklch(0.2 0.03 240);
+
+  --sidebar: oklch(0.21 0.009 285);
+  --sidebar-foreground: oklch(0.94 0.01 85);
+  --sidebar-primary: oklch(0.78 0.135 70);
+  --sidebar-primary-foreground: oklch(0.22 0.04 60);
+  --sidebar-accent: oklch(0.28 0.02 70);
+  --sidebar-accent-foreground: oklch(0.88 0.05 75);
+  --sidebar-border: oklch(0.28 0.01 285);
+  --sidebar-ring: oklch(0.7 0.12 68);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: Pretendard, Inter, 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   html {
+    /* Keeps form controls and scrollbars in step with the active theme. */
+    color-scheme: light;
+  }
+
+  html.dark {
     color-scheme: dark;
   }
 
-  html,
   body {
+    @apply bg-background text-foreground font-sans antialiased;
     margin: 0;
-    min-height: 100%;
-    font-family: Inter, 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+    min-height: 100dvh;
     line-height: 1.5;
-    @apply bg-bg text-text antialiased;
-  }
-
-  body {
-    background:
-      radial-gradient(circle at top, rgba(110, 168, 255, 0.08), transparent 34%), var(--color-bg);
-  }
-
-  a {
-    @apply text-accent no-underline;
   }
 
   button,
@@ -52,6 +166,10 @@
   select:disabled,
   textarea:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+  }
+
+  /* Digits in tables and counters stay in their columns. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 }
