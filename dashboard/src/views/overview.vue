@@ -69,10 +69,10 @@
   const features = computed(() => [
     { label: '음악 오케스트레이션', on: true, to: '/music' },
     { label: 'GitHub PR 리마인더', on: github.value?.enabled ?? false, to: '/github' },
-    { label: '길드 이벤트 · 역할 부여', on: true, to: '/settings' },
+    { label: '초대 로거', on: true, to: '/invites' },
+    { label: '리액션 롤', on: true, to: '/reaction-roles' },
     { label: '감사 로깅', on: false, to: '/logs', planned: 'v0.7.2' },
     { label: '음악 결산', on: false, to: '/settlement', planned: 'v0.8.1' },
-    { label: '캘린더 연동', on: false, to: '/calendar', planned: 'v0.9' },
   ]);
 
   function outcomeVariant(

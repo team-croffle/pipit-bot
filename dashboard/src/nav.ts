@@ -7,7 +7,8 @@ import {
   Music,
   ScrollText,
   Settings,
-  Users,
+  Smile,
+  UserPlus,
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
 
@@ -36,6 +37,8 @@ export const navSections: NavSection[] = [
     items: [
       { to: '/music', label: '음악', icon: Music },
       { to: '/github', label: 'GitHub 리마인더', icon: Github },
+      { to: '/invites', label: '초대 로거', icon: UserPlus },
+      { to: '/reaction-roles', label: '리액션 롤', icon: Smile },
       { to: '/calendar', label: '캘린더 연동', icon: CalendarDays, planned: 'v0.9' },
       { to: '/polls', label: '투표', icon: ListChecks, planned: 'v1.1' },
     ],
@@ -45,7 +48,6 @@ export const navSections: NavSection[] = [
     items: [
       { to: '/settlement', label: '음악 결산', icon: BarChart3, planned: 'v0.8.1' },
       { to: '/logs', label: '로깅', icon: ScrollText, planned: 'v0.7.2' },
-      { to: '/team', label: '팀 관리', icon: Users, planned: 'v0.6.7' },
     ],
   },
   {
