@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, shallowRef } from 'vue';
 
 export interface UnicodeEmoji {
   emoji: string;
@@ -22,8 +22,12 @@ export interface UnicodeEmojiGroup {
  *
  * Loaded through a dynamic import so ~840KB of JSON stays out of the main bundle and
  * only arrives when somebody opens the picker.
+ *
+ * WHY shallowRef: this is 1,914 frozen records that never change. A deep ref would
+ * wrap every one of them in a Proxy on assignment and walk those proxies on every
+ * render, for reactivity nothing here needs.
  */
-const groups = ref<UnicodeEmojiGroup[]>([]);
+const groups = shallowRef<UnicodeEmojiGroup[]>([]);
 const loading = ref(false);
 let requested = false;
 
