@@ -34,9 +34,14 @@ export function usePlayback() {
     }
   }
 
+  /**
+   * WHY the previous message is left standing until the new one arrives: clearing it
+   * up front emptied the status line for the length of the request, which collapsed
+   * the card and sprang it back. `busy` is what tells the panel a request is running;
+   * the text does not have to disappear to say the same thing.
+   */
   async function run(path: string, body?: unknown, fallback = '요청을 처리하지 못했습니다.') {
     busy.value = true;
-    message.value = '';
     try {
       const result = await postJson<PlaybackActionResult>(path, body);
       message.value = result.message;
@@ -67,7 +72,6 @@ export function usePlayback() {
     }
 
     busy.value = true;
-    message.value = '';
     try {
       await postJson('/api/music/jobs', { jobId: crypto.randomUUID(), query: trimmed });
       message.value = '트랙을 준비하고 있습니다…';

@@ -1,12 +1,12 @@
-import { escapeMarkdown } from 'discord.js';
+import { escapeMarkdown, type APIEmbed } from 'discord.js';
 
+import { renderEmbedTemplate, type EmbedTemplate } from './embed-template.js';
 import { resolveGithubMentions } from './mentions.js';
 import type { GithubNotification } from './normalize-event.js';
 import type { GithubAccountMapping } from './settings.js';
-import { renderTemplate, type TemplateValues } from './template.js';
+import type { TemplateValues } from './template.js';
 
 const MAX_TITLE_LENGTH = 200;
-const MAX_CONTENT_LENGTH = 1900;
 const ZERO_WIDTH_SPACE = '​';
 
 // WHY: maskedLink, heading and the list options are off by default, which would
@@ -20,6 +20,7 @@ const ESCAPE_OPTIONS = {
 
 export interface RenderedMessage {
   content: string;
+  embed: APIEmbed | undefined;
   userIds: string[];
 }
 
@@ -56,7 +57,7 @@ export function buildGithubIssueUrl(
 export function formatGithubNotification(
   notification: GithubNotification,
   accounts: GithubAccountMapping[],
-  template: string,
+  template: EmbedTemplate,
 ): RenderedMessage {
   const userIds: string[] = [];
   const mention = (logins: string[]): string => {
@@ -78,15 +79,13 @@ export function formatGithubNotification(
     event: notification.label,
     actor: mention([notification.actor]),
     author: mention(notification.author ? [notification.author] : []),
+    assignee: mention(notification.assignee ? [notification.assignee] : []),
     assignees: mention(notification.assignees),
     reviewers: mention(notification.reviewers),
     mentions: mention(notification.targets),
   };
 
-  const content = renderTemplate(template, values);
+  const rendered = renderEmbedTemplate(template, values);
 
-  return {
-    content: content.length > MAX_CONTENT_LENGTH ? content.slice(0, MAX_CONTENT_LENGTH) : content,
-    userIds,
-  };
+  return { content: rendered.content, embed: rendered.embed, userIds };
 }

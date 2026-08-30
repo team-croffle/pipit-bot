@@ -7,6 +7,8 @@
   import MemberSelect from '@/components/common/member-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
+  import SuggestInput from '@/components/common/suggest-input.vue';
+  import TemplateList from '@/components/github/template-list.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
@@ -19,7 +21,6 @@
     CardTitle,
   } from '@/components/ui/card';
   import { Checkbox } from '@/components/ui/checkbox';
-  import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
@@ -31,17 +32,17 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
-  import { Textarea } from '@/components/ui/textarea';
+  import { eventLabels } from '@/lib/github-templates';
   import type {
     DashboardIdentity,
     DiscordChannel,
     DiscordMember,
     GithubAccountMapping,
     GithubDelivery,
-    GithubEventTemplates,
     GithubEventToggles,
     GithubNotifySettings,
     GithubRepoRule,
+    GithubTemplateDefaults,
   } from '@/types';
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
@@ -49,30 +50,6 @@
 
   const repoPattern = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
   const loginPattern = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
-
-  const templateVariables = [
-    'repo',
-    'pr_number',
-    'pr_url',
-    'pr_title',
-    'event',
-    'actor',
-    'author',
-    'assignees',
-    'reviewers',
-    'mentions',
-  ];
-
-  const eventLabels: { key: keyof GithubEventToggles; label: string }[] = [
-    { key: 'pullRequestOpened', label: 'PR 등록' },
-    { key: 'pullRequestUpdated', label: 'PR 업데이트 (새 커밋 · rebase)' },
-    { key: 'pullRequestMerged', label: 'PR 머지' },
-    { key: 'pullRequestAssigned', label: 'PR 리뷰어 / 담당자 배정' },
-    { key: 'issueOpened', label: 'Issue 등록' },
-    { key: 'issueAssigned', label: 'Issue 담당자 배정' },
-    { key: 'reviewSubmitted', label: 'PR 리뷰 제출' },
-    { key: 'commentCreated', label: '코멘트 작성' },
-  ];
 
   function emptyToggles(): GithubEventToggles {
     return {
@@ -91,11 +68,11 @@
     enabled: false,
     channelId: null,
     events: emptyToggles(),
-    template: '',
     eventTemplates: {},
     repos: [],
     accounts: [],
   });
+  const templateDefaults = ref<GithubTemplateDefaults | null>(null);
   const channels = ref<DiscordChannel[]>([]);
   const deliveries = ref<GithubDelivery[]>([]);
   const members = ref<DiscordMember[]>([]);
@@ -124,15 +101,68 @@
       membersLoading.value = false;
     }
   }
+  const repositories = ref<string[]>([]);
+  const repositoriesLoading = ref(false);
+  let repositoriesRequested = false;
+
+  const githubLogins = ref<string[]>([]);
+  const githubLoginsLoading = ref(false);
+  let githubLoginsRequested = false;
+
+  /**
+   * Both lists come off the GitHub App installation, which is optional — the server
+   * answers `available: false` when there are no credentials and the fields stay
+   * plain text. Loaded on first use for the same reason as the member list: neither
+   * is needed to look at the page.
+   */
+  async function loadRepositories(): Promise<void> {
+    if (repositoriesRequested) {
+      return;
+    }
+
+    repositoriesRequested = true;
+    repositoriesLoading.value = true;
+    try {
+      const body = await fetchJson<{ available: boolean; repositories: { fullName: string }[] }>(
+        '/api/github/repositories',
+      );
+      repositories.value = body.repositories.map((repository) => repository.fullName);
+    } catch {
+      repositoriesRequested = false;
+    } finally {
+      repositoriesLoading.value = false;
+    }
+  }
+
+  async function loadGithubLogins(): Promise<void> {
+    if (githubLoginsRequested) {
+      return;
+    }
+
+    githubLoginsRequested = true;
+    githubLoginsLoading.value = true;
+    try {
+      const body = await fetchJson<{ available: boolean; members: { login: string }[] }>(
+        '/api/github/members',
+      );
+      githubLogins.value = body.members.map((member) => member.login);
+    } catch {
+      githubLoginsRequested = false;
+    } finally {
+      githubLoginsLoading.value = false;
+    }
+  }
+
   const error = ref('');
   const saved = ref('');
   const loading = ref(true);
 
   onMounted(async () => {
     try {
-      const [loaded, channelBody] = await Promise.all([
+      const [loaded, channelBody, defaultsBody] = await Promise.all([
         fetchJson<GithubNotifySettings>('/api/github-notify'),
         fetchJson<{ channels: DiscordChannel[] }>('/api/discord/channels'),
+        fetchJson<GithubTemplateDefaults>('/api/github-notify/defaults'),
       ]);
       settings.value = {
         ...loaded,
@@ -141,7 +171,7 @@
         repos: loaded.repos ?? [],
         accounts: loaded.accounts ?? [],
       };
-      fillDrafts();
+      templateDefaults.value = defaultsBody;
       channels.value = channelBody.channels;
       await refreshDeliveries();
       // Existing mappings only store an id, so the names behind them are fetched
@@ -162,6 +192,7 @@
   const openRepos = ref(new Set<number>());
 
   function toggleOpen(index: number): void {
+    void loadRepositories();
     const next = new Set(openRepos.value);
     if (next.has(index)) {
       next.delete(index);
@@ -234,6 +265,7 @@
 
   function addAccountRow(): void {
     void loadMembers();
+    void loadGithubLogins();
     settings.value.accounts = [...settings.value.accounts, { githubLogin: '', discordUserId: '' }];
   }
 
@@ -264,42 +296,6 @@
 
   function formatTime(at: string): string {
     return new Date(at).toLocaleString();
-  }
-
-  // Every event is edited directly, so the form always holds a full set of wordings.
-  // `template` stays the base the server falls back to, and an event left identical
-  // to it is stored as "inherit" rather than as a duplicate copy.
-  const drafts = ref<Record<string, string>>({});
-
-  function fillDrafts(): void {
-    const base = settings.value.template;
-    drafts.value = Object.fromEntries(
-      eventLabels.map((event) => [event.key, settings.value.eventTemplates[event.key] ?? base]),
-    );
-  }
-
-  function collectTemplates(): GithubEventTemplates {
-    const base = settings.value.template.trim();
-    const result: GithubEventTemplates = {};
-    for (const event of eventLabels) {
-      const text = drafts.value[event.key]?.trim();
-      if (text && text !== base) {
-        result[event.key] = text;
-      }
-    }
-
-    return result;
-  }
-
-  // Editing the base is only useful if the events still showing it follow along.
-  function onBaseTemplateInput(next: string): void {
-    const previous = settings.value.template;
-    settings.value.template = next;
-    for (const event of eventLabels) {
-      if (drafts.value[event.key] === previous) {
-        drafts.value[event.key] = next;
-      }
-    }
   }
 
   async function save(): Promise<void> {
@@ -337,8 +333,7 @@
         enabled: settings.value.enabled,
         channelId: settings.value.channelId,
         events: settings.value.events,
-        template: settings.value.template,
-        eventTemplates: collectTemplates(),
+        eventTemplates: settings.value.eventTemplates,
         repos,
         accounts,
       });
@@ -349,7 +344,6 @@
         repos: result.repos ?? [],
         accounts: result.accounts ?? [],
       };
-      fillDrafts();
       saved.value = '저장했습니다.';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
@@ -443,65 +437,19 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">메시지 템플릿</CardTitle>
+            <CardTitle class="text-base">알림 문구</CardTitle>
             <CardDescription>
-              이벤트마다 실제로 전송될 문구를 지정합니다. 기본 문구와 같게 두면 기본값을 따릅니다.
+              이벤트마다 보낼 임베드를 지정합니다. 손대지 않은 이벤트는 기본 문구를 씁니다 · 행을
+              편집해서 문구와 사용 가능한 변수를 확인하세요
             </CardDescription>
           </CardHeader>
-          <CardContent class="flex flex-col gap-4">
-            <div class="flex flex-col gap-1.5">
-              <Label for="gh-template">기본 문구</Label>
-              <Textarea
-                id="gh-template"
-                :model-value="settings.template"
-                rows="2"
-                class="font-gothic"
-                :disabled="readOnly"
-                @update:model-value="onBaseTemplateInput(String($event))"
-              />
-              <p class="text-muted-foreground text-xs">
-                아래 이벤트 문구의 출발점입니다. 이 값을 고치면 아직 따로 손대지 않은 이벤트도 함께
-                바뀝니다.
-              </p>
-            </div>
-
-            <details class="bg-muted/40 rounded-lg border px-3 py-2">
-              <summary class="text-muted-foreground cursor-pointer text-sm">
-                사용 가능한 변수
-              </summary>
-              <div class="text-muted-foreground mt-3 flex flex-col gap-2 text-sm">
-                <p class="font-gothic text-xs">
-                  <span v-for="name in templateVariables" :key="name" class="mr-2">
-                    {{ '{' + name + '}' }}
-                  </span>
-                </p>
-                <p>
-                  <code>{name|있을 때|없을 때}</code> 형식으로 값 유무에 따라 문구를 바꿀 수
-                  있습니다. 첫 번째 분기는 값 뒤에 붙고, 안에 <code>{}</code> 를 넣으면 그 자리에
-                  값이 들어갑니다. 두 번째 분기는 값이 없을 때 전체를 대체합니다.
-                </p>
-                <p>
-                  예 — <code>{reviewers|: requested|updated} by {assignees}</code> 는 리뷰어가
-                  있으면 <em>@reviewer: requested by @author</em>, 없으면
-                  <em>updated by @author</em> 가 됩니다.
-                </p>
-              </div>
-            </details>
-
-            <Separator />
-
-            <div class="flex flex-col gap-4">
-              <div v-for="event in eventLabels" :key="event.key" class="flex flex-col gap-1.5">
-                <Label :for="`tpl-${event.key}`">{{ event.label }}</Label>
-                <Textarea
-                  :id="`tpl-${event.key}`"
-                  v-model="drafts[event.key]"
-                  rows="2"
-                  class="font-gothic"
-                  :disabled="readOnly"
-                />
-              </div>
-            </div>
+          <CardContent>
+            <TemplateList
+              :templates="settings.eventTemplates"
+              :defaults="templateDefaults"
+              :read-only="readOnly"
+              @update:templates="settings.eventTemplates = $event"
+            />
           </CardContent>
         </Card>
 
@@ -509,7 +457,8 @@
           <CardHeader>
             <CardTitle class="text-base">저장소별 설정</CardTitle>
             <CardDescription>
-              저장소마다 알림 채널과 이벤트 종류를 다르게 지정할 수 있습니다 · 행을 펼쳐서 편집
+              저장소마다 알림 채널과 이벤트 종류를 다르게 지정할 수 있습니다 · 행을 펼쳐서 편집 ·
+              GitHub App이 설치된 저장소가 후보로 제시됩니다
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addRepoRow">
@@ -555,12 +504,15 @@
                           <div class="grid gap-3 sm:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
                               <Label :for="`repo-name-${index}`">저장소</Label>
-                              <Input
+                              <SuggestInput
                                 :id="`repo-name-${index}`"
                                 v-model="row.repo"
+                                :options="repositories"
+                                :list-id="`repo-options-${index}`"
+                                :loading="repositoriesLoading"
                                 :disabled="readOnly"
                                 placeholder="owner/name"
-                                class="font-gothic"
+                                @open="loadRepositories"
                               />
                             </div>
                             <div class="flex flex-col gap-1.5">
@@ -643,7 +595,8 @@
             <CardTitle class="text-base">계정 매핑</CardTitle>
             <CardDescription>
               연결한 멤버는 담당자 배정·리뷰 요청 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은
-              일반 텍스트로 표시됩니다.
+              일반 텍스트로 표시됩니다. GitHub App 자격증명이 설정되어 있으면 조직 멤버가 후보로
+              제시되고, 없으면 직접 입력합니다.
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
@@ -668,11 +621,14 @@
                 :disabled="readOnly"
                 @open="loadMembers"
               />
-              <Input
+              <SuggestInput
                 v-model="row.githubLogin"
+                :options="githubLogins"
+                :list-id="`account-options-${index}`"
+                :loading="githubLoginsLoading"
                 :disabled="readOnly"
                 placeholder="GitHub 계정"
-                class="font-gothic"
+                @open="loadGithubLogins"
               />
               <Button
                 variant="ghost"

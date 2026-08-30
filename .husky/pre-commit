@@ -1,2 +1,3 @@
+node scripts/check-abstraction.mjs
 yarn typecheck
 yarn lint-staged

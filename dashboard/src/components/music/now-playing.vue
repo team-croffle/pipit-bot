@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { Music, Pause, Play, Repeat, SkipForward, Square } from 'lucide-vue-next';
-  import { ref } from 'vue';
+  import { computed, ref } from 'vue';
 
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
@@ -14,6 +14,38 @@
     error: string;
     message: string;
   }>();
+
+  const current = computed(() =>
+    props.playback?.active ? (props.playback.current ?? null) : null,
+  );
+
+  const progress = computed(() => Math.round((current.value?.progress ?? 0) * 100));
+
+  const subtitle = computed(() => {
+    if (!current.value) {
+      return '위에서 추가하거나 디스코드 명령을 사용하세요.';
+    }
+
+    return props.playback?.voiceChannelName
+      ? `#${props.playback.voiceChannelName} 재생 중`
+      : '재생 중';
+  });
+
+  // Priority, not stacking: an error is the thing to read, then whatever the last
+  // action reported, then the reason enqueueing is unavailable.
+  const status = computed(() => {
+    if (props.error) {
+      return props.error;
+    }
+
+    if (props.message) {
+      return props.message;
+    }
+
+    return props.playback && !props.playback.canEnqueue
+      ? '트랙을 추가하려면 먼저 봇을 보이스 채널에 참여시키세요.'
+      : '';
+  });
 
   const emit = defineEmits<{
     action: [path: string];
@@ -42,9 +74,8 @@
   // `off` and `track` are the two the button cycles between when nothing is queued;
   // the full set lives in the queue card's repeat control.
   function cycleRepeat(): void {
-    const current = props.playback?.repeatMode ?? 'off';
-    const next: PlaybackRepeatMode =
-      current === 'off' ? 'track' : current === 'track' ? 'queue' : 'off';
+    const mode = props.playback?.repeatMode ?? 'off';
+    const next: PlaybackRepeatMode = mode === 'off' ? 'track' : mode === 'track' ? 'queue' : 'off';
     emit('repeat', next);
   }
 
@@ -75,54 +106,55 @@
         </Button>
       </form>
 
-      <p v-if="playback && !playback.canEnqueue" class="text-muted-foreground text-sm">
-        트랙을 추가하려면 먼저 봇을 보이스 채널에 참여시키세요.
+      <!-- One reserved line for all three notices: they used to be separate paragraphs
+           that appeared and vanished, and every appearance resized the card. -->
+      <p
+        class="min-h-5 text-sm"
+        :class="error ? 'text-destructive' : 'text-muted-foreground'"
+        :role="error ? 'alert' : undefined"
+        aria-live="polite"
+      >
+        {{ status }}
       </p>
-      <p v-if="error" class="text-destructive text-sm" role="alert">{{ error }}</p>
-      <p v-else-if="message" class="text-muted-foreground text-sm">{{ message }}</p>
 
-      <div class="flex items-start gap-4">
+      <div class="flex min-h-24 items-start gap-4">
         <div
-          class="from-primary/80 to-primary/30 text-primary-foreground flex size-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br"
+          class="from-primary/80 to-primary/30 text-primary-foreground flex size-14 shrink-0 items-center justify-center rounded-xl bg-linear-to-br"
           aria-hidden="true"
         >
           <Music class="size-6" />
         </div>
+        <!-- Both states render the same rows — the idle one just has nothing to say in
+             them. Two branches of different heights made the card resize on every
+             track change and on every poll that arrived mid-transition. -->
         <div class="min-w-0 flex-1">
-          <template v-if="playback?.active && playback.current">
-            <p class="truncate font-semibold">{{ playback.current.title }}</p>
-            <p class="text-muted-foreground mt-0.5 truncate text-xs">
-              <template v-if="playback.voiceChannelName">
-                #{{ playback.voiceChannelName }} 재생 중
-              </template>
-              <template v-else>music worker 소스</template>
-            </p>
+          <p class="truncate font-semibold" :class="current ? '' : 'text-muted-foreground'">
+            {{ current?.title ?? '재생 중인 트랙이 없습니다' }}
+          </p>
+          <p class="text-muted-foreground mt-0.5 truncate text-xs">{{ subtitle }}</p>
+          <div
+            class="bg-muted mt-3 h-1.5 overflow-hidden rounded-full"
+            role="progressbar"
+            :aria-valuenow="progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div
-              class="bg-muted mt-3 h-1.5 overflow-hidden rounded-full"
-              role="progressbar"
-              :aria-valuenow="Math.round(playback.current.progress * 100)"
-              aria-valuemin="0"
-              aria-valuemax="100"
-            >
-              <div
-                class="bg-primary h-full rounded-full transition-[width] duration-300"
-                :style="{ width: `${Math.round(playback.current.progress * 100)}%` }"
-              />
-            </div>
-            <p class="text-muted-foreground tnum mt-1.5 flex justify-between text-xs">
-              <span>{{ playback.current.positionLabel }}</span>
-              <span>{{ playback.current.durationLabel }}</span>
-            </p>
-          </template>
-          <template v-else>
-            <p class="text-muted-foreground font-medium">재생 중인 트랙이 없습니다</p>
-            <p class="text-muted-foreground mt-0.5 text-xs">
-              위에서 추가하거나 디스코드 명령을 사용하세요.
-            </p>
-          </template>
+              class="bg-primary h-full rounded-full transition-[width] duration-300"
+              :style="{ width: `${progress}%` }"
+            />
+          </div>
+          <p class="text-muted-foreground tnum mt-1.5 flex justify-between text-xs">
+            <span>{{ current?.positionLabel ?? '--:--' }}</span>
+            <span>{{ current?.durationLabel ?? '--:--' }}</span>
+          </p>
         </div>
-        <Badge v-if="playback" :variant="statusVariant[playback.status]" class="mt-0.5 shrink-0">
-          {{ statusLabel[playback.status] }}
+        <!-- Reserved so the title does not widen for one poll while state is unknown. -->
+        <Badge
+          :variant="playback ? statusVariant[playback.status] : 'outline'"
+          class="mt-0.5 min-w-14 shrink-0 justify-center"
+        >
+          {{ playback ? statusLabel[playback.status] : '…' }}
         </Badge>
       </div>
 

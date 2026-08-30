@@ -98,16 +98,51 @@ export interface GithubAccountMapping {
   discordUserId: string;
 }
 
-export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, string>>;
+export type GithubEventKey = keyof GithubEventToggles;
+
+export interface EmbedFieldTemplate {
+  name: string;
+  value: string;
+  inline: boolean;
+}
+
+export interface EmbedTemplate {
+  /** Plain text above the embed — the only place a mention actually pings. */
+  content: string;
+  title: string;
+  description: string;
+  fields: EmbedFieldTemplate[];
+  footer: string;
+  /** , or '' to leave the embed uncoloured. */
+  color: string;
+  showTimestamp: boolean;
+}
+
+/** A missing key means the event uses its built-in default. */
+export type GithubEventTemplates = Partial<Record<GithubEventKey, EmbedTemplate>>;
 
 export interface GithubNotifySettings {
   enabled: boolean;
   channelId: string | null;
   events: GithubEventToggles;
-  template: string;
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
+}
+
+/** What the server falls back to, and what each event is allowed to reference. */
+export interface GithubTemplateDefaults {
+  templates: Record<GithubEventKey, EmbedTemplate>;
+  variables: Record<GithubEventKey, string[]>;
+}
+
+export interface DiscordEmoji {
+  id: string;
+  name: string;
+  animated: boolean;
+  url: string;
+  /** What has to be typed into a message for the emoji to render. */
+  markup: string;
 }
 
 export interface BotRuntimeConfig {

@@ -28,6 +28,7 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint --fix .",
     "lint:check": "oxlint .",
+    "check:abstraction": "node scripts/check-abstraction.mjs",
     "prepare": "husky",
     "postinstall": "node node_modules/ffmpeg-static/install.js",
     "typecheck": "tsc --noEmit",

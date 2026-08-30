@@ -1,5 +1,4 @@
 import { container } from '@sapphire/framework';
-import { MessageFlags } from 'discord.js';
 
 import { getConfiguredGuild } from '../discord-guild.js';
 import { recordDelivery } from './delivery-log.js';
@@ -47,7 +46,7 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     settings.accounts,
     resolveTemplate(settings, notification.toggle),
   );
-  if (!message.content) {
+  if (!message.content && !message.embed) {
     skip('The template rendered an empty message.');
     return;
   }
@@ -55,12 +54,13 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
   try {
     await channel.send({
       content: message.content,
+      embeds: message.embed ? [message.embed] : [],
       // WHY: the body carries attacker-controlled text, so nothing may be parsed
       // out of it. Only ids that passed snowflake validation on save can ping.
       allowedMentions: { parse: [], users: message.userIds, roles: [] },
-      // WHY: the link is there to be clicked, not to unfurl a preview card that
-      // buries the next notification.
-      flags: MessageFlags.SuppressEmbeds,
+      // WHY no SuppressEmbeds here, which v0.6.2 set to stop {pr_url} unfurling a
+      // preview card: that flag also hides the embed the bot attaches itself. The
+      // link rides on the embed title instead, where it does not unfurl.
     });
     recordDelivery(notification.repo, notification.label, 'sent');
   } catch (error) {

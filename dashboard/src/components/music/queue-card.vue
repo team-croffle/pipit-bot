@@ -31,10 +31,12 @@
       </CardAction>
     </CardHeader>
     <CardContent class="flex flex-col gap-4">
-      <p v-if="!playback?.tracks.length" class="text-muted-foreground text-sm">
+      <!-- A floor under the list so going from queued to empty, or back, does not
+           yank the repeat controls up the page. -->
+      <p v-if="!playback?.tracks.length" class="text-muted-foreground min-h-16 text-sm">
         대기열이 비어 있습니다.
       </p>
-      <ol v-else class="flex list-none flex-col gap-0.5 p-0">
+      <ol v-else class="flex min-h-16 list-none flex-col gap-0.5 p-0">
         <li
           v-for="track in playback.tracks"
           :key="track.index"

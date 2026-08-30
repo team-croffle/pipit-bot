@@ -6,6 +6,14 @@ import { rootDir } from './constants.js';
 
 export type DashboardDevRole = 'viewer' | 'admin';
 
+export interface GithubAppConfig {
+  appId: string;
+  /** PEM. Accepted base64-encoded too, since a PEM does not survive every .env. */
+  privateKey: string;
+  /** null asks the API which installation this is, and remembers the answer. */
+  installationId: number | null;
+}
+
 export interface OidcConfig {
   issuer: string;
   clientId: string;
@@ -22,6 +30,7 @@ export interface EnvConfig {
   apiPort: number;
   internalToken: string;
   githubWebhookSecret: string | null;
+  githubApp: GithubAppConfig | null;
   dashboardAdminGroups: string[];
   dashboardDevUser: string;
   dashboardDevRole: DashboardDevRole;
@@ -56,6 +65,39 @@ function parseDashboardDevRole(raw: string | undefined): DashboardDevRole {
   }
 
   throw new Error(`Invalid DASHBOARD_DEV_ROLE="${raw}". Expected "viewer" or "admin".`);
+}
+
+/**
+ * Reads the App credentials used to list repositories and organisation members.
+ *
+ * WHY it returns null instead of throwing when unset: this only feeds two dashboard
+ * pickers. A bot that cannot reach the API still receives webhooks and still posts
+ * reminders, so a missing credential disables a convenience, not the feature.
+ */
+function parseGithubApp(): GithubAppConfig | null {
+  const appId = process.env.GITHUB_APP_ID?.trim();
+  const rawKey = process.env.GITHUB_APP_PRIVATE_KEY?.trim();
+  if (!appId || !rawKey) {
+    return null;
+  }
+
+  const privateKey = rawKey.includes('BEGIN')
+    ? rawKey.replaceAll(String.raw`\n`, '\n')
+    : Buffer.from(rawKey, 'base64').toString('utf8');
+  if (!privateKey.includes('BEGIN')) {
+    throw new Error('GITHUB_APP_PRIVATE_KEY must be a PEM, raw or base64-encoded');
+  }
+
+  const rawInstallation = process.env.GITHUB_APP_INSTALLATION_ID?.trim();
+  if (rawInstallation && !/^\d+$/.test(rawInstallation)) {
+    throw new Error('GITHUB_APP_INSTALLATION_ID must be a number');
+  }
+
+  return {
+    appId,
+    privateKey,
+    installationId: rawInstallation ? Number(rawInstallation) : null,
+  };
 }
 
 function parseOidc(nodeEnv: string): OidcConfig | null {
@@ -129,6 +171,7 @@ export function loadEnv(): EnvConfig {
     apiPort,
     internalToken,
     githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET?.trim() || null,
+    githubApp: parseGithubApp(),
     dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
     dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
