@@ -12,31 +12,13 @@
   import type { DiscordEmoji } from '@/types';
 
   defineProps<{ disabled?: boolean }>();
-  const emit = defineEmits<{ pick: [text: string] }>();
 
   /**
-   * A short palette rather than the full Unicode set: the OS emoji keyboard is one
-   * shortcut away for anything else, and what the dashboard can offer that it cannot
-   * is the guild's own emoji.
+   * Emits what belongs in the template: `:name:` for a server emoji, the character
+   * itself for a Discord one. The bot turns the shortcode into the real emoji when it
+   * sends, which is what keeps the editor readable.
    */
-  const common = [
-    '✅',
-    '❌',
-    '⚠️',
-    '🚀',
-    '🎉',
-    '🔥',
-    '👀',
-    '👍',
-    '🙏',
-    '💬',
-    '📝',
-    '🔔',
-    '🔒',
-    '🐛',
-    '✨',
-    '📌',
-  ];
+  const emit = defineEmits<{ pick: [text: string] }>();
 
   const emojis = ref<DiscordEmoji[]>([]);
   const loading = ref(false);
@@ -62,6 +44,26 @@
       loading.value = false;
     }
   }
+
+  /**
+   * Discord's built-in emoji, grouped the way its own picker groups them. Not the
+   * whole Unicode set — the OS emoji keyboard is a keystroke away for anything rarer,
+   * and these are the ones a notification actually reaches for.
+   */
+  const builtIn: { name: string; items: string[] }[] = [
+    {
+      name: '상태',
+      items: ['✅', '❌', '⚠️', '🚫', '❗', '❓', '🔴', '🟡', '🟢', '🔵', '⏳', '🔒'],
+    },
+    {
+      name: '작업',
+      items: ['🔧', '🐛', '✨', '📝', '📌', '🔍', '🚀', '📦', '🔀', '♻️', '🧪', '📊'],
+    },
+    {
+      name: '반응',
+      items: ['👀', '👍', '👎', '🙏', '🎉', '🔥', '💯', '💬', '🤝', '☕', '😄', '😢'],
+    },
+  ];
 </script>
 
 <template>
@@ -78,39 +80,44 @@
         <Smile />
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" class="w-72 p-3">
-      <p class="text-muted-foreground mb-2 text-xs">기본 이모지</p>
-      <div class="mb-3 grid grid-cols-8 gap-1">
-        <button
-          v-for="emoji in common"
-          :key="emoji"
-          type="button"
-          class="hover:bg-accent rounded-md p-1 text-lg leading-none"
-          @click="emit('pick', emoji)"
-        >
-          {{ emoji }}
-        </button>
-      </div>
-
-      <p class="text-muted-foreground mb-2 text-xs">서버 이모지</p>
-      <p v-if="loading" class="text-muted-foreground text-xs">불러오는 중…</p>
-      <p v-else-if="failed" class="text-muted-foreground text-xs">
+    <DropdownMenuContent align="end" class="max-h-96 w-80 overflow-y-auto p-3">
+      <!-- Server emoji first: they are the reason this picker exists, since the OS
+           keyboard already covers the built-in ones. -->
+      <p class="text-muted-foreground mb-2 text-xs font-medium">서버 이모지</p>
+      <p v-if="loading" class="text-muted-foreground mb-3 text-xs">불러오는 중…</p>
+      <p v-else-if="failed" class="text-muted-foreground mb-3 text-xs">
         서버 이모지를 불러오지 못했습니다.
       </p>
-      <p v-else-if="emojis.length === 0" class="text-muted-foreground text-xs">
+      <p v-else-if="emojis.length === 0" class="text-muted-foreground mb-3 text-xs">
         이 서버에는 커스텀 이모지가 없습니다.
       </p>
-      <div v-else class="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
+      <div v-else class="mb-4 grid grid-cols-8 gap-1">
         <button
           v-for="emoji in emojis"
           :key="emoji.id"
           type="button"
           class="hover:bg-accent rounded-md p-1"
           :title="`:${emoji.name}:`"
-          @click="emit('pick', emoji.markup)"
+          @click="emit('pick', `:${emoji.name}:`)"
         >
           <img :src="emoji.url" :alt="emoji.name" class="size-5" loading="lazy" />
         </button>
+      </div>
+
+      <p class="text-muted-foreground mb-2 text-xs font-medium">디스코드 이모지</p>
+      <div v-for="group in builtIn" :key="group.name" class="mb-2">
+        <p class="text-muted-foreground mb-1 text-[0.65rem]">{{ group.name }}</p>
+        <div class="grid grid-cols-8 gap-1">
+          <button
+            v-for="emoji in group.items"
+            :key="emoji"
+            type="button"
+            class="hover:bg-accent rounded-md p-1 text-lg leading-none"
+            @click="emit('pick', emoji)"
+          >
+            {{ emoji }}
+          </button>
+        </div>
       </div>
     </DropdownMenuContent>
   </DropdownMenu>

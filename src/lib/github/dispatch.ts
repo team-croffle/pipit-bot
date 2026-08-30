@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 
 import { getConfiguredGuild } from '../discord-guild.js';
 import { recordDelivery } from './delivery-log.js';
+import { resolveTemplateEmojis } from './emoji.js';
 import { formatGithubNotification } from './format-message.js';
 import type { GithubNotification } from './normalize-event.js';
 import { getGithubNotifySettings, resolveRepoRule, resolveTemplate } from './settings.js';
@@ -44,7 +45,8 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
   const message = formatGithubNotification(
     notification,
     settings.accounts,
-    resolveTemplate(settings, notification.toggle),
+    // Shortcodes become real emoji here, before any payload value is substituted in.
+    resolveTemplateEmojis(resolveTemplate(settings, notification.toggle), guild),
   );
   if (!message.content && !message.embed) {
     skip('The template rendered an empty message.');
