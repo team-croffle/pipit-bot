@@ -142,6 +142,11 @@ export interface GithubTemplateDefaults {
   variables: Record<GithubEventKey, string[]>;
 }
 
+export interface GithubMember {
+  login: string;
+  avatarUrl: string;
+}
+
 export interface DiscordEmoji {
   id: string;
   name: string;

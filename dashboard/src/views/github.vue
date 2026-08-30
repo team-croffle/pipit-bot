@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
-  import { onMounted, ref } from 'vue';
+  import { ChevronDown, ChevronUp, Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
+  import { computed, onMounted, ref } from 'vue';
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
@@ -8,6 +8,7 @@
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import SuggestInput from '@/components/common/suggest-input.vue';
+  import AccountSelect from '@/components/github/account-select.vue';
   import TemplateList from '@/components/github/template-list.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
   import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,7 @@
     GithubAccountMapping,
     GithubDelivery,
     GithubEventToggles,
+    GithubMember,
     GithubNotifySettings,
     GithubRepoRule,
     GithubTemplateDefaults,
@@ -60,6 +62,10 @@
     accounts: [],
   });
   const templateDefaults = ref<GithubTemplateDefaults | null>(null);
+
+  // Collapsed by default: most visits here are about a channel or a repository.
+  const wordingOpen = ref(false);
+  const overriddenCount = computed(() => Object.keys(settings.value.eventTemplates).length);
   const channels = ref<DiscordChannel[]>([]);
   const deliveries = ref<GithubDelivery[]>([]);
   const members = ref<DiscordMember[]>([]);
@@ -92,9 +98,9 @@
   const repositoriesLoading = ref(false);
   let repositoriesRequested = false;
 
-  const githubLogins = ref<string[]>([]);
-  const githubLoginsLoading = ref(false);
-  let githubLoginsRequested = false;
+  const githubMembers = ref<GithubMember[]>([]);
+  const githubMembersLoading = ref(false);
+  let githubMembersRequested = false;
 
   /**
    * Both lists come off the GitHub App installation, which is optional — the server
@@ -121,22 +127,22 @@
     }
   }
 
-  async function loadGithubLogins(): Promise<void> {
-    if (githubLoginsRequested) {
+  async function loadGithubMembers(): Promise<void> {
+    if (githubMembersRequested) {
       return;
     }
 
-    githubLoginsRequested = true;
-    githubLoginsLoading.value = true;
+    githubMembersRequested = true;
+    githubMembersLoading.value = true;
     try {
-      const body = await fetchJson<{ available: boolean; members: { login: string }[] }>(
+      const body = await fetchJson<{ available: boolean; members: GithubMember[] }>(
         '/api/github/members',
       );
-      githubLogins.value = body.members.map((member) => member.login);
+      githubMembers.value = body.members;
     } catch {
-      githubLoginsRequested = false;
+      githubMembersRequested = false;
     } finally {
-      githubLoginsLoading.value = false;
+      githubMembersLoading.value = false;
     }
   }
 
@@ -252,7 +258,7 @@
 
   function addAccountRow(): void {
     void loadMembers();
-    void loadGithubLogins();
+    void loadGithubMembers();
     settings.value.accounts = [...settings.value.accounts, { githubLogin: '', discordUserId: '' }];
   }
 
@@ -431,6 +437,8 @@
           </CardContent>
         </Card>
 
+        <!-- Twelve rows is a lot of page to scroll past when you came here for a
+             channel, so the section folds. -->
         <Card>
           <CardHeader>
             <CardTitle class="text-base">알림 문구</CardTitle>
@@ -438,14 +446,26 @@
               이벤트마다 보낼 임베드를 지정합니다. 손대지 않은 이벤트는 기본 문구를 씁니다 · 행을
               편집해서 문구와 사용 가능한 변수를 확인하세요
             </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" @click="wordingOpen = !wordingOpen">
+                <ChevronDown v-if="!wordingOpen" />
+                <ChevronUp v-else />
+                {{ wordingOpen ? '접기' : '펼치기' }}
+              </Button>
+            </CardAction>
           </CardHeader>
-          <CardContent>
+          <CardContent v-if="wordingOpen">
             <TemplateList
               :templates="settings.eventTemplates"
               :defaults="templateDefaults"
               :read-only="readOnly"
               @update:templates="settings.eventTemplates = $event"
             />
+          </CardContent>
+          <CardContent v-else>
+            <p class="text-muted-foreground text-sm">
+              {{ overriddenCount }}개 이벤트가 기본 문구를 재정의하고 있습니다.
+            </p>
           </CardContent>
         </Card>
 
@@ -591,8 +611,8 @@
             <CardTitle class="text-base">계정 매핑</CardTitle>
             <CardDescription>
               연결한 멤버는 담당자 배정·리뷰 요청 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은
-              일반 텍스트로 표시됩니다. GitHub App 자격증명이 설정되어 있으면 조직 멤버가 후보로
-              제시되고, 없으면 직접 입력합니다.
+              일반 텍스트로 표시됩니다. GitHub App 자격증명이 설정되어 있으면 조직 멤버를 목록에서
+              고를 수 있고, 목록에 없는 계정은 "직접 입력"으로 넣습니다.
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
@@ -617,14 +637,12 @@
                 :disabled="readOnly"
                 @open="loadMembers"
               />
-              <SuggestInput
+              <AccountSelect
                 v-model="row.githubLogin"
-                :options="githubLogins"
-                :list-id="`account-options-${index}`"
-                :loading="githubLoginsLoading"
+                :members="githubMembers"
+                :loading="githubMembersLoading"
                 :disabled="readOnly"
-                placeholder="GitHub 계정"
-                @open="loadGithubLogins"
+                @open="loadGithubMembers"
               />
               <Button
                 variant="ghost"
