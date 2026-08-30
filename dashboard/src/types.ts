@@ -78,11 +78,17 @@ export interface DiscordMember {
 export interface GithubEventToggles {
   pullRequestOpened: boolean;
   pullRequestUpdated: boolean;
-  pullRequestMerged: boolean;
   pullRequestAssigned: boolean;
+  pullRequestChangesRequested: boolean;
+  pullRequestApproved: boolean;
+  pullRequestMerged: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
-  reviewSubmitted: boolean;
+  /** Closed as completed. */
+  issueResolved: boolean;
+  /** Closed as not planned or duplicate. */
+  issueClosed: boolean;
+  issueReopened: boolean;
   commentCreated: boolean;
 }
 

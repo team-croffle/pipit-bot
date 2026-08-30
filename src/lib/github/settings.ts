@@ -9,11 +9,17 @@ import { EVENT_VARIABLES } from './template.js';
 export interface GithubEventToggles {
   pullRequestOpened: boolean;
   pullRequestUpdated: boolean;
-  pullRequestMerged: boolean;
   pullRequestAssigned: boolean;
+  pullRequestChangesRequested: boolean;
+  pullRequestApproved: boolean;
+  pullRequestMerged: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
-  reviewSubmitted: boolean;
+  /** Closed as completed. */
+  issueResolved: boolean;
+  /** Closed as not planned or duplicate. */
+  issueClosed: boolean;
+  issueReopened: boolean;
   commentCreated: boolean;
 }
 
@@ -55,26 +61,42 @@ const repoName = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
 // like `everyone`, or one carrying backticks/`<`/`@`, impossible to persist.
 const githubLogin = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 
+// Ordered the way the dashboard lists them: a pull request's life, then an issue's.
 export const TOGGLE_KEYS = [
   'pullRequestOpened',
   'pullRequestUpdated',
-  'pullRequestMerged',
   'pullRequestAssigned',
+  'pullRequestChangesRequested',
+  'pullRequestApproved',
+  'pullRequestMerged',
   'issueOpened',
   'issueAssigned',
-  'reviewSubmitted',
+  'issueResolved',
+  'issueClosed',
+  'issueReopened',
   'commentCreated',
+] as const satisfies readonly (keyof GithubEventToggles)[];
+
+// v0.6.4-rc.2 and earlier had one toggle for every review outcome. Both halves
+// inherit it, so somebody who had review notifications on does not quietly lose them.
+const SPLIT_FROM_REVIEW_SUBMITTED = [
+  'pullRequestChangesRequested',
+  'pullRequestApproved',
 ] as const satisfies readonly (keyof GithubEventToggles)[];
 
 function emptyToggles(): GithubEventToggles {
   return {
     pullRequestOpened: false,
     pullRequestUpdated: false,
-    pullRequestMerged: false,
     pullRequestAssigned: false,
+    pullRequestChangesRequested: false,
+    pullRequestApproved: false,
+    pullRequestMerged: false,
     issueOpened: false,
     issueAssigned: false,
-    reviewSubmitted: false,
+    issueResolved: false,
+    issueClosed: false,
+    issueReopened: false,
     commentCreated: false,
   };
 }
@@ -121,6 +143,12 @@ function asToggles(value: unknown): GithubEventToggles {
   const toggles = emptyToggles();
   for (const key of TOGGLE_KEYS) {
     toggles[key] = row[key] === true;
+  }
+
+  if (row.reviewSubmitted === true) {
+    for (const key of SPLIT_FROM_REVIEW_SUBMITTED) {
+      toggles[key] = true;
+    }
   }
 
   return toggles;
@@ -212,6 +240,27 @@ function migrateLegacyBase(body: Record<string, unknown>, templates: GithubEvent
   }
 }
 
+/**
+ * Wording written for the single review event follows it into both halves, for the
+ * same reason the toggle does — an operator who customised it should not find the
+ * default back in its place.
+ */
+function migrateSplitReview(body: Record<string, unknown>, templates: GithubEventTemplates): void {
+  const map = body.eventTemplates;
+  if (!map || typeof map !== 'object') {
+    return;
+  }
+
+  const stored = (map as Record<string, unknown>).reviewSubmitted;
+  if (stored === null || stored === undefined) {
+    return;
+  }
+
+  for (const key of SPLIT_FROM_REVIEW_SUBMITTED) {
+    templates[key] ??= parseEmbedTemplate(stored, `Template for ${key}`, EVENT_VARIABLES[key]);
+  }
+}
+
 export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Settings must be an object');
@@ -219,6 +268,7 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
 
   const body = raw as Record<string, unknown>;
   const eventTemplates = parseEmbedTemplateMap(body.eventTemplates, TOGGLE_KEYS);
+  migrateSplitReview(body, eventTemplates);
   migrateLegacyBase(body, eventTemplates);
 
   return {

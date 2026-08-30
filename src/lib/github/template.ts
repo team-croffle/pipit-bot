@@ -47,7 +47,6 @@ const COMMON: readonly TemplateVariable[] = ['repo', 'pr_number', 'pr_url', 'pr_
 export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]> = {
   pullRequestOpened: [...COMMON, 'actor', 'author', 'reviewers', 'assignees', 'mentions'],
   pullRequestUpdated: [...COMMON, 'actor', 'author', 'reviewers', 'assignees', 'mentions'],
-  pullRequestMerged: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   pullRequestAssigned: [
     ...COMMON,
     'actor',
@@ -57,9 +56,16 @@ export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]
     'reviewers',
     'mentions',
   ],
+  // A review names its own author in {actor}; the outstanding request list is what
+  // GitHub has just emptied, so it is not offered.
+  pullRequestChangesRequested: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  pullRequestApproved: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  pullRequestMerged: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueOpened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueAssigned: [...COMMON, 'actor', 'assignee', 'assignees', 'mentions'],
-  reviewSubmitted: [...COMMON, 'actor', 'author', 'mentions'],
+  issueResolved: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  issueClosed: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  issueReopened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   commentCreated: [...COMMON, 'actor', 'author', 'mentions'],
 };
 

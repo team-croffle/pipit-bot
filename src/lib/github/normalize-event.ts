@@ -42,14 +42,36 @@ type EventHandler = (context: EventContext) => GithubNotification | undefined;
 const MENTION_ONLY_TOGGLES = new Set<keyof GithubEventToggles>([
   'pullRequestAssigned',
   'issueAssigned',
-  'reviewSubmitted',
+  'pullRequestChangesRequested',
+  'pullRequestApproved',
   'commentCreated',
 ]);
 
-const REVIEW_LABELS: Record<string, string> = {
-  approved: 'Approved',
-  changes_requested: 'Changes Requested',
-  commented: 'Reviewed',
+/**
+ * A review carries its outcome in `state`, and the three outcomes are different news.
+ *
+ * WHY `commented` lands on commentCreated rather than a toggle of its own: a review
+ * left without approving or requesting changes is a comment, and that is where an
+ * operator looks for it. A thirteenth switch would only split the same idea in two.
+ */
+const REVIEW_OUTCOMES: Record<string, { toggle: keyof GithubEventToggles; label: string }> = {
+  approved: { toggle: 'pullRequestApproved', label: 'Approved' },
+  changes_requested: { toggle: 'pullRequestChangesRequested', label: 'Changes Requested' },
+  commented: { toggle: 'commentCreated', label: 'Reviewed' },
+};
+
+/**
+ * Which way an issue was closed.
+ *
+ * `state_reason` is what the "Close as completed" / "Close as not planned" buttons
+ * set. It is absent on payloads old enough to predate the distinction, and those read
+ * as a plain close rather than as a resolution — claiming something was resolved is
+ * the worse guess of the two.
+ */
+const CLOSE_OUTCOMES: Record<string, { toggle: keyof GithubEventToggles; label: string }> = {
+  completed: { toggle: 'issueResolved', label: 'Issue Resolved' },
+  not_planned: { toggle: 'issueClosed', label: 'Issue Closed' },
+  duplicate: { toggle: 'issueClosed', label: 'Issue Closed' },
 };
 
 function logins(users: GithubUser[] | undefined): string[] {
@@ -172,6 +194,24 @@ function handleIssues(context: EventContext): GithubNotification | undefined {
     return build(context, issue, 'issueAssigned', 'Issue Assigned', [assignee], assignee);
   }
 
+  if (context.action === 'closed') {
+    const reason = asRecord(context.payload.issue)?.state_reason;
+    const outcome =
+      (typeof reason === 'string' ? CLOSE_OUTCOMES[reason] : undefined) ??
+      CLOSE_OUTCOMES.not_planned;
+    return build(context, issue, outcome.toggle, outcome.label, [
+      issue.user,
+      ...(issue.assignees ?? []),
+    ]);
+  }
+
+  if (context.action === 'reopened') {
+    return build(context, issue, 'issueReopened', 'Issue Reopened', [
+      issue.user,
+      ...(issue.assignees ?? []),
+    ]);
+  }
+
   return undefined;
 }
 
@@ -186,12 +226,12 @@ function handlePullRequestReview(context: EventContext): GithubNotification | un
     return undefined;
   }
 
-  const label = REVIEW_LABELS[state.toLowerCase()];
-  if (!label) {
+  const outcome = REVIEW_OUTCOMES[state.toLowerCase()];
+  if (!outcome) {
     return undefined;
   }
 
-  return build(context, pull, 'reviewSubmitted', label, [pull.user]);
+  return build(context, pull, outcome.toggle, outcome.label, [pull.user]);
 }
 
 function handleIssueComment(context: EventContext): GithubNotification | undefined {

@@ -32,7 +32,7 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
-  import { eventLabels } from '@/lib/github-templates';
+  import { emptyToggles, eventGroups, eventLabels } from '@/lib/github-templates';
   import type {
     DashboardIdentity,
     DiscordChannel,
@@ -50,19 +50,6 @@
 
   const repoPattern = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
   const loginPattern = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
-
-  function emptyToggles(): GithubEventToggles {
-    return {
-      pullRequestOpened: false,
-      pullRequestUpdated: false,
-      pullRequestMerged: false,
-      pullRequestAssigned: false,
-      issueOpened: false,
-      issueAssigned: false,
-      reviewSubmitted: false,
-      commentCreated: false,
-    };
-  }
 
   const settings = ref<GithubNotifySettings>({
     enabled: false,
@@ -422,14 +409,23 @@
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div v-for="event in eventLabels" :key="event.key" class="flex items-center gap-2.5">
-                <Checkbox
-                  :id="`ev-${event.key}`"
-                  v-model="settings.events[event.key]"
-                  :disabled="readOnly"
-                />
-                <Label :for="`ev-${event.key}`" class="font-normal">{{ event.label }}</Label>
+            <div class="flex flex-col gap-4">
+              <div v-for="group in eventGroups" :key="group.name" class="flex flex-col gap-2">
+                <p class="text-muted-foreground text-xs font-medium">{{ group.name }}</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div
+                    v-for="event in group.events"
+                    :key="event.key"
+                    class="flex items-center gap-2.5"
+                  >
+                    <Checkbox
+                      :id="`ev-${event.key}`"
+                      v-model="settings.events[event.key]"
+                      :disabled="readOnly"
+                    />
+                    <Label :for="`ev-${event.key}`" class="font-normal">{{ event.label }}</Label>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
