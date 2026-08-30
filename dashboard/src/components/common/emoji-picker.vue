@@ -27,8 +27,12 @@
   const query = ref('');
   const needle = computed(() => query.value.trim().toLowerCase());
 
-  // Custom emoji come from two places Discord will actually serve: this guild, and
-  // the bot itself. The bot's work in every guild it is in.
+  function matches(name: string): boolean {
+    return !needle.value || name.toLowerCase().includes(needle.value);
+  }
+
+  // Custom emoji come from the two places Discord will actually serve: this guild,
+  // and the bot itself. The bot's work in every guild it is in.
   const serverEmojis = computed(() =>
     emojis.value.filter((emoji) => !emoji.application && matches(emoji.name)),
   );
@@ -36,20 +40,30 @@
     emojis.value.filter((emoji) => emoji.application && matches(emoji.name)),
   );
 
-  function matches(name: string): boolean {
-    return !needle.value || name.toLowerCase().includes(needle.value);
-  }
+  /**
+   * Only one group is on screen at a time.
+   *
+   * WHY: the full set is 1,914 emoji, and the menu unmounts its content when it
+   * closes — so rendering them all meant building 1,914 buttons on every open, which
+   * is what made the picker stutter. The largest single group is a fifth of that.
+   */
+  const active = ref(0);
 
-  const unicodeGroups = computed(() =>
-    groups.value
-      .map((group) => ({
-        ...group,
-        emojis: group.emojis.filter(
-          (emoji) => matches(emoji.name) || emoji.slug.includes(needle.value),
-        ),
-      }))
-      .filter((group) => group.emojis.length > 0),
-  );
+  const SEARCH_LIMIT = 96;
+
+  const visible = computed(() => {
+    if (needle.value) {
+      // A search reaches across every group, capped so a one-letter query cannot
+      // rebuild the whole set.
+      const hits = groups.value.flatMap((group) =>
+        group.emojis.filter((emoji) => matches(emoji.name) || emoji.slug.includes(needle.value)),
+      );
+
+      return { emojis: hits.slice(0, SEARCH_LIMIT), truncated: hits.length > SEARCH_LIMIT };
+    }
+
+    return { emojis: groups.value[active.value]?.emojis ?? [], truncated: false };
+  });
 
   function open(isOpen: boolean): void {
     if (!isOpen) {
@@ -75,14 +89,17 @@
         <Smile />
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" class="w-84 p-0">
+    <!-- No enter/exit animation: it runs while the list is being built, which turns a
+         brief pause into visible stutter. -->
+    <DropdownMenuContent
+      align="end"
+      class="w-84 animate-none p-0 duration-0 data-[state=closed]:animate-none data-[state=open]:animate-none"
+    >
       <div class="bg-popover sticky top-0 z-10 border-b p-2">
         <Input v-model="query" placeholder="이모지 검색…" class="h-8" />
       </div>
 
       <div class="max-h-80 overflow-y-auto p-3">
-        <!-- Server emoji first: they are the reason this picker exists, since the OS
-             keyboard already covers the standard ones. -->
         <section class="mb-4">
           <p class="text-muted-foreground mb-2 text-xs font-medium">서버 이모지</p>
           <p v-if="loading" class="text-muted-foreground text-xs">불러오는 중…</p>
@@ -127,25 +144,43 @@
 
         <section>
           <p class="text-muted-foreground mb-2 text-xs font-medium">기본 이모지</p>
+
+          <div v-if="!needle && groups.length > 0" class="mb-2 flex flex-wrap gap-1">
+            <button
+              v-for="(group, index) in groups"
+              :key="group.slug"
+              type="button"
+              class="rounded-md px-1.5 py-0.5 text-[0.65rem]"
+              :class="
+                index === active
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent'
+              "
+              @click="active = index"
+            >
+              {{ group.name }}
+            </button>
+          </div>
+
           <p v-if="unicodeLoading" class="text-muted-foreground text-xs">불러오는 중…</p>
-          <p v-else-if="unicodeGroups.length === 0" class="text-muted-foreground text-xs">
+          <p v-else-if="visible.emojis.length === 0" class="text-muted-foreground text-xs">
             검색 결과가 없습니다.
           </p>
-          <div v-for="group in unicodeGroups" :key="group.slug" class="mb-3">
-            <p class="text-muted-foreground mb-1 text-[0.65rem]">{{ group.name }}</p>
-            <div class="grid grid-cols-8 gap-1">
-              <button
-                v-for="emoji in group.emojis"
-                :key="emoji.slug"
-                type="button"
-                class="hover:bg-accent rounded-md p-1 text-lg leading-none"
-                :title="emoji.name"
-                @click="emit('pick', emoji.emoji)"
-              >
-                {{ emoji.emoji }}
-              </button>
-            </div>
+          <div v-else class="grid grid-cols-8 gap-1">
+            <button
+              v-for="emoji in visible.emojis"
+              :key="emoji.slug"
+              type="button"
+              class="hover:bg-accent rounded-md p-1 text-lg leading-none"
+              :title="emoji.name"
+              @click="emit('pick', emoji.emoji)"
+            >
+              {{ emoji.emoji }}
+            </button>
           </div>
+          <p v-if="visible.truncated" class="text-muted-foreground mt-2 text-[0.65rem]">
+            상위 {{ SEARCH_LIMIT }}개만 표시합니다 — 검색어를 더 좁혀 보세요.
+          </p>
         </section>
       </div>
     </DropdownMenuContent>
