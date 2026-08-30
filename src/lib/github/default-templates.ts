@@ -21,7 +21,7 @@ import type { GithubEventKey } from './template.js';
 export const LEGACY_DEFAULT_TEMPLATE =
   '**{event}** · `{repo}` [#{pr_number}]({pr_url}) — {pr_title}\n{mentions}';
 
-const FOOTER = '[{repo} #{pr_number}]({pr_url})';
+const FOOTER = '{repo} #{pr_number}';
 
 // A field renders as "—" rather than vanishing, so an inline pair keeps its columns.
 const REVIEWERS = { name: 'Reviewers', value: '{reviewers|{}|—}', inline: true };
