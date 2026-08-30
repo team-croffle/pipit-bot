@@ -10,7 +10,8 @@
    */
   const props = defineProps<{ text: string }>();
 
-  const { emojis } = useGuildEmojis();
+  const { emojis, load } = useGuildEmojis();
+  void load();
 
   const SHORTCODE = /:([a-z\d_]{2,32}):/gi;
 
@@ -50,7 +51,7 @@
 </script>
 
 <template>
-  <span class="break-words whitespace-pre-wrap"
+  <span class="wrap-break-word whitespace-pre-wrap"
     ><template v-for="(part, index) in parts" :key="index"
       ><img
         v-if="part.kind === 'emoji'"

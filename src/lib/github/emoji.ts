@@ -10,6 +10,7 @@
  * cost a notification its picture, not its delivery.
  */
 
+import { container } from '@sapphire/framework';
 import type { Guild } from 'discord.js';
 
 import type { EmbedTemplate } from './embed-template.js';
@@ -22,10 +23,15 @@ export function resolveEmojiShortcodes(text: string, guild: Guild | undefined): 
     return text;
   }
 
+  // Both sources the picker offers. The guild's own wins a name collision, since that
+  // is the one an operator browsing this server would have meant.
+  const application = container.client?.application;
+
   return text.replaceAll(SHORTCODE, (whole, name: string) => {
-    const emoji = guild.emojis.cache.find(
-      (candidate) => candidate.name?.toLowerCase() === name.toLowerCase(),
-    );
+    const wanted = name.toLowerCase();
+    const emoji =
+      guild.emojis.cache.find((candidate) => candidate.name?.toLowerCase() === wanted) ??
+      application?.emojis.cache.find((candidate) => candidate.name?.toLowerCase() === wanted);
 
     return emoji ? emoji.toString() : whole;
   });

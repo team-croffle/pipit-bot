@@ -154,6 +154,8 @@ export interface DiscordEmoji {
   url: string;
   /** What has to be typed into a message for the emoji to render. */
   markup: string;
+  /** True for an emoji the bot owns, which works in every guild it is in. */
+  application: boolean;
 }
 
 export interface BotRuntimeConfig {
