@@ -60,6 +60,16 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
     { name: 'Assigned', value: '{assignee|{}|—}', inline: true },
     { name: 'Requested by', value: '{actor}', inline: true },
   ]),
+  // `{reviewers}` is the outstanding request list, which GitHub empties the moment
+  // the review lands — the reviewer is `{actor}`.
+  pullRequestChangesRequested: template('#ef4444', [
+    { name: 'Reviewer', value: '{actor}', inline: true },
+    { name: 'Author', value: '{author|{}|—}', inline: true },
+  ]),
+  pullRequestApproved: template('#06b6d4', [
+    { name: 'Reviewer', value: '{actor}', inline: true },
+    { name: 'Author', value: '{author|{}|—}', inline: true },
+  ]),
   issueOpened: template('#22c55e', [
     { name: 'Opened by', value: '{actor}', inline: true },
     ASSIGNEES,
@@ -68,11 +78,17 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
     { name: 'Assigned', value: '{assignee|{}|—}', inline: true },
     { name: 'Assigned by', value: '{actor}', inline: true },
   ]),
-  // `{reviewers}` is the outstanding request list, which GitHub empties the moment
-  // the review lands — the reviewer is `{actor}`.
-  reviewSubmitted: template('#06b6d4', [
-    { name: 'Reviewer', value: '{actor}', inline: true },
+  issueResolved: template('#8b5cf6', [
+    { name: 'Resolved by', value: '{actor}', inline: true },
     { name: 'Author', value: '{author|{}|—}', inline: true },
+  ]),
+  issueClosed: template('#64748b', [
+    { name: 'Closed by', value: '{actor}', inline: true },
+    { name: 'Author', value: '{author|{}|—}', inline: true },
+  ]),
+  issueReopened: template('#22c55e', [
+    { name: 'Reopened by', value: '{actor}', inline: true },
+    ASSIGNEES,
   ]),
   commentCreated: template('#64748b', [
     { name: 'Comment by', value: '{actor}', inline: true },

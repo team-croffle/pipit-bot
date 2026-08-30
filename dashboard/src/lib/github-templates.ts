@@ -1,14 +1,19 @@
-import type { EmbedTemplate, GithubEventKey } from '@/types';
+import type { EmbedTemplate, GithubEventKey, GithubEventToggles } from '@/types';
 
-export const eventLabels: { key: GithubEventKey; label: string }[] = [
-  { key: 'pullRequestOpened', label: 'PR 등록' },
-  { key: 'pullRequestUpdated', label: 'PR 업데이트 (새 커밋 · rebase)' },
-  { key: 'pullRequestMerged', label: 'PR 머지' },
-  { key: 'pullRequestAssigned', label: 'PR 리뷰어 / 담당자 배정' },
-  { key: 'issueOpened', label: 'Issue 등록' },
-  { key: 'issueAssigned', label: 'Issue 담당자 배정' },
-  { key: 'reviewSubmitted', label: 'PR 리뷰 제출' },
-  { key: 'commentCreated', label: '코멘트 작성' },
+/** A pull request's life, then an issue's — the order the server lists them in. */
+export const eventLabels: { key: GithubEventKey; label: string; group: string }[] = [
+  { key: 'pullRequestOpened', label: 'PR 등록', group: 'PR' },
+  { key: 'pullRequestUpdated', label: 'PR 업데이트 (새 커밋 · rebase)', group: 'PR' },
+  { key: 'pullRequestAssigned', label: 'PR 리뷰어 / 담당자 배정', group: 'PR' },
+  { key: 'pullRequestChangesRequested', label: 'PR 변경 요청', group: 'PR' },
+  { key: 'pullRequestApproved', label: 'PR 승인 (Approved)', group: 'PR' },
+  { key: 'pullRequestMerged', label: 'PR 머지', group: 'PR' },
+  { key: 'issueOpened', label: 'Issue 등록', group: 'Issue' },
+  { key: 'issueAssigned', label: 'Issue 담당자 배정', group: 'Issue' },
+  { key: 'issueResolved', label: 'Issue 해결 (Completed)', group: 'Issue' },
+  { key: 'issueClosed', label: 'Issue 닫음 (Not planned · Duplicate)', group: 'Issue' },
+  { key: 'issueReopened', label: 'Issue 재오픈', group: 'Issue' },
+  { key: 'commentCreated', label: '코멘트 작성 (리뷰 코멘트 포함)', group: '공통' },
 ];
 
 /**
@@ -19,11 +24,15 @@ export const eventLabels: { key: GithubEventKey; label: string }[] = [
 export const actorLabels: Record<GithubEventKey, string> = {
   pullRequestOpened: 'PR을 연 사람',
   pullRequestUpdated: '커밋을 푸시한 사람',
-  pullRequestMerged: '머지를 실행한 사람',
   pullRequestAssigned: '배정 · 리뷰를 요청한 사람',
+  pullRequestChangesRequested: '변경을 요청한 리뷰어',
+  pullRequestApproved: '승인한 리뷰어',
+  pullRequestMerged: '머지를 실행한 사람',
   issueOpened: 'Issue를 연 사람',
   issueAssigned: '배정한 사람',
-  reviewSubmitted: '리뷰를 제출한 사람',
+  issueResolved: 'Issue를 해결 처리한 사람',
+  issueClosed: 'Issue를 닫은 사람',
+  issueReopened: 'Issue를 다시 연 사람',
   commentCreated: '코멘트를 쓴 사람',
 };
 
@@ -107,4 +116,16 @@ export function emptyTemplate(): EmbedTemplate {
 
 export function cloneTemplate(template: EmbedTemplate): EmbedTemplate {
   return { ...template, fields: template.fields.map((field) => ({ ...field })) };
+}
+
+/** The label list folded into its groups, for rendering twelve checkboxes readably. */
+export const eventGroups: { name: string; events: typeof eventLabels }[] = [
+  ...new Set(eventLabels.map((event) => event.group)),
+].map((name) => ({ name, events: eventLabels.filter((event) => event.group === name) }));
+
+/** Derived from the label list, so a new event cannot be missed here. */
+export function emptyToggles(): GithubEventToggles {
+  return Object.fromEntries(
+    eventLabels.map((event) => [event.key, false]),
+  ) as unknown as GithubEventToggles;
 }
