@@ -56,6 +56,12 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
     { name: 'Author', value: '{author|{}|—}', inline: true },
     ASSIGNEES,
   ]),
+  // A pull request closed without merging: nothing landed, so it reads as a stop
+  // rather than as a result.
+  pullRequestClosed: template('#64748b', [
+    { name: 'Closed by', value: '{actor}', inline: true },
+    { name: 'Author', value: '{author|{}|—}', inline: true },
+  ]),
   pullRequestAssigned: template('#f59e0b', [
     { name: 'Assigned', value: '{assignee|{}|—}', inline: true },
     { name: 'Requested by', value: '{actor}', inline: true },

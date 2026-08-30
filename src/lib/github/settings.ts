@@ -13,6 +13,8 @@ export interface GithubEventToggles {
   pullRequestChangesRequested: boolean;
   pullRequestApproved: boolean;
   pullRequestMerged: boolean;
+  /** Closed without merging. */
+  pullRequestClosed: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
   /** Closed as completed. */
@@ -69,6 +71,7 @@ export const TOGGLE_KEYS = [
   'pullRequestChangesRequested',
   'pullRequestApproved',
   'pullRequestMerged',
+  'pullRequestClosed',
   'issueOpened',
   'issueAssigned',
   'issueResolved',
@@ -92,6 +95,7 @@ function emptyToggles(): GithubEventToggles {
     pullRequestChangesRequested: false,
     pullRequestApproved: false,
     pullRequestMerged: false,
+    pullRequestClosed: false,
     issueOpened: false,
     issueAssigned: false,
     issueResolved: false,

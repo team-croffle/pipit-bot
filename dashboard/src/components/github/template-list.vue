@@ -44,6 +44,10 @@
     return props.defaults?.variables[key] ?? [];
   }
 
+  function labelFor(key: GithubEventKey): string {
+    return props.defaults?.labels[key] ?? '';
+  }
+
   /** The wording an event will actually send: its override, else the built-in default. */
   function effective(key: GithubEventKey): EmbedTemplate {
     return props.templates[key] ?? defaultsFor(key);
@@ -53,7 +57,7 @@
   // opening eight dialogs.
   function summary(key: GithubEventKey): string {
     const template = effective(key);
-    const values = sampleFor(variablesFor(key));
+    const values = sampleFor(key, variablesFor(key), labelFor(key));
     const line =
       renderTemplate(template.title, values) ||
       renderTemplate(template.description, values) ||
@@ -135,6 +139,7 @@
     :variables="variablesFor(editing)"
     :read-only="readOnly"
     :inherited="templates[editing] === undefined"
+    :sample-label="labelFor(editing)"
     @update:open="$event || (editing = null)"
     @save="save(editing, $event)"
     @reset="reset(editing)"

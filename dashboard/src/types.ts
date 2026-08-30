@@ -82,6 +82,8 @@ export interface GithubEventToggles {
   pullRequestChangesRequested: boolean;
   pullRequestApproved: boolean;
   pullRequestMerged: boolean;
+  /** Closed without merging. */
+  pullRequestClosed: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
   /** Closed as completed. */
@@ -140,6 +142,8 @@ export interface GithubNotifySettings {
 export interface GithubTemplateDefaults {
   templates: Record<GithubEventKey, EmbedTemplate>;
   variables: Record<GithubEventKey, string[]>;
+  /** What `{event}` renders as, so a preview shows this event's own wording. */
+  labels: Record<GithubEventKey, string>;
 }
 
 export interface GithubMember {

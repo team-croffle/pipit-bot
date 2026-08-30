@@ -3,11 +3,16 @@
 
   import EmojiText from '@/components/common/emoji-text.vue';
   import { renderTemplate, sampleFor } from '@/lib/github-templates';
-  import type { EmbedTemplate } from '@/types';
+  import type { EmbedTemplate, GithubEventKey } from '@/types';
 
-  const props = defineProps<{ template: EmbedTemplate; variables: string[] }>();
+  const props = defineProps<{
+    template: EmbedTemplate;
+    variables: string[];
+    eventKey: GithubEventKey;
+    eventLabel: string;
+  }>();
 
-  const values = computed(() => sampleFor(props.variables));
+  const values = computed(() => sampleFor(props.eventKey, props.variables, props.eventLabel));
   const fill = (text: string): string => renderTemplate(text, values.value);
 
   const content = computed(() => fill(props.template.content));
