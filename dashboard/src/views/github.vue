@@ -7,6 +7,7 @@
   import MemberSelect from '@/components/common/member-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
+  import SuggestInput from '@/components/common/suggest-input.vue';
   import TemplateList from '@/components/github/template-list.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
   import { Badge } from '@/components/ui/badge';
@@ -20,7 +21,6 @@
     CardTitle,
   } from '@/components/ui/card';
   import { Checkbox } from '@/components/ui/checkbox';
-  import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
@@ -101,6 +101,58 @@
       membersLoading.value = false;
     }
   }
+  const repositories = ref<string[]>([]);
+  const repositoriesLoading = ref(false);
+  let repositoriesRequested = false;
+
+  const githubLogins = ref<string[]>([]);
+  const githubLoginsLoading = ref(false);
+  let githubLoginsRequested = false;
+
+  /**
+   * Both lists come off the GitHub App installation, which is optional — the server
+   * answers `available: false` when there are no credentials and the fields stay
+   * plain text. Loaded on first use for the same reason as the member list: neither
+   * is needed to look at the page.
+   */
+  async function loadRepositories(): Promise<void> {
+    if (repositoriesRequested) {
+      return;
+    }
+
+    repositoriesRequested = true;
+    repositoriesLoading.value = true;
+    try {
+      const body = await fetchJson<{ available: boolean; repositories: { fullName: string }[] }>(
+        '/api/github/repositories',
+      );
+      repositories.value = body.repositories.map((repository) => repository.fullName);
+    } catch {
+      repositoriesRequested = false;
+    } finally {
+      repositoriesLoading.value = false;
+    }
+  }
+
+  async function loadGithubLogins(): Promise<void> {
+    if (githubLoginsRequested) {
+      return;
+    }
+
+    githubLoginsRequested = true;
+    githubLoginsLoading.value = true;
+    try {
+      const body = await fetchJson<{ available: boolean; members: { login: string }[] }>(
+        '/api/github/members',
+      );
+      githubLogins.value = body.members.map((member) => member.login);
+    } catch {
+      githubLoginsRequested = false;
+    } finally {
+      githubLoginsLoading.value = false;
+    }
+  }
+
   const error = ref('');
   const saved = ref('');
   const loading = ref(true);
@@ -140,6 +192,7 @@
   const openRepos = ref(new Set<number>());
 
   function toggleOpen(index: number): void {
+    void loadRepositories();
     const next = new Set(openRepos.value);
     if (next.has(index)) {
       next.delete(index);
@@ -212,6 +265,7 @@
 
   function addAccountRow(): void {
     void loadMembers();
+    void loadGithubLogins();
     settings.value.accounts = [...settings.value.accounts, { githubLogin: '', discordUserId: '' }];
   }
 
@@ -403,7 +457,8 @@
           <CardHeader>
             <CardTitle class="text-base">저장소별 설정</CardTitle>
             <CardDescription>
-              저장소마다 알림 채널과 이벤트 종류를 다르게 지정할 수 있습니다 · 행을 펼쳐서 편집
+              저장소마다 알림 채널과 이벤트 종류를 다르게 지정할 수 있습니다 · 행을 펼쳐서 편집 ·
+              GitHub App이 설치된 저장소가 후보로 제시됩니다
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addRepoRow">
@@ -449,12 +504,15 @@
                           <div class="grid gap-3 sm:grid-cols-2">
                             <div class="flex flex-col gap-1.5">
                               <Label :for="`repo-name-${index}`">저장소</Label>
-                              <Input
+                              <SuggestInput
                                 :id="`repo-name-${index}`"
                                 v-model="row.repo"
+                                :options="repositories"
+                                :list-id="`repo-options-${index}`"
+                                :loading="repositoriesLoading"
                                 :disabled="readOnly"
                                 placeholder="owner/name"
-                                class="font-gothic"
+                                @open="loadRepositories"
                               />
                             </div>
                             <div class="flex flex-col gap-1.5">
@@ -537,7 +595,8 @@
             <CardTitle class="text-base">계정 매핑</CardTitle>
             <CardDescription>
               연결한 멤버는 담당자 배정·리뷰 요청 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은
-              일반 텍스트로 표시됩니다.
+              일반 텍스트로 표시됩니다. GitHub App 자격증명이 설정되어 있으면 조직 멤버가 후보로
+              제시되고, 없으면 직접 입력합니다.
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
@@ -562,11 +621,14 @@
                 :disabled="readOnly"
                 @open="loadMembers"
               />
-              <Input
+              <SuggestInput
                 v-model="row.githubLogin"
+                :options="githubLogins"
+                :list-id="`account-options-${index}`"
+                :loading="githubLoginsLoading"
                 :disabled="readOnly"
                 placeholder="GitHub 계정"
-                class="font-gothic"
+                @open="loadGithubLogins"
               />
               <Button
                 variant="ghost"
