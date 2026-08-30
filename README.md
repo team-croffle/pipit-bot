@@ -72,6 +72,17 @@ Mentions belong on the plain line: Discord raises no notification for a mention 
 
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
 
+## Source abstraction
+
+This repository describes its music backend only as an external **music worker** —
+never a specific source, and never the worker by name. The contract in
+[docs/music-backend.md](docs/music-backend.md) is the whole interface.
+
+`yarn check:abstraction` enforces it. A pre-commit hook runs it over the staged
+files, a commit-msg hook runs it over the message, and the **Source Abstraction**
+workflow runs it over every pushed range — the last one is the check that cannot be
+skipped with `--no-verify`.
+
 ## Development
 
 From `pipit-bot/`:

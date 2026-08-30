@@ -261,13 +261,16 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
    * page look broken on an install that simply has no App credentials.
    */
   app.get('/api/github/repositories', dashboardViewer, async (c) => {
-    const app = config.githubApp;
-    if (!app) {
+    const githubApp = config.githubApp;
+    if (!githubApp) {
       return c.json({ available: false, repositories: [] });
     }
 
     try {
-      return c.json({ available: true, repositories: await listInstallationRepositories(app) });
+      return c.json({
+        available: true,
+        repositories: await listInstallationRepositories(githubApp),
+      });
     } catch (error) {
       container.logger.warn('[github] repository list failed:', error);
       return c.json({ available: false, repositories: [] });
@@ -275,13 +278,13 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   });
 
   app.get('/api/github/members', dashboardViewer, async (c) => {
-    const app = config.githubApp;
-    if (!app) {
+    const githubApp = config.githubApp;
+    if (!githubApp) {
       return c.json({ available: false, members: [] });
     }
 
     try {
-      return c.json({ available: true, members: await listInstallationMembers(app) });
+      return c.json({ available: true, members: await listInstallationMembers(githubApp) });
     } catch (error) {
       container.logger.warn('[github] member list failed:', error);
       return c.json({ available: false, members: [] });
