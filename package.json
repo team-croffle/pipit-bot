@@ -1,6 +1,6 @@
 {
   "name": "pipit-bot",
-  "version": "0.6.4-rc.1",
+  "version": "0.6.4-rc.2",
   "main": "dist/index.js",
   "author": "Croffle Dev.",
   "license": "MIT",
