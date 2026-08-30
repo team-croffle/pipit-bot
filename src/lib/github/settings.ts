@@ -2,7 +2,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
-import { DEFAULT_TEMPLATE, parseTemplateMap, parseTemplateText } from './template.js';
+import { defaultTemplateFor, LEGACY_DEFAULT_TEMPLATE } from './default-templates.js';
+import { parseEmbedTemplate, parseEmbedTemplateMap, type EmbedTemplate } from './embed-template.js';
+import { EVENT_VARIABLES } from './template.js';
 
 export interface GithubEventToggles {
   pullRequestOpened: boolean;
@@ -27,16 +29,15 @@ export interface GithubAccountMapping {
   discordUserId: string;
 }
 
-export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, string>>;
+/** A missing key means "use the built-in default for that event". */
+export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, EmbedTemplate>>;
 
 // WHY: The webhook secret stays in env — a dashboard GET must never echo it back.
 export interface GithubNotifySettings {
   enabled: boolean;
   channelId: string | null;
   events: GithubEventToggles;
-  /** The message wording every event falls back to. */
-  template: string;
-  /** Per-event wording; a missing key inherits `template`. */
+  /** Per-event wording; every event falls back to its own built-in default. */
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
@@ -54,7 +55,7 @@ const repoName = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
 // like `everyone`, or one carrying backticks/`<`/`@`, impossible to persist.
 const githubLogin = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 
-const TOGGLE_KEYS = [
+export const TOGGLE_KEYS = [
   'pullRequestOpened',
   'pullRequestUpdated',
   'pullRequestMerged',
@@ -83,7 +84,6 @@ function emptySettings(): GithubNotifySettings {
     enabled: false,
     channelId: null,
     events: emptyToggles(),
-    template: DEFAULT_TEMPLATE,
     eventTemplates: {},
     repos: [],
     accounts: [],
@@ -192,19 +192,40 @@ function asAccountMappings(value: unknown): GithubAccountMapping[] {
   return accounts;
 }
 
+/**
+ * Carries a v0.6.2 file forward.
+ *
+ * That version stored one `template` string shared by every event, with per-event
+ * strings overriding it. Wording is now per-event, so a base the operator actually
+ * customised is copied onto every event that has no override of its own — dropping
+ * it would silently reset their wording. A base still equal to the old built-in
+ * default is left behind so the file picks up the new per-event defaults instead.
+ */
+function migrateLegacyBase(body: Record<string, unknown>, templates: GithubEventTemplates): void {
+  const base = body.template;
+  if (typeof base !== 'string' || base.trim() === '' || base === LEGACY_DEFAULT_TEMPLATE) {
+    return;
+  }
+
+  for (const key of TOGGLE_KEYS) {
+    templates[key] ??= parseEmbedTemplate(base, `Template for ${key}`, EVENT_VARIABLES[key]);
+  }
+}
+
 export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Settings must be an object');
   }
 
   const body = raw as Record<string, unknown>;
+  const eventTemplates = parseEmbedTemplateMap(body.eventTemplates, TOGGLE_KEYS);
+  migrateLegacyBase(body, eventTemplates);
 
   return {
     enabled: body.enabled === true,
     channelId: asChannelId(body.channelId, 'channelId'),
     events: asToggles(body.events),
-    template: parseTemplateText(body.template, 'Template') ?? DEFAULT_TEMPLATE,
-    eventTemplates: parseTemplateMap(body.eventTemplates, TOGGLE_KEYS),
+    eventTemplates,
     repos: asRepoRules(body.repos ?? []),
     accounts: asAccountMappings(body.accounts ?? []),
   };
@@ -232,12 +253,12 @@ export function resolveRepoRule(
   return { channelId, events: rule?.events ?? settings.events };
 }
 
-/** The wording for one event: its own override, else the global template. */
+/** The wording for one event: its own override, else that event's built-in default. */
 export function resolveTemplate(
   settings: GithubNotifySettings,
   toggle: keyof GithubEventToggles,
-): string {
-  return settings.eventTemplates[toggle] ?? settings.template ?? DEFAULT_TEMPLATE;
+): EmbedTemplate {
+  return settings.eventTemplates[toggle] ?? defaultTemplateFor(toggle);
 }
 
 export async function loadGithubNotifySettings(): Promise<GithubNotifySettings> {

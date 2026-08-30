@@ -10,16 +10,19 @@ import { rootDir } from '../lib/constants.js';
 import {
   getConfiguredGuild,
   listAssignableRoles,
+  listGuildEmojis,
   listGuildMembers,
   listTextChannels,
 } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
+import { DEFAULT_EVENT_TEMPLATES } from '../lib/github/default-templates.js';
 import { listDeliveries } from '../lib/github/delivery-log.js';
 import {
   getGithubNotifySettings,
   parseGithubNotifySettings,
   saveGithubNotifySettings,
 } from '../lib/github/settings.js';
+import { EVENT_VARIABLES } from '../lib/github/template.js';
 import {
   getGuildEventSettings,
   parseGuildEventSettings,
@@ -215,6 +218,13 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     c.json({ deliveries: listDeliveries() }),
   );
 
+  // WHY served rather than duplicated in the dashboard: the wording an event falls
+  // back to, and the variables it may use, are the same two tables the webhook path
+  // renders from. A second copy in the SPA would drift the moment either changes.
+  app.get('/api/github-notify/defaults', dashboardViewer, (c) =>
+    c.json({ templates: DEFAULT_EVENT_TEMPLATES, variables: EVENT_VARIABLES }),
+  );
+
   app.put('/api/github-notify', dashboardViewer, dashboardWrite, async (c) => {
     try {
       const body = parseGithubNotifySettings(await c.req.json());
@@ -241,6 +251,15 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     }
 
     return c.json({ roles: listAssignableRoles(guild) });
+  });
+
+  app.get('/api/discord/emojis', dashboardViewer, async (c) => {
+    const guild = getConfiguredGuild();
+    if (!guild) {
+      return c.json({ error: 'Discord guild is not ready.' }, 503);
+    }
+
+    return c.json({ emojis: await listGuildEmojis(guild) });
   });
 
   app.get('/api/discord/members', dashboardViewer, async (c) => {

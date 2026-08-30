@@ -22,6 +22,8 @@ export interface GithubNotification {
    *  still say "updated by <the person who is also the assignee>". */
   assignees: string[];
   reviewers: string[];
+  /** The one person an assign/review-request event is about, when it names one. */
+  assignee?: string;
   /** Who is worth pinging: the roles this event is about, minus the actor. */
   targets: string[];
 }
@@ -67,6 +69,7 @@ function build(
   toggle: keyof GithubEventToggles,
   label: string,
   targets: (GithubUser | undefined)[],
+  assignee?: GithubUser,
 ): GithubNotification | undefined {
   const actor = context.actor.login.toLowerCase();
   const unique: string[] = [];
@@ -100,6 +103,7 @@ function build(
     author: subject.user?.login,
     assignees: logins(subject.assignees),
     reviewers: logins(subject.requestedReviewers),
+    assignee: assignee?.login,
     targets: unique,
   };
 }
@@ -140,15 +144,14 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
   }
 
   if (context.action === 'assigned') {
-    return build(context, pull, 'pullRequestAssigned', 'PR Assigned', [
-      asUser(context.payload.assignee),
-    ]);
+    const assignee = asUser(context.payload.assignee);
+    return build(context, pull, 'pullRequestAssigned', 'PR Assigned', [assignee], assignee);
   }
 
   if (context.action === 'review_requested') {
     const requested = asUser(context.payload.requested_reviewer);
     const team = requested ? [requested] : asUserList(context.payload.requested_reviewers);
-    return build(context, pull, 'pullRequestAssigned', 'Review Requested', team);
+    return build(context, pull, 'pullRequestAssigned', 'Review Requested', team, requested);
   }
 
   return undefined;
@@ -165,9 +168,8 @@ function handleIssues(context: EventContext): GithubNotification | undefined {
   }
 
   if (context.action === 'assigned') {
-    return build(context, issue, 'issueAssigned', 'Issue Assigned', [
-      asUser(context.payload.assignee),
-    ]);
+    const assignee = asUser(context.payload.assignee);
+    return build(context, issue, 'issueAssigned', 'Issue Assigned', [assignee], assignee);
   }
 
   return undefined;

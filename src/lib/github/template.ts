@@ -7,8 +7,7 @@
  * what keeps a pull request title from forging mentions or links.
  */
 
-export const DEFAULT_TEMPLATE =
-  '**{event}** · `{repo}` [#{pr_number}]({pr_url}) — {pr_title}\n{mentions}';
+import type { GithubEventToggles } from './settings.js';
 
 const MAX_TEMPLATE_LENGTH = 2000;
 
@@ -20,6 +19,7 @@ export const TEMPLATE_VARIABLES = [
   'event',
   'actor',
   'author',
+  'assignee',
   'assignees',
   'reviewers',
   'mentions',
@@ -28,6 +28,40 @@ export const TEMPLATE_VARIABLES = [
 export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number];
 
 export type TemplateValues = Record<TemplateVariable, string>;
+
+export type GithubEventKey = keyof GithubEventToggles;
+
+// Describe the subject rather than the action, so every event carries them.
+const COMMON: readonly TemplateVariable[] = ['repo', 'pr_number', 'pr_url', 'pr_title', 'event'];
+
+/**
+ * What each event can actually fill in.
+ *
+ * WHY this is not one flat list: `{actor}` is a different person per event, and two
+ * variables are only sometimes populated. `{reviewers}` reads `requested_reviewers`,
+ * which GitHub empties once the review lands — offering it on `reviewSubmitted` or
+ * `pullRequestMerged` produced wording that silently rendered to nothing. Rejecting
+ * those at save time is the same bargain `findUnknownVariables` already makes: catch
+ * it in the dashboard, not in a channel three days later.
+ */
+export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]> = {
+  pullRequestOpened: [...COMMON, 'actor', 'author', 'reviewers', 'assignees', 'mentions'],
+  pullRequestUpdated: [...COMMON, 'actor', 'author', 'reviewers', 'assignees', 'mentions'],
+  pullRequestMerged: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  pullRequestAssigned: [
+    ...COMMON,
+    'actor',
+    'author',
+    'assignee',
+    'assignees',
+    'reviewers',
+    'mentions',
+  ],
+  issueOpened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  issueAssigned: [...COMMON, 'actor', 'assignee', 'assignees', 'mentions'],
+  reviewSubmitted: [...COMMON, 'actor', 'author', 'mentions'],
+  commentCreated: [...COMMON, 'actor', 'author', 'mentions'],
+};
 
 const NAMES = new Set<string>(TEMPLATE_VARIABLES);
 // WHY: a placeholder is `{name}`, `{name|tail}` or `{name|tail|fallback}`. A branch
@@ -52,9 +86,35 @@ export function readTemplateVariables(template: string): string[] {
   return found;
 }
 
-/** The names in a template that are not variables — surfaced as a save-time error. */
-export function findUnknownVariables(template: string): string[] {
-  return readTemplateVariables(template).filter((name) => !NAMES.has(name));
+/**
+ * The names in a template that it may not use — surfaced as a save-time error.
+ * Without `allowed` this is "is it a variable at all"; with one it also asks whether
+ * the event being edited can fill it in.
+ */
+export function findUnusableVariables(
+  template: string,
+  allowed: readonly TemplateVariable[] = TEMPLATE_VARIABLES,
+): string[] {
+  const permitted = new Set<string>(allowed);
+  return readTemplateVariables(template).filter((name) => !permitted.has(name));
+}
+
+/**
+ * Drops the placeholders an event cannot fill, leaving the rest of the text alone.
+ *
+ * WHY this exists next to the strict check: wording saved before per-event scoping
+ * may name a variable the event no longer offers. Refusing to parse it would make
+ * the whole settings file unreadable and reset every other setting with it, so the
+ * migration path prunes where the dashboard path rejects.
+ */
+export function stripDisallowedVariables(
+  template: string,
+  allowed: readonly TemplateVariable[],
+): string {
+  const permitted = new Set<string>(allowed);
+  return template.replaceAll(PLACEHOLDER, (whole, rawName: string) =>
+    NAMES.has(rawName) && !permitted.has(rawName) ? '' : whole,
+  );
 }
 
 /**
@@ -83,55 +143,35 @@ export function renderTemplate(template: string, values: TemplateValues): string
 }
 
 /**
- * Validates one stored template. Returns null for "unset"; throws when the text is
- * present but unusable.
+ * Validates one piece of template text. Returns '' for "unset"; throws when the text
+ * is present but unusable.
  *
- * WHY the unknown-variable check happens on save: a typo would otherwise sit in the
- * template until an event fired, and then render as literal `{revewers}` in a
- * channel — or as nothing at all.
+ * WHY the variable check happens on save: a typo would otherwise sit in the template
+ * until an event fired, and then render as literal `{revewers}` in a channel — or as
+ * nothing at all.
  */
-export function parseTemplateText(value: unknown, label: string): string | null {
+export function parseTemplateText(
+  value: unknown,
+  label: string,
+  allowed?: readonly TemplateVariable[],
+  maxLength = MAX_TEMPLATE_LENGTH,
+): string {
   if (value === null || value === undefined || value === '') {
-    return null;
+    return '';
   }
 
   if (typeof value !== 'string') {
     throw new Error(`${label} must be text`);
   }
 
-  if (value.length > MAX_TEMPLATE_LENGTH) {
-    throw new Error(`${label} must be ${MAX_TEMPLATE_LENGTH} characters or fewer`);
+  if (value.length > maxLength) {
+    throw new Error(`${label} must be ${maxLength} characters or fewer`);
   }
 
-  const unknown = findUnknownVariables(value);
-  if (unknown.length > 0) {
-    throw new Error(`${label} uses unknown variables: ${unknown.join(', ')}`);
+  const unusable = findUnusableVariables(value, allowed);
+  if (unusable.length > 0) {
+    throw new Error(`${label} cannot use: ${unusable.join(', ')}`);
   }
 
   return value;
-}
-
-/** Validates a per-event override map, keeping only the keys that carry wording. */
-export function parseTemplateMap<Key extends string>(
-  value: unknown,
-  keys: readonly Key[],
-): Partial<Record<Key, string>> {
-  if (value === null || value === undefined) {
-    return {};
-  }
-
-  if (typeof value !== 'object') {
-    throw new Error('eventTemplates must be an object');
-  }
-
-  const row = value as Record<string, unknown>;
-  const templates: Partial<Record<Key, string>> = {};
-  for (const key of keys) {
-    const template = parseTemplateText(row[key], `Template for ${key}`);
-    if (template) {
-      templates[key] = template;
-    }
-  }
-
-  return templates;
 }

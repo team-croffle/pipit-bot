@@ -69,6 +69,44 @@ export function listTextChannels(guild: Guild): ChannelOption[] {
     .map(({ id, name, category, canPost }) => ({ id, name, category, canPost }));
 }
 
+export interface GuildEmojiOption {
+  id: string;
+  name: string;
+  animated: boolean;
+  /** The CDN image, for rendering the option. */
+  url: string;
+  /** What has to be typed into a message for the emoji to render. */
+  markup: string;
+}
+
+/**
+ * Lists the guild's custom emoji for dashboard pickers.
+ *
+ * WHY no extra intent: emoji ride along in GUILD_CREATE, so `Guilds` already fills
+ * this cache. Only live add/remove events would need GuildExpressions, and a picker
+ * that is a fetch behind is not worth an intent for.
+ */
+export async function listGuildEmojis(guild: Guild): Promise<GuildEmojiOption[]> {
+  if (guild.emojis.cache.size === 0) {
+    try {
+      await guild.emojis.fetch();
+    } catch {
+      // A picker that cannot load must not take the whole dashboard down.
+    }
+  }
+
+  return [...guild.emojis.cache.values()]
+    .filter((emoji) => emoji.id !== null && emoji.name !== null)
+    .map((emoji) => ({
+      id: emoji.id,
+      name: emoji.name ?? '',
+      animated: emoji.animated === true,
+      url: emoji.imageURL({ size: 64 }),
+      markup: emoji.toString(),
+    }))
+    .toSorted((a, b) => a.name.localeCompare(b.name));
+}
+
 export function listAssignableRoles(guild: Guild): { id: string; name: string }[] {
   return [...guild.roles.cache.values()]
     .filter((role) => role.id !== guild.id && !role.managed)
