@@ -89,12 +89,9 @@
         <Smile />
       </Button>
     </DropdownMenuTrigger>
-    <!-- No enter/exit animation: it runs while the list is being built, which turns a
-         brief pause into visible stutter. -->
-    <DropdownMenuContent
-      align="end"
-      class="w-84 animate-none p-0 duration-0 data-[state=closed]:animate-none data-[state=open]:animate-none"
-    >
+    <!-- No enter/exit animation: it runs while the list is being built, which turns a 
+     brief pause into visible stutter. -->
+    <DropdownMenuContent align="end" class="w-90 p-0">
       <div class="bg-popover sticky top-0 z-10 border-b p-2">
         <Input v-model="query" placeholder="이모지 검색…" class="h-8" />
       </div>
