@@ -2,6 +2,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import { join, normalize, relative } from 'node:path';
 import { Readable } from 'node:stream';
 
+import { container } from '@sapphire/framework';
 import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { stream } from 'hono/streaming';
@@ -15,6 +16,7 @@ import {
   listTextChannels,
 } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
+import { listInstallationMembers, listInstallationRepositories } from '../lib/github/app-client.js';
 import { DEFAULT_EVENT_TEMPLATES } from '../lib/github/default-templates.js';
 import { listDeliveries } from '../lib/github/delivery-log.js';
 import {
@@ -251,6 +253,39 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     }
 
     return c.json({ roles: listAssignableRoles(guild) });
+  });
+
+  /**
+   * WHY `available` rather than a 503: the dashboard falls back to typing the value
+   * by hand, which is what it did before this existed. A hard error would make the
+   * page look broken on an install that simply has no App credentials.
+   */
+  app.get('/api/github/repositories', dashboardViewer, async (c) => {
+    const app = config.githubApp;
+    if (!app) {
+      return c.json({ available: false, repositories: [] });
+    }
+
+    try {
+      return c.json({ available: true, repositories: await listInstallationRepositories(app) });
+    } catch (error) {
+      container.logger.warn('[github] repository list failed:', error);
+      return c.json({ available: false, repositories: [] });
+    }
+  });
+
+  app.get('/api/github/members', dashboardViewer, async (c) => {
+    const app = config.githubApp;
+    if (!app) {
+      return c.json({ available: false, members: [] });
+    }
+
+    try {
+      return c.json({ available: true, members: await listInstallationMembers(app) });
+    } catch (error) {
+      container.logger.warn('[github] member list failed:', error);
+      return c.json({ available: false, members: [] });
+    }
   });
 
   app.get('/api/discord/emojis', dashboardViewer, async (c) => {
