@@ -286,7 +286,7 @@ jobs:
           \`\`\`
           EOF
           )"
-          ARGS=(--draft --title "$VERSION" --notes "$NOTES")
+          ARGS=(--draft --title "v$VERSION" --notes "$NOTES")
           if [[ "$IS_PRE" == "true" ]]; then
             ARGS+=(--prerelease)
           fi
