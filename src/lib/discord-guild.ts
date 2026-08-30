@@ -77,14 +77,44 @@ export interface GuildEmojiOption {
   url: string;
   /** What has to be typed into a message for the emoji to render. */
   markup: string;
+  /** True for an emoji the bot owns, which works in every guild it is in. */
+  application: boolean;
+}
+
+interface EmojiLike {
+  id: string | null;
+  name: string | null;
+  animated: boolean | null;
+  imageURL(options: { size: 64 }): string;
+  toString(): string;
+}
+
+function toOption(emoji: EmojiLike, application: boolean): GuildEmojiOption | undefined {
+  if (!emoji.id || !emoji.name) {
+    return undefined;
+  }
+
+  return {
+    id: emoji.id,
+    name: emoji.name,
+    animated: emoji.animated === true,
+    url: emoji.imageURL({ size: 64 }),
+    markup: emoji.toString(),
+    application,
+  };
 }
 
 /**
- * Lists the guild's custom emoji for dashboard pickers.
+ * Custom emoji the dashboard can offer: the guild's own, plus the ones the bot owns.
  *
- * WHY no extra intent: emoji ride along in GUILD_CREATE, so `Guilds` already fills
- * this cache. Only live add/remove events would need GuildExpressions, and a picker
- * that is a fetch behind is not worth an intent for.
+ * WHY application emoji are worth the second call: they belong to the bot rather than
+ * to a server, so they render in every guild it is in. Discord has no endpoint for
+ * the standard Unicode set — its own picker ships that list inside the client — so
+ * these two are the whole of what can actually be fetched.
+ *
+ * WHY no extra intent for the guild half: emoji ride along in GUILD_CREATE, so
+ * `Guilds` already fills that cache. Only live add/remove events would need
+ * GuildExpressions, and a picker that is a fetch behind is not worth an intent for.
  */
 export async function listGuildEmojis(guild: Guild): Promise<GuildEmojiOption[]> {
   if (guild.emojis.cache.size === 0) {
@@ -95,15 +125,22 @@ export async function listGuildEmojis(guild: Guild): Promise<GuildEmojiOption[]>
     }
   }
 
-  return [...guild.emojis.cache.values()]
-    .filter((emoji) => emoji.id !== null && emoji.name !== null)
-    .map((emoji) => ({
-      id: emoji.id,
-      name: emoji.name ?? '',
-      animated: emoji.animated === true,
-      url: emoji.imageURL({ size: 64 }),
-      markup: emoji.toString(),
-    }))
+  const application = container.client?.application;
+  if (application && application.emojis.cache.size === 0) {
+    try {
+      await application.emojis.fetch();
+    } catch {
+      // Same bargain: one missing source should not empty the other.
+    }
+  }
+
+  const owned = [...(application?.emojis.cache.values() ?? [])].map((emoji) =>
+    toOption(emoji, true),
+  );
+  const guildOwned = [...guild.emojis.cache.values()].map((emoji) => toOption(emoji, false));
+
+  return [...guildOwned, ...owned]
+    .filter((option): option is GuildEmojiOption => option !== undefined)
     .toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
