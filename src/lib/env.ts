@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { setup } from '@skyra/env-utilities';
@@ -74,18 +75,45 @@ function parseDashboardDevRole(raw: string | undefined): DashboardDevRole {
  * pickers. A bot that cannot reach the API still receives webhooks and still posts
  * reminders, so a missing credential disables a convenience, not the feature.
  */
-function parseGithubApp(): GithubAppConfig | null {
-  const appId = process.env.GITHUB_APP_ID?.trim();
-  const rawKey = process.env.GITHUB_APP_PRIVATE_KEY?.trim();
-  if (!appId || !rawKey) {
+/**
+ * Reads the App private key from a file or from the environment.
+ *
+ * WHY the path wins: a PEM is multi-line, which `.env` carries badly, and a secret
+ * mounted as a file is the usual shape in a container. When both are set the file is
+ * the more deliberate of the two, so it decides.
+ */
+function readPrivateKey(): string | null {
+  const path = process.env.GITHUB_APP_PRIVATE_KEY_PATH?.trim();
+  if (path) {
+    try {
+      return readFileSync(path, 'utf8').trim();
+    } catch {
+      throw new Error(`GITHUB_APP_PRIVATE_KEY_PATH is set but ${path} could not be read`);
+    }
+  }
+
+  const raw = process.env.GITHUB_APP_PRIVATE_KEY?.trim();
+  if (!raw) {
     return null;
   }
 
-  const privateKey = rawKey.includes('BEGIN')
-    ? rawKey.replaceAll(String.raw`\n`, '\n')
-    : Buffer.from(rawKey, 'base64').toString('utf8');
+  // An escaped-newline PEM survives .env; a base64 one avoids the question entirely.
+  return raw.includes('BEGIN')
+    ? raw.replaceAll(String.raw`\n`, '\n')
+    : Buffer.from(raw, 'base64').toString('utf8');
+}
+
+function parseGithubApp(): GithubAppConfig | null {
+  const appId = process.env.GITHUB_APP_ID?.trim();
+  const privateKey = readPrivateKey();
+  if (!appId || !privateKey) {
+    return null;
+  }
+
   if (!privateKey.includes('BEGIN')) {
-    throw new Error('GITHUB_APP_PRIVATE_KEY must be a PEM, raw or base64-encoded');
+    throw new Error(
+      'The GitHub App private key must be a PEM — set GITHUB_APP_PRIVATE_KEY_PATH to a file, or GITHUB_APP_PRIVATE_KEY to the PEM itself (raw or base64-encoded)',
+    );
   }
 
   const rawInstallation = process.env.GITHUB_APP_INSTALLATION_ID?.trim();

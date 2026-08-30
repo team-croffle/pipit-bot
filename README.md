@@ -27,6 +27,7 @@ INTERNAL_TOKEN=
 GITHUB_WEBHOOK_SECRET=
 GITHUB_APP_ID=
 GITHUB_APP_PRIVATE_KEY=
+GITHUB_APP_PRIVATE_KEY_PATH=
 GITHUB_APP_INSTALLATION_ID=
 MUSIC_WORKER_URL=http://music-worker:8080
 PIPIT_API_URL=http://127.0.0.1:3000
@@ -60,7 +61,7 @@ PR and issue activity is delivered by a **GitHub App**. Register one app, instal
 
 `POST /webhooks/github` is the only route meant to be reachable from the internet; keep `/api/*` and `/internal/*` off the public host. Every delivery must carry a valid `X-Hub-Signature-256`, and the endpoint answers `404` while `GITHUB_WEBHOOK_SECRET` is unset.
 
-`GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` (a PEM, raw or base64-encoded) let the dashboard offer the installed repositories and the organisation members instead of asking you to type them. `GITHUB_APP_INSTALLATION_ID` is optional — without it the first installation is used. None of this is required: reminders work on the webhook secret alone, and the pickers fall back to plain text fields.
+`GITHUB_APP_ID` plus a private key let the dashboard offer the installed repositories and the organisation members instead of asking you to type them. Give the key as `GITHUB_APP_PRIVATE_KEY_PATH` (a file, which is how a mounted secret usually arrives) or as `GITHUB_APP_PRIVATE_KEY` (the PEM itself, raw or base64-encoded); the path wins when both are set. `GITHUB_APP_INSTALLATION_ID` is optional — without it the first installation is used. None of this is required: reminders work on the webhook secret alone, and the pickers fall back to plain text fields.
 
 Routing lives in `data/github-notify.json`: a default channel plus per-repository overrides for the channel and which event types to report, and a GitHub-login-to-Discord-user map used for mentions. Unmapped logins appear as plain text. The feature ships disabled (`enabled: false`).
 
