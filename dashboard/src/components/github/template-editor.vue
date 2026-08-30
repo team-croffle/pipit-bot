@@ -31,6 +31,8 @@
     readOnly: boolean;
     /** True while the event still follows the built-in default. */
     inherited: boolean;
+    /** What `{event}` renders as for this event. */
+    sampleLabel: string;
   }>();
 
   const emit = defineEmits<{
@@ -294,7 +296,12 @@
 
         <div class="flex flex-col gap-2">
           <p class="text-sm font-medium">미리보기</p>
-          <EmbedPreview :template="draft" :variables="variables" />
+          <EmbedPreview
+            :template="draft"
+            :variables="variables"
+            :event-key="eventKey"
+            :event-label="sampleLabel"
+          />
         </div>
       </div>
 

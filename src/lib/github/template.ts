@@ -61,12 +61,38 @@ export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]
   pullRequestChangesRequested: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   pullRequestApproved: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   pullRequestMerged: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  pullRequestClosed: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueOpened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueAssigned: [...COMMON, 'actor', 'assignee', 'assignees', 'mentions'],
   issueResolved: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueClosed: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueReopened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   commentCreated: [...COMMON, 'actor', 'author', 'mentions'],
+};
+
+/**
+ * What `{event}` renders as.
+ *
+ * A couple of events carry a different label depending on the action behind them —
+ * an assignment reads "Review Requested" when that is what happened — so the handler
+ * overrides those. This table is the rest, and it is also what the dashboard fills
+ * `{event}` with when it draws a preview: without it every event previewed with the
+ * same word.
+ */
+export const EVENT_LABELS: Record<GithubEventKey, string> = {
+  pullRequestOpened: 'PR Open',
+  pullRequestUpdated: 'PR Updated',
+  pullRequestAssigned: 'PR Assigned',
+  pullRequestChangesRequested: 'Changes Requested',
+  pullRequestApproved: 'Approved',
+  pullRequestMerged: 'PR Merged',
+  pullRequestClosed: 'PR Closed',
+  issueOpened: 'Issue Open',
+  issueAssigned: 'Issue Assigned',
+  issueResolved: 'Issue Resolved',
+  issueClosed: 'Issue Closed',
+  issueReopened: 'Issue Reopened',
+  commentCreated: 'Comment',
 };
 
 const NAMES = new Set<string>(TEMPLATE_VARIABLES);

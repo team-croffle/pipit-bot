@@ -8,6 +8,7 @@ export const eventLabels: { key: GithubEventKey; label: string; group: string }[
   { key: 'pullRequestChangesRequested', label: 'PR 변경 요청', group: 'PR' },
   { key: 'pullRequestApproved', label: 'PR 승인 (Approved)', group: 'PR' },
   { key: 'pullRequestMerged', label: 'PR 머지', group: 'PR' },
+  { key: 'pullRequestClosed', label: 'PR 닫음 (머지 안 함)', group: 'PR' },
   { key: 'issueOpened', label: 'Issue 등록', group: 'Issue' },
   { key: 'issueAssigned', label: 'Issue 담당자 배정', group: 'Issue' },
   { key: 'issueResolved', label: 'Issue 해결 (Completed)', group: 'Issue' },
@@ -28,6 +29,7 @@ export const actorLabels: Record<GithubEventKey, string> = {
   pullRequestChangesRequested: '변경을 요청한 리뷰어',
   pullRequestApproved: '승인한 리뷰어',
   pullRequestMerged: '머지를 실행한 사람',
+  pullRequestClosed: 'PR을 닫은 사람',
   issueOpened: 'Issue를 연 사람',
   issueAssigned: '배정한 사람',
   issueResolved: 'Issue를 해결 처리한 사람',
@@ -50,19 +52,49 @@ export const variableHints: Record<string, string> = {
   mentions: '이 알림으로 불러야 할 사람 (본인 제외)',
 };
 
-/** Sample values for the preview — shaped like what the bot actually substitutes. */
-export const sampleValues: Record<string, string> = {
+/**
+ * Sample values for the preview — shaped like what the bot actually substitutes.
+ *
+ * `{event}` and the subject vary per event: with one fixed set, every row in the
+ * summary table rendered the same sentence, which made the table useless for telling
+ * the events apart.
+ */
+const BASE_SAMPLE: Record<string, string> = {
   repo: 'team-croffle/pipit-bot',
   pr_number: '42',
-  pr_url: 'https://github.com/team-croffle/pipit-bot/pull/42',
-  pr_title: '리마인더 문구를 임베드로',
-  event: 'PR Merged',
-  actor: '@머지한사람',
+  actor: '@행위자',
   author: '@작성자',
   assignee: '@담당자',
   assignees: '@담당자',
   reviewers: '@리뷰어',
   mentions: '@담당자',
+};
+
+const PULL_SAMPLE = {
+  pr_url: 'https://github.com/team-croffle/pipit-bot/pull/42',
+  pr_title: '리마인더 문구를 임베드로',
+};
+
+const ISSUE_SAMPLE = {
+  pr_url: 'https://github.com/team-croffle/pipit-bot/issues/42',
+  pr_title: '알림이 두 번 오는 문제',
+};
+
+/** Who `{actor}` is, phrased short enough for a sample value. */
+const ACTOR_SAMPLE: Partial<Record<GithubEventKey, string>> = {
+  pullRequestOpened: '@등록자',
+  pullRequestUpdated: '@푸시한사람',
+  pullRequestAssigned: '@요청자',
+  pullRequestChangesRequested: '@리뷰어',
+  pullRequestApproved: '@리뷰어',
+  pullRequestMerged: '@머지한사람',
+  pullRequestClosed: '@닫은사람',
+  issueOpened: '@등록자',
+  issueAssigned: '@배정한사람',
+  issueResolved: '@해결한사람',
+  issueClosed: '@닫은사람',
+  issueReopened: '@다시연사람',
+  commentCreated: '@작성자',
 };
 
 // Mirrors renderTemplate on the bot: `{name}`, `{name|tail}`, `{name|tail|fallback}`,
@@ -98,8 +130,20 @@ export function renderTemplate(template: string, values: Record<string, string>)
 }
 
 /** Only the variables this event can fill, so the preview matches what will be sent. */
-export function sampleFor(allowed: string[]): Record<string, string> {
-  return Object.fromEntries(allowed.map((name) => [name, sampleValues[name] ?? '']));
+export function sampleFor(
+  event: GithubEventKey,
+  allowed: string[],
+  label: string,
+): Record<string, string> {
+  const subject = event.startsWith('issue') ? ISSUE_SAMPLE : PULL_SAMPLE;
+  const values: Record<string, string> = {
+    ...BASE_SAMPLE,
+    ...subject,
+    event: label,
+    actor: ACTOR_SAMPLE[event] ?? BASE_SAMPLE.actor ?? '',
+  };
+
+  return Object.fromEntries(allowed.map((name) => [name, values[name] ?? '']));
 }
 
 export function emptyTemplate(): EmbedTemplate {

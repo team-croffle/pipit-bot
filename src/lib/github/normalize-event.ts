@@ -8,6 +8,7 @@ import {
   type GithubUser,
 } from './payload-types.js';
 import type { GithubEventToggles } from './settings.js';
+import { EVENT_LABELS } from './template.js';
 
 export interface GithubNotification {
   toggle: keyof GithubEventToggles;
@@ -137,7 +138,7 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
   }
 
   if (context.action === 'opened') {
-    return build(context, pull, 'pullRequestOpened', 'PR Open', [
+    return build(context, pull, 'pullRequestOpened', EVENT_LABELS.pullRequestOpened, [
       ...(pull.requestedReviewers ?? []),
       ...(pull.assignees ?? []),
     ]);
@@ -150,24 +151,31 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
       return undefined;
     }
 
-    return build(context, pull, 'pullRequestUpdated', 'PR Updated', [
+    return build(context, pull, 'pullRequestUpdated', EVENT_LABELS.pullRequestUpdated, [
       ...(pull.requestedReviewers ?? []),
       ...(pull.assignees ?? []),
     ]);
   }
 
   if (context.action === 'closed') {
-    const merged = asRecord(context.payload.pull_request)?.merged;
-    if (merged !== true) {
-      return undefined;
-    }
-
-    return build(context, pull, 'pullRequestMerged', 'PR Merged', [pull.user]);
+    const merged = asRecord(context.payload.pull_request)?.merged === true;
+    const toggle = merged ? 'pullRequestMerged' : 'pullRequestClosed';
+    return build(context, pull, toggle, EVENT_LABELS[toggle], [
+      pull.user,
+      ...(merged ? [] : (pull.requestedReviewers ?? [])),
+    ]);
   }
 
   if (context.action === 'assigned') {
     const assignee = asUser(context.payload.assignee);
-    return build(context, pull, 'pullRequestAssigned', 'PR Assigned', [assignee], assignee);
+    return build(
+      context,
+      pull,
+      'pullRequestAssigned',
+      EVENT_LABELS.pullRequestAssigned,
+      [assignee],
+      assignee,
+    );
   }
 
   if (context.action === 'review_requested') {
@@ -186,12 +194,12 @@ function handleIssues(context: EventContext): GithubNotification | undefined {
   }
 
   if (context.action === 'opened') {
-    return build(context, issue, 'issueOpened', 'Issue Open', issue.assignees ?? []);
+    return build(context, issue, 'issueOpened', EVENT_LABELS.issueOpened, issue.assignees ?? []);
   }
 
   if (context.action === 'assigned') {
     const assignee = asUser(context.payload.assignee);
-    return build(context, issue, 'issueAssigned', 'Issue Assigned', [assignee], assignee);
+    return build(context, issue, 'issueAssigned', EVENT_LABELS.issueAssigned, [assignee], assignee);
   }
 
   if (context.action === 'closed') {
@@ -206,7 +214,7 @@ function handleIssues(context: EventContext): GithubNotification | undefined {
   }
 
   if (context.action === 'reopened') {
-    return build(context, issue, 'issueReopened', 'Issue Reopened', [
+    return build(context, issue, 'issueReopened', EVENT_LABELS.issueReopened, [
       issue.user,
       ...(issue.assignees ?? []),
     ]);
