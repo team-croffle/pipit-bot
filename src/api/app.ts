@@ -28,6 +28,7 @@ import type { ApiVariables } from './context.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
 import { mountMusicRoutes } from './routes/music.js';
+import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
 const OIDC_STATE_COOKIE = 'pipit_oidc_state';
@@ -243,6 +244,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   mountGithubNotifyRoutes(app, config);
   mountGithubWebhookRoutes(app);
   mountMusicRoutes(app);
+  mountReactionRoleRoutes(app);
 
   app.get('*', async (c) => {
     const pathname = new URL(c.req.url).pathname;
