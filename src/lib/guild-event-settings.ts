@@ -3,20 +3,12 @@ import { join } from 'node:path';
 
 import { dataDir } from './constants.js';
 
-export interface ReactionRoleMapping {
-  channelId: string;
-  messageId: string;
-  emoji: string;
-  roleId: string;
-}
-
 // WHY: Prefix, command channel, and RSS belong to bot config (C), not this store.
 export interface GuildEventSettings {
   logChannelId: string | null;
   joinMessages: string[];
   leaveMessages: string[];
   joinRoleIds: string[];
-  reactionRoles: ReactionRoleMapping[];
 }
 
 const eventsPath = join(dataDir, 'guild-events.json');
@@ -29,7 +21,6 @@ function emptySettings(): GuildEventSettings {
     joinMessages: [],
     leaveMessages: [],
     joinRoleIds: [],
-    reactionRoles: [],
   };
 }
 
@@ -55,36 +46,6 @@ function asStringList(value: unknown, maxItems: number, maxLength: number): stri
   }
 
   return items;
-}
-
-function asReactionRoles(value: unknown): ReactionRoleMapping[] {
-  if (!Array.isArray(value)) {
-    throw new Error('reactionRoles must be an array');
-  }
-
-  const mappings: ReactionRoleMapping[] = [];
-  for (const item of value.slice(0, 50)) {
-    if (!item || typeof item !== 'object') {
-      throw new Error('Invalid reaction role mapping');
-    }
-
-    const row = item as Record<string, unknown>;
-    const channelId = row.channelId;
-    const messageId = row.messageId;
-    const emoji = typeof row.emoji === 'string' ? row.emoji.trim() : '';
-    const roleId = row.roleId;
-    if (!isSnowflake(channelId) || !isSnowflake(messageId) || !isSnowflake(roleId) || !emoji) {
-      throw new Error('Each reaction role needs channelId, messageId, emoji, and roleId');
-    }
-
-    if (emoji.length > 100) {
-      throw new Error('Emoji is too long');
-    }
-
-    mappings.push({ channelId, messageId, emoji, roleId });
-  }
-
-  return mappings;
 }
 
 export function parseGuildEventSettings(raw: unknown): GuildEventSettings {
@@ -116,7 +77,6 @@ export function parseGuildEventSettings(raw: unknown): GuildEventSettings {
     joinMessages: asStringList(body.joinMessages ?? [], 20, 2000),
     leaveMessages: asStringList(body.leaveMessages ?? [], 20, 2000),
     joinRoleIds,
-    reactionRoles: asReactionRoles(body.reactionRoles ?? []),
   };
 }
 
