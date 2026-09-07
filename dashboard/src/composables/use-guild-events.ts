@@ -9,15 +9,13 @@ export function emptyGuildEventSettings(): GuildEventSettings {
     joinMessages: [],
     leaveMessages: [],
     joinRoleIds: [],
-    reactionRoles: [],
   };
 }
 
 /**
  * `PUT /api/guild-events` replaces the whole document — a field left out of the body
- * is stored as empty, not left alone. The invite log and the reaction roles are edited
- * on separate pages, so each page loads the full settings and sends the full settings
- * back, changing only its own slice. Anything else would wipe the other page's data.
+ * is stored as empty, not left alone. A page loads the full settings and sends the
+ * full settings back, changing only its own slice.
  */
 export function useGuildEvents() {
   const settings = ref<GuildEventSettings>(emptyGuildEventSettings());

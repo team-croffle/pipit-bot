@@ -21,7 +21,11 @@ import type { ApiVariables } from '../context.js';
  * only fixes a typo cannot surprise a channel with a message.
  */
 export function mountReactionRoleRoutes(app: Hono<{ Variables: ApiVariables }>): void {
-  app.get('/api/reaction-roles', dashboardViewer, (c) => c.json(getReactionRoleSettings()));
+  // The guild id rides along so the dashboard can link a published panel straight
+  // to its message without a second call.
+  app.get('/api/reaction-roles', dashboardViewer, (c) =>
+    c.json({ ...getReactionRoleSettings(), guildId: getConfiguredGuild()?.id ?? null }),
+  );
 
   app.put('/api/reaction-roles', dashboardViewer, dashboardWrite, async (c) => {
     try {
