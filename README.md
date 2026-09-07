@@ -45,7 +45,7 @@ Production dashboard auth is **Authentik OIDC** (Authorization Code + PKCE). The
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback).
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `reaction-roles.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 ## GitHub notifications
 
@@ -72,6 +72,12 @@ Which variables an event offers depends on what it can fill in — `{actor}` is 
 Mentions belong on the plain line: Discord raises no notification for a mention that only appears inside an embed. The template is the operator's own markdown, but everything substituted into it is escaped, so a pull request title cannot forge a mention or a link.
 
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
+
+## Reaction roles
+
+A **panel** is one message the bot owns. Pick a channel, compose the embed, and list which emoji hands out which role; publishing sends the message and reacts to it with each emoji. Editing the panel and publishing again edits that same message and brings its reactions back in line with the options.
+
+The bot checks before it sends: it must be able to post and react in the channel, and every role must sit below its own and not be one Discord manages. A panel that could never grant its roles is refused with the reason, rather than failing silently when a member reacts. Panels live in `data/reaction-roles.json`.
 
 ## Source abstraction
 

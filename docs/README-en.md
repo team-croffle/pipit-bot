@@ -24,7 +24,7 @@ DASHBOARD_DEV_ROLE=admin
 
 Dashboard `/api` uses Authentik OIDC (app is the client). Keep `/internal/*` on the Docker network. Without OIDC env, local identity uses `DASHBOARD_DEV_ROLE`. Music worker callbacks use `INTERNAL_TOKEN`.
 
-Settings live in `data/runtime-config.json` and `data/guild-events.json`.
+Settings live in `data/runtime-config.json`, `data/guild-events.json` and `data/reaction-roles.json`.
 
 ## Commands
 
