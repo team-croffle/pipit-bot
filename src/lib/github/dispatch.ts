@@ -1,8 +1,8 @@
 import { container } from '@sapphire/framework';
 
 import { getConfiguredGuild } from '../discord-guild.js';
+import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { recordDelivery } from './delivery-log.js';
-import { resolveTemplateEmojis } from './emoji.js';
 import { formatGithubNotification } from './format-message.js';
 import type { GithubNotification } from './normalize-event.js';
 import { getGithubNotifySettings, resolveRepoRule, resolveTemplate } from './settings.js';
