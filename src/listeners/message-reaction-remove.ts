@@ -8,8 +8,8 @@ import {
   type User,
 } from 'discord.js';
 
-import { getGuildEventSettings } from '../lib/guild-event-settings.js';
-import { reactionMatchesMapping } from '../lib/reaction-roles.js';
+import { reactionMatchesEmoji } from '../lib/reaction-roles/match.js';
+import { findPanelByMessage } from '../lib/reaction-roles/settings.js';
 
 @ApplyOptions<Listener.Options>({ event: Events.MessageReactionRemove })
 export class UserEvent extends Listener {
@@ -23,18 +23,20 @@ export class UserEvent extends Listener {
       return;
     }
 
-    const mapping = getGuildEventSettings().reactionRoles.find(
-      (entry) =>
-        entry.messageId === fullReaction.message.id &&
-        reactionMatchesMapping(fullReaction, entry.emoji),
-    );
-    if (!mapping || !fullReaction.message.guild) {
+    const guild = fullReaction.message.guild;
+    const panel = findPanelByMessage(fullReaction.message.id);
+    if (!panel || !guild) {
+      return;
+    }
+
+    const option = panel.options.find((entry) => reactionMatchesEmoji(fullReaction, entry.emoji));
+    if (!option) {
       return;
     }
 
     try {
-      const member = await fullReaction.message.guild.members.fetch(fullUser.id);
-      await member.roles.remove(mapping.roleId);
+      const member = await guild.members.fetch(fullUser.id);
+      await member.roles.remove(option.roleId);
     } catch (error) {
       this.container.logger.error('Failed to remove reaction role:', error);
     }

@@ -20,7 +20,6 @@ import {
   parseGuildEventSettings,
   saveGuildEventSettings,
 } from '../lib/guild-event-settings.js';
-import { syncReactionRoleEmojis } from '../lib/reaction-roles.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
 import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
 import { buildLoginRedirect, buildLogoutRedirect, exchangeAuthorizationCode } from './auth/oidc.js';
@@ -193,12 +192,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   app.put('/api/guild-events', dashboardViewer, dashboardWrite, async (c) => {
     try {
       const body = parseGuildEventSettings(await c.req.json());
-      const saved = await saveGuildEventSettings(body);
-      const guild = getConfiguredGuild();
-      if (guild) {
-        void syncReactionRoleEmojis(guild, saved.reactionRoles);
-      }
-      return c.json(saved);
+      return c.json(await saveGuildEventSettings(body));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Invalid settings';
       return c.json({ error: message }, 400);
