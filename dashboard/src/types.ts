@@ -31,19 +31,41 @@ export interface JobsResponse {
   jobs: JobRecord[];
 }
 
-export interface ReactionRoleMapping {
-  channelId: string;
-  messageId: string;
-  emoji: string;
-  roleId: string;
-}
-
 export interface GuildEventSettings {
   logChannelId: string | null;
   joinMessages: string[];
   leaveMessages: string[];
   joinRoleIds: string[];
-  reactionRoles: ReactionRoleMapping[];
+}
+
+export interface ReactionRoleOption {
+  /** A `:name:` shortcode for a custom emoji, or the character for a standard one. */
+  emoji: string;
+  roleId: string;
+}
+
+/** One message the bot publishes and owns. */
+export interface ReactionRolePanel {
+  id: string;
+  name: string;
+  channelId: string;
+  /** `null` until the bot has published the panel. */
+  messageId: string | null;
+  embed: EmbedTemplate;
+  options: ReactionRoleOption[];
+}
+
+export interface ReactionRoleSettings {
+  panels: ReactionRolePanel[];
+  /** Null until the bot has connected; only used to build message links. */
+  guildId?: string | null;
+}
+
+export interface PublishPanelResult {
+  panel: ReactionRolePanel;
+  messageUrl: string;
+  /** Emoji the bot could not put on the message, if any. */
+  failedEmoji: string[];
 }
 
 export interface DiscordChannel {
