@@ -134,6 +134,19 @@ function orderIsWrong(message: Message, panel: ReactionRolePanel): boolean {
   return positions.some((option, position) => option !== position);
 }
 
+/**
+ * True when the reactions have to be taken off and put back, rather than topped up.
+ */
+function needsRebuild(message: Message, panel: ReactionRolePanel): boolean {
+  if (orderIsWrong(message, panel)) {
+    return true;
+  }
+
+  // A panel held at one reaction must not come out of a publish still carrying the
+  // marks it collected while the setting was off — the count it promises is one.
+  return panel.singleReaction && message.reactions.cache.some((reaction) => reaction.count > 1);
+}
+
 interface SyncResult {
   failedEmoji: string[];
   warnings: string[];
@@ -160,7 +173,7 @@ async function syncReactions(
   const warnings: string[] = [];
   let cleared = false;
 
-  if (orderIsWrong(message, panel)) {
+  if (needsRebuild(message, panel)) {
     if (canManage) {
       try {
         await message.reactions.removeAll();
