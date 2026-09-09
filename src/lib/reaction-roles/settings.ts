@@ -36,6 +36,14 @@ export interface ReactionRolePanel {
   channelId: string;
   /** `null` until the bot has published the panel. */
   messageId: string | null;
+  /**
+   * Hold the message at one reaction — the bot's own.
+   *
+   * A member's reaction is taken straight back off, so the panel reads as a row of
+   * buttons rather than a tally of who picked what, and the role is toggled on what
+   * the member already has instead of on which way the reaction went.
+   */
+  singleReaction: boolean;
   embed: EmbedTemplate;
   options: ReactionRoleOption[];
 }
@@ -134,6 +142,8 @@ function parsePanel(value: unknown, index: number): ReactionRolePanel {
     name,
     channelId: row.channelId,
     messageId: isSnowflake(messageId) ? messageId : null,
+    // Absent in a panel written before this setting existed, which behaved as off.
+    singleReaction: row.singleReaction === true,
     embed: parsePlainEmbedTemplate(row.embed, label),
     options: parseOptions(row.options, label),
   };
@@ -170,6 +180,7 @@ export function emptyPanel(id: string): ReactionRolePanel {
     name: '',
     channelId: '',
     messageId: null,
+    singleReaction: false,
     embed: emptyEmbedTemplate(),
     options: [],
   };

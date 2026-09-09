@@ -227,6 +227,17 @@ export async function publishPanel(guild: Guild, panel: ReactionRolePanel): Prom
   const channel = resolveChannel(guild, panel.channelId);
   checkRoles(guild, panel);
 
+  const canManage = canManageMessages(guild, channel);
+  // WHY this one is fatal while a wrong emoji order is only a warning: a panel held
+  // at one reaction cannot work at all without it. The bot would leave every
+  // reaction standing and read the member's own unreact as a request to give the
+  // role back, which is the opposite of what the setting asks for.
+  if (panel.singleReaction && !canManage) {
+    throw new PublishError(
+      '반응 수를 1로 유지하려면 봇에게 이 채널의 "메시지 관리" 권한이 필요합니다.',
+    );
+  }
+
   // Shortcodes become real emoji here, the same way the reminder resolves them.
   const rendered = renderPlainEmbed(resolveTemplateEmojis(panel.embed, guild));
   if (!rendered.content && !rendered.embed) {
@@ -251,11 +262,7 @@ export async function publishPanel(guild: Guild, panel: ReactionRolePanel): Prom
   }
 
   const message = edited ?? (await channel.send(payload));
-  const { failedEmoji, warnings } = await syncReactions(
-    message,
-    panel,
-    canManageMessages(guild, channel),
-  );
+  const { failedEmoji, warnings } = await syncReactions(message, panel, canManage);
 
   return { panel: { ...panel, messageId: message.id }, failedEmoji, warnings };
 }

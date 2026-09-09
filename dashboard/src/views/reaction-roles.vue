@@ -23,6 +23,7 @@
   } from '@/components/ui/card';
   import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
+  import { Switch } from '@/components/ui/switch';
   import { emptyPanel, useReactionRoles } from '@/composables/use-reaction-roles';
   import type { DashboardIdentity, DiscordChannel, DiscordRole, ReactionRolePanel } from '@/types';
 
@@ -196,6 +197,21 @@
                   아직 비어 있습니다.
                 </template>
               </p>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+              <Label :for="`rr-single-${panel.id}`" class="flex-col items-start gap-1">
+                <span class="text-sm">반응 수 1로 유지</span>
+                <span class="text-muted-foreground text-xs font-normal">
+                  누른 사람의 반응을 바로 떼어내고, 역할은 누를 때마다 부여·해제를 오갑니다. 봇에게
+                  "메시지 관리" 권한이 필요합니다.
+                </span>
+              </Label>
+              <Switch
+                :id="`rr-single-${panel.id}`"
+                v-model="panel.singleReaction"
+                :disabled="readOnly"
+              />
             </div>
 
             <div class="flex flex-col gap-2">

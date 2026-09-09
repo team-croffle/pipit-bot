@@ -8,8 +8,7 @@ import {
   type User,
 } from 'discord.js';
 
-import { reactionMatchesEmoji } from '../lib/reaction-roles/match.js';
-import { findPanelByMessage } from '../lib/reaction-roles/settings.js';
+import { applyReactionRemoved, resolvePanelReaction } from '../lib/reaction-roles/apply.js';
 
 @ApplyOptions<Listener.Options>({ event: Events.MessageReactionRemove })
 export class UserEvent extends Listener {
@@ -17,28 +16,13 @@ export class UserEvent extends Listener {
     reaction: MessageReaction | PartialMessageReaction,
     user: User | PartialUser,
   ) {
-    const fullReaction = reaction.partial ? await reaction.fetch() : reaction;
-    const fullUser = user.partial ? await user.fetch() : user;
-    if (fullUser.bot) {
-      return;
-    }
-
-    const guild = fullReaction.message.guild;
-    const panel = findPanelByMessage(fullReaction.message.id);
-    if (!panel || !guild) {
-      return;
-    }
-
-    const option = panel.options.find((entry) => reactionMatchesEmoji(fullReaction, entry.emoji));
-    if (!option) {
-      return;
-    }
-
     try {
-      const member = await guild.members.fetch(fullUser.id);
-      await member.roles.remove(option.roleId);
+      const hit = await resolvePanelReaction(reaction, user);
+      if (hit) {
+        await applyReactionRemoved(hit);
+      }
     } catch (error) {
-      this.container.logger.error('Failed to remove reaction role:', error);
+      this.container.logger.error('Failed to take back a reaction role:', error);
     }
   }
 }

@@ -51,6 +51,8 @@ export interface ReactionRolePanel {
   channelId: string;
   /** `null` until the bot has published the panel. */
   messageId: string | null;
+  /** Hold the message at one reaction — the bot's own — and toggle the role instead. */
+  singleReaction: boolean;
   embed: EmbedTemplate;
   options: ReactionRoleOption[];
 }
