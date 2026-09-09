@@ -77,7 +77,9 @@ In the Discord Developer Portal enable **Server Members Intent**. The bot needs 
 
 A **panel** is one message the bot owns. Pick a channel, compose the embed, and list which emoji hands out which role; publishing sends the message and reacts to it with each emoji. Editing the panel and publishing again edits that same message and brings its reactions back in line with the options.
 
-The bot checks before it sends: it must be able to post and react in the channel, and every role must sit below its own and not be one Discord manages. A panel that could never grant its roles is refused with the reason, rather than failing silently when a member reacts. Panels live in `data/reaction-roles.json`.
+A panel can be held at **one reaction** — the bot takes each member's reaction straight back off, so the message reads as a row of buttons rather than a tally, and pressing an emoji toggles its role on and off. Left off, the reaction itself is the record: adding one grants the role, taking it away gives it back.
+
+The bot checks before it sends: it must be able to post and react in the channel, and every role must sit below its own and not be one Discord manages. Holding a panel at one reaction also needs `Manage Messages`, as does putting the emoji back in order after one is inserted in the middle — Discord fixes a reaction's place when it is first added, so the only repair is to clear them and react again. A panel that could never grant its roles is refused with the reason, rather than failing silently when a member reacts. Panels live in `data/reaction-roles.json`.
 
 ## Source abstraction
 

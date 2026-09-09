@@ -22,6 +22,7 @@ export function emptyPanel(): ReactionRolePanel {
     name: '',
     channelId: '',
     messageId: null,
+    singleReaction: false,
     embed: emptyEmbed(),
     options: [],
   };
