@@ -95,10 +95,14 @@ export function useReactionRoles() {
       panels.value = panels.value.map((panel) =>
         panel.id === result.panel.id ? result.panel : panel,
       );
-      saved.value =
-        result.failedEmoji.length > 0
-          ? `발행했지만 ${result.failedEmoji.join(' ')} 은(는) 붙이지 못했습니다. 서버에서 지워진 이모지인지 확인해 주세요.`
-          : '발행했습니다.';
+      const notes = [...result.warnings];
+      if (result.failedEmoji.length > 0) {
+        notes.unshift(
+          `${result.failedEmoji.join(' ')} 은(는) 붙이지 못했습니다. 서버에서 지워진 이모지인지 확인해 주세요.`,
+        );
+      }
+
+      saved.value = notes.length > 0 ? `발행했지만 ${notes.join(' ')}` : '발행했습니다.';
     } catch (cause) {
       saved.value = '';
       report(cause, '발행하지 못했습니다.');

@@ -57,6 +57,7 @@ export function mountReactionRoleRoutes(app: Hono<{ Variables: ApiVariables }>):
         messageUrl: `https://discord.com/channels/${guild.id}/${saved.channelId}/${saved.messageId}`,
         // The message went out either way; these emoji just did not go on it.
         failedEmoji: published.failedEmoji,
+        warnings: published.warnings,
       });
     } catch (error) {
       if (error instanceof PublishError) {
