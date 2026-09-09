@@ -2617,6 +2617,8 @@ __metadata:
     "@vueuse/core": "npm:^14.4.0"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
+    emojibase: "npm:^17.0.0"
+    emojibase-data: "npm:^17.0.0"
     lucide-vue-next: "npm:^1.0.0"
     reka-ui: "npm:^2.10.4"
     tailwind-merge: "npm:^3.6.0"
@@ -2802,6 +2804,22 @@ __metadata:
   version: 8.0.0
   resolution: "emoji-regex@npm:8.0.0"
   checksum: 10c0/b6053ad39951c4cf338f9092d7bfba448cdfd46fe6a2a034700b149ac9ffbc137e361cbd3c442297f86bed2e5f7576c1b54cc0a6bf8ef5106cc62f496af35010
+  languageName: node
+  linkType: hard
+
+"emojibase-data@npm:^17.0.0":
+  version: 17.0.0
+  resolution: "emojibase-data@npm:17.0.0"
+  peerDependencies:
+    emojibase: "*"
+  checksum: 10c0/c1373438ac52e943a7953ce2315c0da4e29a6552a0ee9ae18a22dbf824a6b428d25655c55e2e48c69900358052408496807cdf7af12a43a0a1b39fb369cbf4a0
+  languageName: node
+  linkType: hard
+
+"emojibase@npm:^17.0.0":
+  version: 17.0.0
+  resolution: "emojibase@npm:17.0.0"
+  checksum: 10c0/d37435b77f12e3c45d06fc09753fd7dd6b44e757cfaa96b64b72257109aa8166773e19c1eb18c21a06e5b8c50462cb279dca83510724673f505a6f0d6e7dc90f
   languageName: node
   linkType: hard
 

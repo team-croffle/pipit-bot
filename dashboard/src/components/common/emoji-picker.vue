@@ -10,7 +10,7 @@
   } from '@/components/ui/dropdown-menu';
   import { Input } from '@/components/ui/input';
   import { useGuildEmojis } from '@/composables/use-guild-emojis';
-  import { useUnicodeEmojis } from '@/composables/use-unicode-emojis';
+  import { useUnicodeEmojis, type UnicodeEmoji } from '@/composables/use-unicode-emojis';
 
   defineProps<{ disabled?: boolean }>();
 
@@ -25,7 +25,9 @@
   const { groups, loading: unicodeLoading, load: loadUnicode } = useUnicodeEmojis();
 
   const query = ref('');
-  const needle = computed(() => query.value.trim().toLowerCase());
+  // A name copied out of Discord arrives wearing its colons. They are punctuation
+  // here, not part of any name we hold.
+  const needle = computed(() => query.value.trim().toLowerCase().replaceAll(':', ''));
 
   function matches(name: string): boolean {
     return !needle.value || name.toLowerCase().includes(needle.value);
@@ -56,7 +58,13 @@
       // A search reaches across every group, capped so a one-letter query cannot
       // rebuild the whole set.
       const hits = groups.value.flatMap((group) =>
-        group.emojis.filter((emoji) => matches(emoji.name) || emoji.slug.includes(needle.value)),
+        group.emojis.filter(
+          (emoji) =>
+            matches(emoji.name) ||
+            emoji.slug.includes(needle.value) ||
+            // The name Discord shows, which is often nothing like the unicode.org one.
+            emoji.shortcodes.some((shortcode) => shortcode.includes(needle.value)),
+        ),
       );
 
       return { emojis: hits.slice(0, SEARCH_LIMIT), truncated: hits.length > SEARCH_LIMIT };
@@ -64,6 +72,12 @@
 
     return { emojis: groups.value[active.value]?.emojis ?? [], truncated: false };
   });
+
+  /** Discord's name first, since that is the one an operator would type. */
+  function label(emoji: UnicodeEmoji): string {
+    const [shortcode] = emoji.shortcodes;
+    return shortcode ? `:${shortcode}: — ${emoji.name}` : emoji.name;
+  }
 
   function open(isOpen: boolean): void {
     if (!isOpen) {
@@ -170,7 +184,7 @@
               :key="emoji.slug"
               type="button"
               class="hover:bg-accent rounded-md p-1 text-lg leading-none"
-              :title="emoji.name"
+              :title="label(emoji)"
               @click="emit('pick', emoji.emoji)"
             >
               {{ emoji.emoji }}
