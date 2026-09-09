@@ -66,6 +66,8 @@ export interface PublishPanelResult {
   messageUrl: string;
   /** Emoji the bot could not put on the message, if any. */
   failedEmoji: string[];
+  /** What went ahead anyway but the operator should know about. */
+  warnings: string[];
 }
 
 export interface DiscordChannel {

@@ -62,6 +62,21 @@ function resolveChannel(guild: Guild, channelId: string): GuildTextBasedChannel 
 }
 
 /**
+ * Taking a reaction off somebody else's behalf needs this, and two things want it:
+ * putting the emoji back in order, and holding a panel at one reaction.
+ *
+ * WHY it is not in `REQUIRED`: a panel that neither reorders nor holds at one
+ * reaction works perfectly without it, and panels published before either feature
+ * existed must not start failing to publish.
+ */
+function canManageMessages(guild: Guild, channel: GuildTextBasedChannel): boolean {
+  const me = guild.members.me;
+  return me
+    ? (channel.permissionsFor(me)?.has(PermissionFlagsBits.ManageMessages) ?? false)
+    : false;
+}
+
+/**
  * Every role has to be one the bot could actually hand out: below its own highest
  * role, and not a role Discord manages on an integration's behalf.
  */
@@ -93,47 +108,108 @@ function checkRoles(guild: Guild, panel: ReactionRolePanel): void {
   }
 }
 
+const ORDER_WARNING =
+  '이모지 순서를 설정과 맞추지 못했습니다 — 봇에게 이 채널의 "메시지 관리" 권한이 필요합니다.';
+
+/**
+ * True when adding the missing emoji would leave them out of the order the options
+ * are in.
+ *
+ * Discord fixes a reaction's place the moment it is first added and offers no way to
+ * move one afterwards. So appending only lands right when the option reactions
+ * already on the message are the *first* options, in their order — anything else
+ * (an option inserted in the middle, two swapped) can only be repaired by taking
+ * them all off.
+ *
+ * Reactions that are not options at all are ignored: they sit wherever a member put
+ * them and say nothing about the order of ours.
+ */
+function orderIsWrong(message: Message, panel: ReactionRolePanel): boolean {
+  const positions = [...message.reactions.cache.values()]
+    .map((reaction) =>
+      panel.options.findIndex((option) => reactionMatchesEmoji(reaction, option.emoji)),
+    )
+    .filter((index) => index >= 0);
+
+  return positions.some((option, position) => option !== position);
+}
+
+interface SyncResult {
+  failedEmoji: string[];
+  warnings: string[];
+}
+
 /**
  * Brings the message's reactions to exactly the options, in their order.
  *
- * Only the bot's own reactions are removed. A member's reaction to an emoji that is
- * no longer an option is left alone — taking it away would look like the bot
- * undoing something the member did.
+ * WHY clearing the lot is acceptable: it takes members' reactions with it, but their
+ * roles stay — only the marks go, and they come back the next time somebody reacts.
+ * The alternative is a panel whose emoji are permanently in the wrong order, since
+ * removing just the bot's reaction leaves the entry standing wherever a member also
+ * reacted.
  *
  * WHY an emoji that will not go on is reported rather than thrown: the message is
  * already in the channel by then. Failing the publish would lose the id the caller
  * has not stored yet, and the next attempt would post a second copy.
  */
-async function syncReactions(message: Message, panel: ReactionRolePanel): Promise<string[]> {
-  const stale = message.reactions.cache.filter(
-    (reaction) =>
-      reaction.me && !panel.options.some((option) => reactionMatchesEmoji(reaction, option.emoji)),
-  );
+async function syncReactions(
+  message: Message,
+  panel: ReactionRolePanel,
+  canManage: boolean,
+): Promise<SyncResult> {
+  const warnings: string[] = [];
+  let cleared = false;
 
-  for (const reaction of stale.values()) {
-    try {
-      await reaction.users.remove(message.client.user.id);
-    } catch {
-      // A reaction we cannot take off is not worth failing the publish over.
+  if (orderIsWrong(message, panel)) {
+    if (canManage) {
+      try {
+        await message.reactions.removeAll();
+        cleared = true;
+      } catch {
+        warnings.push(ORDER_WARNING);
+      }
+    } else {
+      warnings.push(ORDER_WARNING);
     }
   }
 
-  const failed: string[] = [];
+  if (!cleared) {
+    // Only the bot's own reactions are removed. A member's reaction to an emoji that
+    // is no longer an option is left alone — taking it away would look like the bot
+    // undoing something the member did.
+    const stale = message.reactions.cache.filter(
+      (reaction) =>
+        reaction.me &&
+        !panel.options.some((option) => reactionMatchesEmoji(reaction, option.emoji)),
+    );
+
+    for (const reaction of stale.values()) {
+      try {
+        await reaction.users.remove(message.client.user.id);
+      } catch {
+        // A reaction we cannot take off is not worth failing the publish over.
+      }
+    }
+  }
+
+  const failedEmoji: string[] = [];
   for (const option of panel.options) {
     try {
       await message.react(emojiToReact(option.emoji, message.guild ?? undefined));
     } catch {
-      failed.push(option.emoji);
+      failedEmoji.push(option.emoji);
     }
   }
 
-  return failed;
+  return { failedEmoji, warnings };
 }
 
 export interface PublishResult {
   panel: ReactionRolePanel;
   /** Emoji the bot could not put on the message, if any. */
   failedEmoji: string[];
+  /** What went ahead anyway but the operator should know about. */
+  warnings: string[];
 }
 
 /**
@@ -175,7 +251,11 @@ export async function publishPanel(guild: Guild, panel: ReactionRolePanel): Prom
   }
 
   const message = edited ?? (await channel.send(payload));
-  const failedEmoji = await syncReactions(message, panel);
+  const { failedEmoji, warnings } = await syncReactions(
+    message,
+    panel,
+    canManageMessages(guild, channel),
+  );
 
-  return { panel: { ...panel, messageId: message.id }, failedEmoji };
+  return { panel: { ...panel, messageId: message.id }, failedEmoji, warnings };
 }
