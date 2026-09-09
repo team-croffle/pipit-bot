@@ -12,6 +12,8 @@
     "@vueuse/core": "^14.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "emojibase": "^17.0.0",
+    "emojibase-data": "^17.0.0",
     "lucide-vue-next": "^1.0.0",
     "reka-ui": "^2.10.4",
     "tailwind-merge": "^3.6.0",
