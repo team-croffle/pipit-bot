@@ -55,6 +55,7 @@
 
   const settings = ref<GithubNotifySettings>({
     enabled: false,
+    notifyUnlistedRepos: true,
     channelId: null,
     events: emptyToggles(),
     eventTemplates: {},
@@ -159,6 +160,8 @@
       ]);
       settings.value = {
         ...loaded,
+        // Same rule as the server: only an explicit false turns the fallback off.
+        notifyUnlistedRepos: loaded.notifyUnlistedRepos !== false,
         events: { ...emptyToggles(), ...loaded.events },
         eventTemplates: { ...loaded.eventTemplates },
         repos: loaded.repos ?? [],
@@ -324,6 +327,7 @@
     try {
       const result = await putJson<GithubNotifySettings>('/api/github-notify', {
         enabled: settings.value.enabled,
+        notifyUnlistedRepos: settings.value.notifyUnlistedRepos,
         channelId: settings.value.channelId,
         events: settings.value.events,
         eventTemplates: settings.value.eventTemplates,
@@ -332,6 +336,7 @@
       });
       settings.value = {
         ...result,
+        notifyUnlistedRepos: result.notifyUnlistedRepos !== false,
         events: { ...emptyToggles(), ...result.events },
         eventTemplates: result.eventTemplates ?? {},
         repos: result.repos ?? [],
@@ -387,6 +392,20 @@
                 </span>
               </Label>
               <Switch id="gh-enabled" v-model="settings.enabled" :disabled="readOnly" />
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <Label for="gh-unlisted" class="flex-col items-start gap-1">
+                <span>목록에 없는 저장소도 알림</span>
+                <span class="text-muted-foreground text-xs font-normal">
+                  끄면 아래 저장소별 설정에 있는 저장소만 알림을 보냅니다. 나머지는 발송 결과에
+                  "목록에 없는 저장소"로 남습니다
+                </span>
+              </Label>
+              <Switch
+                id="gh-unlisted"
+                v-model="settings.notifyUnlistedRepos"
+                :disabled="readOnly"
+              />
             </div>
             <Separator />
             <div class="flex flex-col gap-1.5">
