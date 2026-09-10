@@ -53,17 +53,23 @@
     return props.templates[key] ?? defaultsFor(key);
   }
 
-  // One line that says what the message opens with, so the table is scannable without
-  // opening eight dialogs.
+  /**
+   * What the message opens with, so the table is scannable without opening thirteen
+   * dialogs.
+   *
+   * WHY title and description both: showing only the first non-empty part meant an
+   * edit to the description left this column exactly as it was — which read as the
+   * preview ignoring the edit. The parts are joined on one line; the dialog is where
+   * the real layout is.
+   */
   function summary(key: GithubEventKey): string {
     const template = effective(key);
     const values = sampleFor(key, variablesFor(key), labelFor(key));
-    const line =
-      renderTemplate(template.title, values) ||
-      renderTemplate(template.description, values) ||
-      renderTemplate(template.content, values);
+    const parts = [template.title, template.description, template.content]
+      .map((text) => renderTemplate(text, values))
+      .filter(Boolean);
 
-    return line || '(비어 있음)';
+    return parts.length > 0 ? parts.join(' — ') : '(비어 있음)';
   }
 
   function fieldCount(key: GithubEventKey): number {
