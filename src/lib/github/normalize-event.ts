@@ -144,6 +144,14 @@ function build(
   };
 }
 
+/**
+ * `edited` fires for the body as well as the title; `changes.title` is present only
+ * when the title moved. The body is not in the announcement, so a body edit is nothing.
+ */
+function titleChanged(payload: Record<string, unknown>): boolean {
+  return asRecord(asRecord(payload.changes)?.title) !== undefined;
+}
+
 /** An event with nothing to say of its own: it exists to bring the announcement up to date. */
 function updateOnly(
   context: EventContext,
@@ -298,6 +306,14 @@ function handleIssues(context: EventContext): GithubNotification | undefined {
       issue.user,
       ...(issue.assignees ?? []),
     ]);
+  }
+
+  if (context.action === 'unassigned') {
+    return updateOnly(context, issue, 'issueOpened', 'Unassigned');
+  }
+
+  if (context.action === 'edited' && titleChanged(context.payload)) {
+    return updateOnly(context, issue, 'issueOpened', 'Title Edited');
   }
 
   return undefined;
