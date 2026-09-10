@@ -1,11 +1,22 @@
 import { container } from '@sapphire/framework';
-import type { Guild, GuildBasedChannel, SendableChannels } from 'discord.js';
+import {
+  DiscordAPIError,
+  RESTJSONErrorCodes,
+  type Guild,
+  type GuildBasedChannel,
+  type SendableChannels,
+} from 'discord.js';
 
 import { getConfiguredGuild } from '../discord-guild.js';
 import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { recordDelivery } from './delivery-log.js';
 import { formatGithubNotification } from './format-message.js';
-import { findTrackedMessage, forgetMessage, rememberMessage } from './message-tracker.js';
+import {
+  findTrackedMessage,
+  forgetMessage,
+  rememberMessage,
+  type TrackedMessage,
+} from './message-tracker.js';
 import type { GithubNotification } from './normalize-event.js';
 import {
   getGithubNotifySettings,
@@ -27,9 +38,23 @@ const UPDATING_TOGGLES = new Set<keyof GithubEventToggles>([
   'issueAssigned',
 ]);
 
+/**
+ * How long after the announcement an assignment or review request counts as part of
+ * it. GitHub delivers the reviewers and assignees set on the creation form as
+ * separate events right after `opened`, and the announcement has already pinged them.
+ */
+const ANNOUNCEMENT_ECHO_MS = 2 * 60 * 1000;
+
 // No pings on an edit: Discord would not deliver them anyway, and the people who
 // are new to the item get their own message below.
 const NO_PINGS = { parse: [], users: [], roles: [] } as const;
+
+// The two answers that mean the message is not coming back. Anything else — missing
+// permission, a rate limit, a network blip — is a reason to try again next time.
+const GONE = new Set<number>([
+  RESTJSONErrorCodes.UnknownMessage,
+  RESTJSONErrorCodes.UnknownChannel,
+]);
 
 function sendableChannel(
   guild: Guild,
@@ -68,7 +93,38 @@ function asAnnouncement(
     assignee: undefined,
     targets,
     silent: false,
+    updateOnly: false,
   };
+}
+
+/** True when everyone this event would ping was already pinged by a fresh announcement. */
+function echoesAnnouncement(notification: GithubNotification, tracked: TrackedMessage): boolean {
+  if (notification.targets.length === 0) {
+    return false;
+  }
+
+  if (Date.now() - Date.parse(tracked.at) > ANNOUNCEMENT_ECHO_MS) {
+    return false;
+  }
+
+  return notification.targets.every((login) => tracked.mentioned.includes(login.toLowerCase()));
+}
+
+/** The one line that explains why nothing was posted. */
+function silentReason(notification: GithubNotification, echo: boolean): string {
+  if (echo) {
+    return 'Everyone here was mentioned by the announcement a moment ago.';
+  }
+
+  if (notification.updateOnly) {
+    return 'Nothing to post for this event.';
+  }
+
+  if (notification.assignee?.startsWith('team/')) {
+    return 'A team was asked to review; teams have no Discord mapping yet, so nobody is mentioned.';
+  }
+
+  return 'Nobody to mention — the actor is the only person this event is about.';
 }
 
 /**
@@ -77,10 +133,10 @@ function asAnnouncement(
  */
 async function updateAnnouncement(
   notification: GithubNotification,
+  tracked: TrackedMessage | undefined,
   settings: GithubNotifySettings,
   guild: Guild,
 ): Promise<string | undefined> {
-  const tracked = findTrackedMessage(notification.repo, notification.number);
   if (!tracked) {
     return 'No earlier message is known for this item.';
   }
@@ -109,11 +165,17 @@ async function updateAnnouncement(
     });
     return undefined;
   } catch (error) {
-    // Deleted by hand, or older than the bot may read: stop trying for this item.
-    // Sending a fresh announcement instead would be the more surprising outcome.
-    container.logger.debug('[github] could not edit the earlier message:', error);
-    forgetMessage(notification.repo, notification.number);
-    return 'The earlier message could not be edited — it may have been deleted.';
+    if (error instanceof DiscordAPIError && GONE.has(Number(error.code))) {
+      // Deleted by hand, or its channel with it: stop trying for this item. Sending
+      // a fresh announcement instead would be the more surprising outcome.
+      forgetMessage(notification.repo, notification.number);
+      return 'The earlier message has been deleted.';
+    }
+
+    // Kept: a missing permission or a passing failure is not a reason to lose track.
+    container.logger.warn('[github] could not edit the earlier message:', error);
+    const detail = error instanceof Error ? error.message : 'unknown error';
+    return `The earlier message could not be edited (${detail}); it is still tracked.`;
   }
 }
 
@@ -142,7 +204,9 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     return;
   }
 
-  if (!rule.events[notification.toggle]) {
+  // An update-only event answers to no toggle: it never posts, it only keeps the
+  // announcement honest.
+  if (!notification.updateOnly && !rule.events[notification.toggle]) {
     skip(`The ${notification.toggle} event is switched off for this repository.`);
     return;
   }
@@ -155,25 +219,27 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
 
   // The announcement is brought up to date first, so the people it lists are right
   // whether or not anything is posted below.
+  const updates = notification.updateOnly === true || UPDATING_TOGGLES.has(notification.toggle);
+  const tracked = updates ? findTrackedMessage(notification.repo, notification.number) : undefined;
   let updateProblem: string | undefined;
   let updated = false;
-  if (UPDATING_TOGGLES.has(notification.toggle)) {
-    updateProblem = await updateAnnouncement(notification, settings, guild);
+  if (updates) {
+    updateProblem = await updateAnnouncement(notification, tracked, settings, guild);
     updated = updateProblem === undefined;
   }
 
-  if (notification.silent) {
+  const echo = tracked !== undefined && echoesAnnouncement(notification, tracked);
+  if (notification.silent || echo) {
+    const why = silentReason(notification, echo);
     if (updated) {
       recordDelivery(
         notification.repo,
         notification.label,
         'edited',
-        'Nobody to mention; the announcement was brought up to date.',
+        `${why} The announcement was brought up to date.`,
       );
     } else {
-      skip(
-        `Nobody to mention — the actor is the only person this event is about. ${updateProblem ?? ''}`.trim(),
-      );
+      skip(`${why} ${updateProblem ?? ''}`.trim());
     }
     return;
   }
@@ -212,6 +278,7 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
         channelId: channel.id,
         messageId: sent.id,
         toggle: notification.toggle,
+        mentioned: notification.targets.map((login) => login.toLowerCase()),
       });
     }
 

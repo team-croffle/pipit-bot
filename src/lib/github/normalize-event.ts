@@ -34,6 +34,13 @@ export interface GithubNotification {
    * sent is dispatch's decision, not this module's.
    */
   silent: boolean;
+  /**
+   * True for an event that only changes what the announcement should say — a
+   * conversion to draft, and later a title edit or an unassignment. No toggle governs
+   * it and nothing is ever posted for it; dispatch updates the announcement or notes
+   * why it could not. `toggle` names the announcement's own event.
+   */
+  updateOnly?: boolean;
 }
 
 interface EventContext {
@@ -137,17 +144,48 @@ function build(
   };
 }
 
+/** An event with nothing to say of its own: it exists to bring the announcement up to date. */
+function updateOnly(
+  context: EventContext,
+  subject: GithubIssueLike,
+  toggle: keyof GithubEventToggles,
+  label: string,
+): GithubNotification {
+  return {
+    toggle,
+    label,
+    repo: context.repo,
+    number: subject.number,
+    title: subject.title,
+    isPullRequest: subject.isPullRequest,
+    actor: context.actor.login,
+    author: subject.user?.login,
+    assignees: logins(subject.assignees),
+    reviewers: logins(subject.requestedReviewers),
+    targets: [],
+    silent: true,
+    updateOnly: true,
+  };
+}
+
 function handlePullRequest(context: EventContext): GithubNotification | undefined {
   const pull = readIssueLike(context.payload.pull_request, true);
   if (!pull) {
     return undefined;
   }
 
-  if (context.action === 'opened') {
+  // A draft is announced when it becomes reviewable, not when it is created: nobody
+  // can act on it before, and pinging its reviewers at creation only makes them
+  // look at something they were asked not to review yet.
+  if ((context.action === 'opened' && !pull.isDraft) || context.action === 'ready_for_review') {
     return build(context, pull, 'pullRequestOpened', EVENT_LABELS.pullRequestOpened, [
       ...(pull.requestedReviewers ?? []),
       ...(pull.assignees ?? []),
     ]);
+  }
+
+  if (context.action === 'converted_to_draft') {
+    return updateOnly(context, pull, 'pullRequestOpened', 'Converted to Draft');
   }
 
   if (context.action === 'synchronize') {

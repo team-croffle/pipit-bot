@@ -30,6 +30,12 @@ export interface TrackedMessage {
   toggle: keyof GithubEventToggles;
   /** ISO time of the send; the oldest go first when the cap is hit. */
   at: string;
+  /**
+   * Lower-cased logins the announcement pinged. The reviewers and assignees set on
+   * the creation form arrive as their own events right after `opened`, and this is
+   * how dispatch knows they have been told already.
+   */
+  mentioned: string[];
 }
 
 interface StoredFile {
@@ -73,6 +79,10 @@ function parseEntry(value: unknown): TrackedMessage | undefined {
     messageId: row.messageId,
     toggle: row.toggle as keyof GithubEventToggles,
     at: row.at,
+    // Entries from rc.7 have no list; they simply never suppress an echo.
+    mentioned: Array.isArray(row.mentioned)
+      ? row.mentioned.filter((item): item is string => typeof item === 'string')
+      : [],
   };
 }
 
