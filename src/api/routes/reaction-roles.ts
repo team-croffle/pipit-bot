@@ -4,6 +4,7 @@ import type { Hono } from 'hono';
 import { getConfiguredGuild } from '../../lib/discord-guild.js';
 import { PublishError, publishPanel } from '../../lib/reaction-roles/publish.js';
 import {
+  getReactionRoleLoadError,
   getReactionRoleSettings,
   parseReactionRoleSettings,
   saveReactionRoleSettings,
@@ -24,7 +25,11 @@ export function mountReactionRoleRoutes(app: Hono<{ Variables: ApiVariables }>):
   // The guild id rides along so the dashboard can link a published panel straight
   // to its message without a second call.
   app.get('/api/reaction-roles', dashboardViewer, (c) =>
-    c.json({ ...getReactionRoleSettings(), guildId: getConfiguredGuild()?.id ?? null }),
+    c.json({
+      ...getReactionRoleSettings(),
+      guildId: getConfiguredGuild()?.id ?? null,
+      loadError: getReactionRoleLoadError(),
+    }),
   );
 
   app.put('/api/reaction-roles', dashboardViewer, dashboardWrite, async (c) => {

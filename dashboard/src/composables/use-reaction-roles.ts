@@ -42,6 +42,8 @@ export function useReactionRoles() {
   const error = ref('');
   const saved = ref('');
   const busy = ref(false);
+  /** The server could not read its file and is running on defaults. */
+  const loadError = ref('');
 
   function report(cause: unknown, fallback: string): void {
     if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
@@ -56,6 +58,7 @@ export function useReactionRoles() {
       const body = await fetchJson<ReactionRoleSettings>('/api/reaction-roles');
       panels.value = body.panels;
       guildId.value = body.guildId ?? null;
+      loadError.value = body.loadError ?? '';
     } catch (cause) {
       report(cause, '설정을 불러오지 못했습니다.');
     } finally {
@@ -73,6 +76,7 @@ export function useReactionRoles() {
       });
       panels.value = body.panels;
       saved.value = '저장했습니다.';
+      loadError.value = '';
       return true;
     } catch (cause) {
       report(cause, '저장하지 못했습니다.');
@@ -112,5 +116,5 @@ export function useReactionRoles() {
     }
   }
 
-  return { panels, guildId, loading, error, saved, busy, load, save, publish };
+  return { panels, guildId, loading, error, saved, busy, loadError, load, save, publish };
 }

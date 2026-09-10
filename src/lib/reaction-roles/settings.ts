@@ -15,12 +15,13 @@
  * couple of ids.
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
 import { emptyEmbedTemplate, parsePlainEmbedTemplate } from '../embed/template.js';
 import type { EmbedTemplate } from '../embed/template.js';
+import { loadSettingsFile } from '../settings-file.js';
 
 export interface ReactionRoleOption {
   /** A `:name:` shortcode for a custom emoji, or the character for a standard one. */
@@ -195,12 +196,22 @@ export function findPanelByMessage(messageId: string): ReactionRolePanel | undef
   return getReactionRoleSettings().panels.find((panel) => panel.messageId === messageId);
 }
 
+let loadError: string | null = null;
+
+/** Why the file on disk is not in use, or null when it is. Cleared by a successful save. */
+export function getReactionRoleLoadError(): string | null {
+  return loadError;
+}
+
 export async function loadReactionRoleSettings(): Promise<ReactionRoleSettings> {
-  try {
-    cache = parseReactionRoleSettings(JSON.parse(await readFile(settingsPath, 'utf8')) as unknown);
-  } catch {
-    cache = emptySettings();
-  }
+  const loaded = await loadSettingsFile({
+    path: settingsPath,
+    label: 'Reaction role settings',
+    parse: parseReactionRoleSettings,
+    empty: emptySettings,
+  });
+  cache = loaded.value;
+  loadError = loaded.error;
 
   return getReactionRoleSettings();
 }
@@ -212,6 +223,7 @@ export async function saveReactionRoleSettings(
   await mkdir(dataDir, { recursive: true });
   await writeFile(settingsPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
   cache = parsed;
+  loadError = null;
   return parsed;
 }
 

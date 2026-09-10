@@ -22,10 +22,13 @@ export function useGuildEvents() {
   const loading = ref(true);
   const error = ref('');
   const saved = ref('');
+  /** The server could not read its file and is running on defaults. */
+  const loadError = ref('');
 
   async function load(): Promise<void> {
     try {
       settings.value = await fetchJson<GuildEventSettings>('/api/guild-events');
+      loadError.value = settings.value.loadError ?? '';
     } catch (cause) {
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
@@ -45,10 +48,11 @@ export function useGuildEvents() {
         ...patch,
       });
       saved.value = '저장했습니다.';
+      loadError.value = '';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
     }
   }
 
-  return { settings, loading, error, saved, load, save };
+  return { settings, loading, error, saved, loadError, load, save };
 }

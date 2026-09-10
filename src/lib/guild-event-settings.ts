@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from './constants.js';
+import { loadSettingsFile } from './settings-file.js';
 
 // WHY: Prefix, command channel, and RSS belong to bot config (C), not this store.
 export interface GuildEventSettings {
@@ -92,12 +93,23 @@ async function readSettingsFile(): Promise<string> {
   }
 }
 
+let loadError: string | null = null;
+
+/** Why the file on disk is not in use, or null when it is. Cleared by a successful save. */
+export function getGuildEventLoadError(): string | null {
+  return loadError;
+}
+
 export async function loadGuildEventSettings(): Promise<GuildEventSettings> {
-  try {
-    cache = parseGuildEventSettings(JSON.parse(await readSettingsFile()) as unknown);
-  } catch {
-    cache = emptySettings();
-  }
+  const loaded = await loadSettingsFile({
+    path: eventsPath,
+    label: 'Guild event settings',
+    parse: parseGuildEventSettings,
+    empty: emptySettings,
+    read: readSettingsFile,
+  });
+  cache = loaded.value;
+  loadError = loaded.error;
 
   return getGuildEventSettings();
 }
@@ -109,6 +121,7 @@ export async function saveGuildEventSettings(
   await mkdir(dataDir, { recursive: true });
   await writeFile(eventsPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
   cache = parsed;
+  loadError = null;
   return parsed;
 }
 

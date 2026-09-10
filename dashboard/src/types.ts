@@ -36,6 +36,8 @@ export interface GuildEventSettings {
   joinMessages: string[];
   leaveMessages: string[];
   joinRoleIds: string[];
+  /** Set when the settings file on disk could not be read; defaults are in use. */
+  loadError?: string | null;
 }
 
 export interface ReactionRoleOption {
@@ -61,6 +63,8 @@ export interface ReactionRoleSettings {
   panels: ReactionRolePanel[];
   /** Null until the bot has connected; only used to build message links. */
   guildId?: string | null;
+  /** Set when the settings file on disk could not be read; defaults are in use. */
+  loadError?: string | null;
 }
 
 export interface PublishPanelResult {
@@ -165,6 +169,8 @@ export interface GithubNotifySettings {
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
+  /** Set when the settings file on disk could not be read; defaults are in use. */
+  loadError?: string | null;
 }
 
 /** What the server falls back to, and what each event is allowed to reference. */
