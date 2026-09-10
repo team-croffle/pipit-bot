@@ -36,6 +36,18 @@ export interface GithubMemberOption {
   avatarUrl: string;
 }
 
+/** Where the account list came from, so the dashboard can say why it looks as it does. */
+export type GithubMemberSource = 'organization' | 'assignees' | 'none';
+
+export interface GithubMemberList {
+  members: GithubMemberOption[];
+  source: GithubMemberSource;
+}
+
+// Enough for a team's installation; a bound so a large one cannot turn one dashboard
+// request into hundreds of API calls.
+const MAX_ASSIGNEE_REPOSITORIES = 20;
+
 function base64url(value: string | Buffer): string {
   return Buffer.from(value).toString('base64url');
 }
@@ -147,7 +159,7 @@ interface Cached<T> {
 }
 
 let repositoryCache: Cached<GithubRepositoryOption[]> | undefined;
-let memberCache: Cached<GithubMemberOption[]> | undefined;
+let memberCache: Cached<GithubMemberList> | undefined;
 
 function fresh<T>(cache: Cached<T> | undefined): T | undefined {
   return cache && Date.now() - cache.at < CACHE_TTL_MS ? cache.value : undefined;
@@ -175,18 +187,39 @@ export async function listInstallationRepositories(
   return repositories;
 }
 
+interface GithubPerson {
+  login: string;
+  avatar_url: string;
+}
+
+/** Reads one list of people into the map, and says whether it added anybody. */
+async function collect(
+  path: string,
+  token: string,
+  into: Map<string, GithubMemberOption>,
+): Promise<void> {
+  const people = await paginate<GithubPerson>(path, token);
+  for (const person of people) {
+    into.set(person.login.toLowerCase(), { login: person.login, avatarUrl: person.avatar_url });
+  }
+}
+
 /**
  * The people who could appear in an account mapping.
  *
- * Collected from the organisations that own the installed repositories, because that
- * is the set the App can see without asking for a second scope. A repository owned by
- * a user account has no member list, so it contributes nothing — and an organisation
- * the App may not read members of is skipped rather than failing the whole request,
- * since a partial list is still a better picker than a blank text box.
+ * First choice is the members of the organisations that own the installed
+ * repositories. That endpoint answers only when the App was granted Organization ›
+ * Members (read) — a permission the installer has to approve, and one this list was
+ * silently empty without for two release candidates.
+ *
+ * When that yields nobody, each installed repository's assignable users are read
+ * instead. Repository metadata is enough for that, and "who can be assigned" is
+ * exactly the set a mapping is about. An organisation or repository the App may not
+ * read is skipped rather than failing the request: a partial list is still a better
+ * picker than a blank text box. The source is returned so the dashboard can say which
+ * one it is looking at, or why there is none.
  */
-export async function listInstallationMembers(
-  config: GithubAppConfig,
-): Promise<GithubMemberOption[]> {
+export async function listInstallationMembers(config: GithubAppConfig): Promise<GithubMemberList> {
   const cached = fresh(memberCache);
   if (cached) {
     return cached;
@@ -201,22 +234,28 @@ export async function listInstallationMembers(
   const members = new Map<string, GithubMemberOption>();
   for (const owner of owners) {
     try {
-      const people = await paginate<{ login: string; avatar_url: string }>(
-        `/orgs/${owner}/members`,
-        token,
-      );
-      for (const person of people) {
-        members.set(person.login.toLowerCase(), {
-          login: person.login,
-          avatarUrl: person.avatar_url,
-        });
-      }
+      await collect(`/orgs/${owner}/members`, token, members);
     } catch (error) {
       container.logger.debug(`[github] no member list for ${owner}:`, error);
     }
   }
 
-  const sorted = [...members.values()].toSorted((a, b) => a.login.localeCompare(b.login));
-  memberCache = { value: sorted, at: Date.now() };
-  return sorted;
+  let source: GithubMemberSource = members.size > 0 ? 'organization' : 'none';
+  if (members.size === 0) {
+    for (const repository of repositories.slice(0, MAX_ASSIGNEE_REPOSITORIES)) {
+      try {
+        await collect(`/repos/${repository.fullName}/assignees`, token, members);
+      } catch (error) {
+        container.logger.debug(`[github] no assignee list for ${repository.fullName}:`, error);
+      }
+    }
+    source = members.size > 0 ? 'assignees' : 'none';
+  }
+
+  const list: GithubMemberList = {
+    members: [...members.values()].toSorted((a, b) => a.login.localeCompare(b.login)),
+    source,
+  };
+  memberCache = { value: list, at: Date.now() };
+  return list;
 }

@@ -66,17 +66,19 @@ export function mountGithubNotifyRoutes(
     }
   });
 
+  // `reason` and `source` exist so the dashboard can say why the list is what it is,
+  // instead of an unexplained "no accounts" for every one of three different causes.
   app.get('/api/github/members', dashboardViewer, async (c) => {
     const githubApp = config.githubApp;
     if (!githubApp) {
-      return c.json({ available: false, members: [] });
+      return c.json({ available: false, members: [], reason: 'no-credentials' });
     }
 
     try {
-      return c.json({ available: true, members: await listInstallationMembers(githubApp) });
+      return c.json({ available: true, ...(await listInstallationMembers(githubApp)) });
     } catch (error) {
       container.logger.warn('[github] member list failed:', error);
-      return c.json({ available: false, members: [] });
+      return c.json({ available: false, members: [], reason: 'request-failed' });
     }
   });
 }

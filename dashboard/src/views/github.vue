@@ -42,6 +42,7 @@
     GithubDelivery,
     GithubEventToggles,
     GithubMember,
+    GithubMemberList,
     GithubNotifySettings,
     GithubRepoRule,
     GithubTemplateDefaults,
@@ -101,7 +102,35 @@
 
   const githubMembers = ref<GithubMember[]>([]);
   const githubMembersLoading = ref(false);
+  const githubMembersInfo = ref<GithubMemberList | null>(null);
   let githubMembersRequested = false;
+
+  /**
+   * Why the account list is what it is. An empty dropdown used to be the only signal
+   * for three different situations, and the operator could act on none of them.
+   */
+  const githubMembersNote = computed(() => {
+    const info = githubMembersInfo.value;
+    if (!info) {
+      return '';
+    }
+
+    if (!info.available) {
+      return info.reason === 'no-credentials'
+        ? 'GitHub App 자격증명이 설정되어 있지 않아 계정 목록을 가져오지 않습니다 — 직접 입력하세요.'
+        : 'GitHub에서 계정 목록을 가져오지 못했습니다. 서버 로그를 확인하세요 — 직접 입력은 그대로 됩니다.';
+    }
+
+    if (info.source === 'assignees') {
+      return 'App에 조직 멤버 읽기 권한이 없어, 설치된 저장소에서 배정할 수 있는 사람으로 목록을 채웠습니다.';
+    }
+
+    if (info.source === 'none') {
+      return 'GitHub에서 가져온 계정이 없습니다. App에 Organization › Members 읽기 권한이 없고, 설치된 저장소에서도 배정 가능한 사람을 찾지 못했습니다 — 직접 입력하세요.';
+    }
+
+    return '';
+  });
 
   /**
    * Both lists come off the GitHub App installation, which is optional — the server
@@ -136,10 +165,9 @@
     githubMembersRequested = true;
     githubMembersLoading.value = true;
     try {
-      const body = await fetchJson<{ available: boolean; members: GithubMember[] }>(
-        '/api/github/members',
-      );
+      const body = await fetchJson<GithubMemberList>('/api/github/members');
       githubMembers.value = body.members;
+      githubMembersInfo.value = body;
     } catch {
       githubMembersRequested = false;
     } finally {
@@ -673,6 +701,9 @@
                 <Trash2 />
               </Button>
             </div>
+            <p v-if="githubMembersNote" class="text-muted-foreground text-xs">
+              {{ githubMembersNote }}
+            </p>
           </CardContent>
         </Card>
 
