@@ -43,6 +43,13 @@ export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, Embe
 // WHY: The webhook secret stays in env — a dashboard GET must never echo it back.
 export interface GithubNotifySettings {
   enabled: boolean;
+  /**
+   * Whether a repository that has no rule of its own still posts to the default
+   * channel. On by default — that fallback is how the feature worked from the start —
+   * but an installation that covers more repositories than the team cares about turns
+   * it off and lists the ones it does.
+   */
+  notifyUnlistedRepos: boolean;
   channelId: string | null;
   events: GithubEventToggles;
   /** Per-event wording; every event falls back to its own built-in default. */
@@ -108,6 +115,7 @@ function emptyToggles(): GithubEventToggles {
 function emptySettings(): GithubNotifySettings {
   return {
     enabled: false,
+    notifyUnlistedRepos: true,
     channelId: null,
     events: emptyToggles(),
     eventTemplates: {},
@@ -277,6 +285,9 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
 
   return {
     enabled: body.enabled === true,
+    // A file written before the switch existed has no key, and must keep behaving as
+    // it did — so only an explicit false turns it off.
+    notifyUnlistedRepos: body.notifyUnlistedRepos !== false,
     channelId: asChannelId(body.channelId, 'channelId'),
     events: asToggles(body.events),
     eventTemplates,
@@ -287,6 +298,12 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
 
 export function getGithubNotifySettings(): GithubNotifySettings {
   return cache ?? emptySettings();
+}
+
+/** Whether the repository has a rule of its own in the per-repository table. */
+export function isRepoListed(settings: GithubNotifySettings, repo: string): boolean {
+  const name = repo.toLowerCase();
+  return settings.repos.some((item) => item.repo === name);
 }
 
 /**

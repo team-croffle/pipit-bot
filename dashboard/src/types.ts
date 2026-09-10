@@ -157,6 +157,8 @@ export type GithubEventTemplates = Partial<Record<GithubEventKey, EmbedTemplate>
 
 export interface GithubNotifySettings {
   enabled: boolean;
+  /** Whether a repository without a rule of its own still posts to the default channel. */
+  notifyUnlistedRepos: boolean;
   channelId: string | null;
   events: GithubEventToggles;
   eventTemplates: GithubEventTemplates;

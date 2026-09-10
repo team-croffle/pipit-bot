@@ -5,7 +5,12 @@ import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { recordDelivery } from './delivery-log.js';
 import { formatGithubNotification } from './format-message.js';
 import type { GithubNotification } from './normalize-event.js';
-import { getGithubNotifySettings, resolveRepoRule, resolveTemplate } from './settings.js';
+import {
+  getGithubNotifySettings,
+  isRepoListed,
+  resolveRepoRule,
+  resolveTemplate,
+} from './settings.js';
 
 export async function dispatchGithubNotification(notification: GithubNotification): Promise<void> {
   const settings = getGithubNotifySettings();
@@ -18,6 +23,13 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
   const skip = (detail: string): void => {
     recordDelivery(notification.repo, notification.label, 'skipped', detail);
   };
+
+  // Checked before the channel is resolved: with the fallback off, an unlisted
+  // repository is skipped even when a default channel exists.
+  if (!settings.notifyUnlistedRepos && !isRepoListed(settings, notification.repo)) {
+    skip('This repository is not in the list, and unlisted repositories are switched off.');
+    return;
+  }
 
   const rule = resolveRepoRule(settings, notification.repo);
   if (!rule) {
