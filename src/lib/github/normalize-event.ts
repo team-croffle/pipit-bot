@@ -271,25 +271,17 @@ function handleIssueComment(context: EventContext): GithubNotification | undefin
   ]);
 }
 
-function handleReviewComment(context: EventContext): GithubNotification | undefined {
-  if (context.action !== 'created') {
-    return undefined;
-  }
-
-  const pull = readIssueLike(context.payload.pull_request, true);
-  if (!pull) {
-    return undefined;
-  }
-
-  return build(context, pull, 'commentCreated', 'Review Comment', [pull.user]);
-}
-
 // WHY: a lookup table rather than a switch — oxlint's switch-exhaustiveness-check
 // forbids a default case, and these are arbitrary strings off the wire.
+//
+// WHY `pull_request_review_comment` is not here: every comment on a diff belongs to a
+// review, and GitHub reports that review through `pull_request_review.submitted` — a
+// single "Add single comment" makes an implicit review and sent both events, so one
+// remark arrived twice, and a review with N comments arrived N+1 times. One action,
+// one notification: the review carries it.
 const HANDLERS: Record<string, EventHandler> = {
   pull_request: handlePullRequest,
   pull_request_review: handlePullRequestReview,
-  pull_request_review_comment: handleReviewComment,
   issue_comment: handleIssueComment,
   issues: handleIssues,
 };
