@@ -9,6 +9,7 @@
   import { computed } from 'vue';
 
   import EmojiText from '@/components/common/emoji-text.vue';
+  import MarkdownText from '@/components/common/markdown-text.vue';
   import type { EmbedTemplate } from '@/types';
 
   const props = defineProps<{
@@ -52,8 +53,11 @@
     <p v-if="empty" class="text-muted-foreground text-sm">
       아직 보낼 내용이 없습니다 — 문구를 채우면 여기에 미리보기가 나타납니다.
     </p>
+    <!-- Markdown only where Discord renders it: the plain line, the description and
+         field values. Title, field names and footer are plain text in Discord — a
+         markdown link in the footer prints its brackets — so they get emoji only. -->
     <template v-else>
-      <p v-if="content" class="text-sm"><EmojiText :text="content" /></p>
+      <div v-if="content" class="text-sm"><MarkdownText :text="content" /></div>
       <div
         v-if="title || description || fields.length > 0 || footer"
         class="bg-muted/40 flex gap-3 rounded-md border py-2.5 pr-3 pl-0"
@@ -67,7 +71,7 @@
           <p v-if="title" class="text-primary text-sm font-semibold">
             <EmojiText :text="title" />
           </p>
-          <p v-if="description" class="text-sm"><EmojiText :text="description" /></p>
+          <div v-if="description" class="text-sm"><MarkdownText :text="description" /></div>
           <div v-if="fields.length > 0" class="flex flex-wrap gap-x-6 gap-y-2">
             <div
               v-for="(field, index) in fields"
@@ -75,7 +79,7 @@
               :class="field.inline ? 'min-w-24' : 'w-full'"
             >
               <p class="text-xs font-semibold"><EmojiText :text="field.name" /></p>
-              <p class="text-muted-foreground text-xs"><EmojiText :text="field.value" /></p>
+              <div class="text-muted-foreground text-xs"><MarkdownText :text="field.value" /></div>
             </div>
           </div>
           <p v-if="footer || template.showTimestamp" class="text-muted-foreground text-xs">
@@ -88,7 +92,9 @@
     </template>
     <slot name="note">
       <p class="text-muted-foreground text-xs">
-        <code>:이름:</code> 은 발송할 때 서버 이모지로 바뀝니다.
+        <code>:이름:</code> 은 발송할 때 서버 이모지로 바뀝니다. 알림 줄·내용·필드 값은 디스코드
+        마크다운으로 표시되고, 제목·필드 이름·꼬리말은 디스코드가 마크다운을 렌더하지 않아 쓴 그대로
+        나옵니다.
       </p>
     </slot>
   </div>
