@@ -178,6 +178,8 @@
   const error = ref('');
   const saved = ref('');
   const loading = ref(true);
+  /** The server could not read its file and is running on defaults. */
+  const loadError = ref('');
 
   onMounted(async () => {
     try {
@@ -195,6 +197,7 @@
         repos: loaded.repos ?? [],
         accounts: loaded.accounts ?? [],
       };
+      loadError.value = loaded.loadError ?? '';
       templateDefaults.value = defaultsBody;
       channels.value = channelBody.channels;
       await refreshDeliveries();
@@ -375,6 +378,7 @@
         accounts: result.accounts ?? [],
       };
       saved.value = '저장했습니다.';
+      loadError.value = '';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
     }
@@ -400,6 +404,13 @@
 
     <StateBlock :loading="loading" :error="loading ? '' : error && !saved ? error : ''">
       <div class="flex flex-col gap-5">
+        <Alert v-if="loadError" variant="destructive">
+          <AlertTitle>저장된 설정 파일을 읽지 못했습니다</AlertTitle>
+          <AlertDescription>
+            봇이 기본값으로 동작하고 있어 알림이 꺼진 상태입니다. 지금 저장하면 기본값이 파일을
+            덮어씁니다 — 서버의 사본을 먼저 확인하세요. {{ loadError }}
+          </AlertDescription>
+        </Alert>
         <Alert v-if="error" variant="destructive">
           <AlertTitle>저장하지 못했습니다</AlertTitle>
           <AlertDescription>{{ error }}</AlertDescription>

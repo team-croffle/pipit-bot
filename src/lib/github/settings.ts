@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
+import { loadSettingsFile } from '../settings-file.js';
 import { defaultTemplateFor, LEGACY_DEFAULT_TEMPLATE } from './default-templates.js';
 import { parseEmbedTemplate, parseEmbedTemplateMap, type EmbedTemplate } from './embed-template.js';
 import { EVENT_VARIABLES } from './template.js';
@@ -305,11 +306,8 @@ function migrateSplitReviewRequest(
     return;
   }
 
-  const map = body.eventTemplates;
-  const stored =
-    map && typeof map === 'object'
-      ? (map as Record<string, unknown>).pullRequestAssigned
-      : undefined;
+  const stored = (body.eventTemplates as Record<string, unknown> | null | undefined)
+    ?.pullRequestAssigned;
   if (stored === null || stored === undefined) {
     return;
   }
@@ -381,12 +379,22 @@ export function resolveTemplate(
   return settings.eventTemplates[toggle] ?? defaultTemplateFor(toggle);
 }
 
+let loadError: string | null = null;
+
+/** Why the file on disk is not in use, or null when it is. Cleared by a successful save. */
+export function getGithubNotifyLoadError(): string | null {
+  return loadError;
+}
+
 export async function loadGithubNotifySettings(): Promise<GithubNotifySettings> {
-  try {
-    cache = parseGithubNotifySettings(JSON.parse(await readFile(settingsPath, 'utf8')) as unknown);
-  } catch {
-    cache = emptySettings();
-  }
+  const loaded = await loadSettingsFile({
+    path: settingsPath,
+    label: 'GitHub notification settings',
+    parse: parseGithubNotifySettings,
+    empty: emptySettings,
+  });
+  cache = loaded.value;
+  loadError = loaded.error;
 
   return getGithubNotifySettings();
 }
@@ -398,5 +406,6 @@ export async function saveGithubNotifySettings(
   await mkdir(dataDir, { recursive: true });
   await writeFile(settingsPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
   cache = parsed;
+  loadError = null;
   return parsed;
 }

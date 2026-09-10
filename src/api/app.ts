@@ -16,6 +16,7 @@ import {
 } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
 import {
+  getGuildEventLoadError,
   getGuildEventSettings,
   parseGuildEventSettings,
   saveGuildEventSettings,
@@ -188,7 +189,9 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json(updated);
   });
 
-  app.get('/api/guild-events', dashboardViewer, (c) => c.json(getGuildEventSettings()));
+  app.get('/api/guild-events', dashboardViewer, (c) =>
+    c.json({ ...getGuildEventSettings(), loadError: getGuildEventLoadError() }),
+  );
 
   app.put('/api/guild-events', dashboardViewer, dashboardWrite, async (c) => {
     try {

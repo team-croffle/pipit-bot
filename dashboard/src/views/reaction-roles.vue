@@ -30,7 +30,8 @@
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
 
-  const { panels, guildId, loading, error, saved, busy, load, save, publish } = useReactionRoles();
+  const { panels, guildId, loading, error, saved, busy, loadError, load, save, publish } =
+    useReactionRoles();
   const channels = ref<DiscordChannel[]>([]);
   const roles = ref<DiscordRole[]>([]);
   const editing = ref<string | null>(null);
@@ -100,6 +101,13 @@
 
     <StateBlock :loading="loading">
       <div class="flex flex-col gap-5">
+        <Alert v-if="loadError" variant="destructive">
+          <AlertTitle>저장된 설정 파일을 읽지 못했습니다</AlertTitle>
+          <AlertDescription>
+            봇이 기본값으로 동작하고 있습니다. 지금 저장하면 기본값이 파일을 덮어씁니다 — 서버의
+            사본을 먼저 확인하세요. {{ loadError }}
+          </AlertDescription>
+        </Alert>
         <Alert v-if="error" variant="destructive">
           <AlertTitle>문제가 발생했습니다</AlertTitle>
           <AlertDescription>{{ error }}</AlertDescription>

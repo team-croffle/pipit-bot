@@ -9,6 +9,7 @@ import {
 import { DEFAULT_EVENT_TEMPLATES } from '../../lib/github/default-templates.js';
 import { listDeliveries } from '../../lib/github/delivery-log.js';
 import {
+  getGithubNotifyLoadError,
   getGithubNotifySettings,
   parseGithubNotifySettings,
   saveGithubNotifySettings,
@@ -22,7 +23,11 @@ export function mountGithubNotifyRoutes(
   app: Hono<{ Variables: ApiVariables }>,
   config: EnvConfig,
 ): void {
-  app.get('/api/github-notify', dashboardViewer, (c) => c.json(getGithubNotifySettings()));
+  // `loadError` says why the file on disk is not what is in use — a damaged file used
+  // to look exactly like a fresh install, and the next save quietly overwrote it.
+  app.get('/api/github-notify', dashboardViewer, (c) =>
+    c.json({ ...getGithubNotifySettings(), loadError: getGithubNotifyLoadError() }),
+  );
 
   app.get('/api/github-notify/deliveries', dashboardViewer, (c) =>
     c.json({ deliveries: listDeliveries() }),
