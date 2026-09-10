@@ -10,6 +10,8 @@ export interface GithubEventToggles {
   pullRequestOpened: boolean;
   pullRequestUpdated: boolean;
   pullRequestAssigned: boolean;
+  /** A reviewer was asked for — split from assignment in v0.6.4-rc.7. */
+  pullRequestReviewRequested: boolean;
   pullRequestChangesRequested: boolean;
   pullRequestApproved: boolean;
   pullRequestMerged: boolean;
@@ -75,6 +77,7 @@ export const TOGGLE_KEYS = [
   'pullRequestOpened',
   'pullRequestUpdated',
   'pullRequestAssigned',
+  'pullRequestReviewRequested',
   'pullRequestChangesRequested',
   'pullRequestApproved',
   'pullRequestMerged',
@@ -86,6 +89,16 @@ export const TOGGLE_KEYS = [
   'issueReopened',
   'commentCreated',
 ] as const satisfies readonly (keyof GithubEventToggles)[];
+
+/**
+ * A file written before v0.6.4-rc.7 has no `pullRequestReviewRequested` key anywhere,
+ * because review requests rode on the assignment toggle. That absence is the marker:
+ * once the file has been saved with the key, nothing is copied again — otherwise an
+ * operator resetting the new event's wording would find the old one back next start.
+ */
+function predatesReviewRequestSplit(events: unknown): boolean {
+  return !(events && typeof events === 'object' && 'pullRequestReviewRequested' in events);
+}
 
 // v0.6.4-rc.2 and earlier had one toggle for every review outcome. Both halves
 // inherit it, so somebody who had review notifications on does not quietly lose them.
@@ -99,6 +112,7 @@ function emptyToggles(): GithubEventToggles {
     pullRequestOpened: false,
     pullRequestUpdated: false,
     pullRequestAssigned: false,
+    pullRequestReviewRequested: false,
     pullRequestChangesRequested: false,
     pullRequestApproved: false,
     pullRequestMerged: false,
@@ -161,6 +175,11 @@ function asToggles(value: unknown): GithubEventToggles {
     for (const key of SPLIT_FROM_REVIEW_SUBMITTED) {
       toggles[key] = true;
     }
+  }
+
+  // Review requests used to share the assignment toggle; both halves inherit it.
+  if (predatesReviewRequestSplit(row) && row.pullRequestAssigned === true) {
+    toggles.pullRequestReviewRequested = true;
   }
 
   return toggles;
@@ -273,6 +292,35 @@ function migrateSplitReview(body: Record<string, unknown>, templates: GithubEven
   }
 }
 
+/**
+ * Wording written for the combined assign/review-request event follows it into the
+ * new review-request event, for the same reason as the review split above. Only on a
+ * file that predates the split — see predatesReviewRequestSplit.
+ */
+function migrateSplitReviewRequest(
+  body: Record<string, unknown>,
+  templates: GithubEventTemplates,
+): void {
+  if (!predatesReviewRequestSplit(body.events)) {
+    return;
+  }
+
+  const map = body.eventTemplates;
+  const stored =
+    map && typeof map === 'object'
+      ? (map as Record<string, unknown>).pullRequestAssigned
+      : undefined;
+  if (stored === null || stored === undefined) {
+    return;
+  }
+
+  templates.pullRequestReviewRequested ??= parseEmbedTemplate(
+    stored,
+    'Template for pullRequestReviewRequested',
+    EVENT_VARIABLES.pullRequestReviewRequested,
+  );
+}
+
 export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Settings must be an object');
@@ -281,6 +329,7 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
   const body = raw as Record<string, unknown>;
   const eventTemplates = parseEmbedTemplateMap(body.eventTemplates, TOGGLE_KEYS);
   migrateSplitReview(body, eventTemplates);
+  migrateSplitReviewRequest(body, eventTemplates);
   migrateLegacyBase(body, eventTemplates);
 
   return {

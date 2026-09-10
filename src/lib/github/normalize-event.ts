@@ -42,6 +42,7 @@ type EventHandler = (context: EventContext) => GithubNotification | undefined;
 // self-suppression, there is nothing worth posting.
 const MENTION_ONLY_TOGGLES = new Set<keyof GithubEventToggles>([
   'pullRequestAssigned',
+  'pullRequestReviewRequested',
   'issueAssigned',
   'pullRequestChangesRequested',
   'pullRequestApproved',
@@ -181,7 +182,14 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
   if (context.action === 'review_requested') {
     const requested = asUser(context.payload.requested_reviewer);
     const team = requested ? [requested] : asUserList(context.payload.requested_reviewers);
-    return build(context, pull, 'pullRequestAssigned', 'Review Requested', team, requested);
+    return build(
+      context,
+      pull,
+      'pullRequestReviewRequested',
+      EVENT_LABELS.pullRequestReviewRequested,
+      team,
+      requested,
+    );
   }
 
   return undefined;

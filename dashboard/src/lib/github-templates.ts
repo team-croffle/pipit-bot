@@ -4,7 +4,8 @@ import type { EmbedTemplate, GithubEventKey, GithubEventToggles } from '@/types'
 export const eventLabels: { key: GithubEventKey; label: string; group: string }[] = [
   { key: 'pullRequestOpened', label: 'PR 등록', group: 'PR' },
   { key: 'pullRequestUpdated', label: 'PR 업데이트 (새 커밋 · rebase)', group: 'PR' },
-  { key: 'pullRequestAssigned', label: 'PR 리뷰어 / 담당자 배정', group: 'PR' },
+  { key: 'pullRequestAssigned', label: 'PR 담당자 배정', group: 'PR' },
+  { key: 'pullRequestReviewRequested', label: 'PR 리뷰어 요청', group: 'PR' },
   { key: 'pullRequestChangesRequested', label: 'PR 변경 요청', group: 'PR' },
   { key: 'pullRequestApproved', label: 'PR 승인 (Approved)', group: 'PR' },
   { key: 'pullRequestMerged', label: 'PR 머지', group: 'PR' },
@@ -25,7 +26,8 @@ export const eventLabels: { key: GithubEventKey; label: string; group: string }[
 export const actorLabels: Record<GithubEventKey, string> = {
   pullRequestOpened: 'PR을 연 사람',
   pullRequestUpdated: '커밋을 푸시한 사람',
-  pullRequestAssigned: '배정 · 리뷰를 요청한 사람',
+  pullRequestAssigned: '담당자를 배정한 사람',
+  pullRequestReviewRequested: '리뷰를 요청한 사람',
   pullRequestChangesRequested: '변경을 요청한 리뷰어',
   pullRequestApproved: '승인한 리뷰어',
   pullRequestMerged: '머지를 실행한 사람',
@@ -46,7 +48,7 @@ export const variableHints: Record<string, string> = {
   event: '이벤트 이름 (PR Merged, Approved …)',
   actor: '이벤트를 일으킨 사람',
   author: 'PR · Issue를 작성한 사람',
-  assignee: '이번에 배정된 담당자 한 명',
+  assignee: '이번에 배정된 담당자, 또는 이번에 요청받은 리뷰어 한 명',
   assignees: '담당자 전체',
   reviewers: '아직 응답하지 않은 리뷰 요청 대상',
   mentions: '이 알림으로 불러야 할 사람 (본인 제외)',
@@ -84,7 +86,8 @@ const ISSUE_SAMPLE = {
 const ACTOR_SAMPLE: Partial<Record<GithubEventKey, string>> = {
   pullRequestOpened: '@등록자',
   pullRequestUpdated: '@푸시한사람',
-  pullRequestAssigned: '@요청자',
+  pullRequestAssigned: '@배정한사람',
+  pullRequestReviewRequested: '@요청자',
   pullRequestChangesRequested: '@리뷰어',
   pullRequestApproved: '@리뷰어',
   pullRequestMerged: '@머지한사람',

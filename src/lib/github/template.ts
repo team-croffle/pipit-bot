@@ -56,6 +56,16 @@ export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]
     'reviewers',
     'mentions',
   ],
+  // `{assignee}` is the reviewer who was just asked; `{reviewers}` everyone still asked.
+  pullRequestReviewRequested: [
+    ...COMMON,
+    'actor',
+    'author',
+    'assignee',
+    'assignees',
+    'reviewers',
+    'mentions',
+  ],
   // A review names its own author in {actor}; the outstanding request list is what
   // GitHub has just emptied, so it is not offered.
   pullRequestChangesRequested: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
@@ -74,7 +84,7 @@ export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]
  * What `{event}` renders as.
  *
  * A couple of events carry a different label depending on the action behind them —
- * an assignment reads "Review Requested" when that is what happened — so the handler
+ * a comment reads "Review Comment" when it was left on a diff — so the handler
  * overrides those. This table is the rest, and it is also what the dashboard fills
  * `{event}` with when it draws a preview: without it every event previewed with the
  * same word.
@@ -83,6 +93,7 @@ export const EVENT_LABELS: Record<GithubEventKey, string> = {
   pullRequestOpened: 'PR Open',
   pullRequestUpdated: 'PR Updated',
   pullRequestAssigned: 'PR Assigned',
+  pullRequestReviewRequested: 'Review Requested',
   pullRequestChangesRequested: 'Changes Requested',
   pullRequestApproved: 'Approved',
   pullRequestMerged: 'PR Merged',

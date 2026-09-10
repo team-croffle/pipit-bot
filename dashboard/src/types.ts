@@ -105,6 +105,7 @@ export interface GithubEventToggles {
   pullRequestOpened: boolean;
   pullRequestUpdated: boolean;
   pullRequestAssigned: boolean;
+  pullRequestReviewRequested: boolean;
   pullRequestChangesRequested: boolean;
   pullRequestApproved: boolean;
   pullRequestMerged: boolean;
