@@ -64,6 +64,10 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
   ]),
   pullRequestAssigned: template('#f59e0b', [
     { name: 'Assigned', value: '{assignee|{}|—}', inline: true },
+    { name: 'Assigned by', value: '{actor}', inline: true },
+  ]),
+  pullRequestReviewRequested: template('#f59e0b', [
+    { name: 'Reviewer', value: '{assignee|{}|—}', inline: true },
     { name: 'Requested by', value: '{actor}', inline: true },
   ]),
   // `{reviewers}` is the outstanding request list, which GitHub empties the moment
