@@ -188,6 +188,28 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
     return updateOnly(context, pull, 'pullRequestOpened', 'Converted to Draft');
   }
 
+  // A reopened pull request is news to the same people as an opening, and its
+  // announcement becomes the one later assignments update.
+  if (context.action === 'reopened') {
+    return build(context, pull, 'pullRequestReopened', EVENT_LABELS.pullRequestReopened, [
+      ...(pull.requestedReviewers ?? []),
+      ...(pull.assignees ?? []),
+    ]);
+  }
+
+  // Nothing to say, but the announcement's Assignees / Reviewers / title have changed.
+  if (context.action === 'unassigned') {
+    return updateOnly(context, pull, 'pullRequestOpened', 'Unassigned');
+  }
+
+  if (context.action === 'review_request_removed') {
+    return updateOnly(context, pull, 'pullRequestOpened', 'Review Request Removed');
+  }
+
+  if (context.action === 'edited' && titleChanged(context.payload)) {
+    return updateOnly(context, pull, 'pullRequestOpened', 'Title Edited');
+  }
+
   if (context.action === 'synchronize') {
     // WHY: a draft is still being assembled — the commits piling up in one are not
     // news to anybody yet.

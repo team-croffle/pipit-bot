@@ -28,8 +28,16 @@ import {
 } from './settings.js';
 import { EVENT_LABELS } from './template.js';
 
-/** The messages worth coming back to: the ones that announce the item. */
-const ANNOUNCING_TOGGLES = new Set<keyof GithubEventToggles>(['pullRequestOpened', 'issueOpened']);
+/**
+ * The messages worth coming back to: the ones that announce the item. A reopening
+ * replaces the original as the message later events update.
+ */
+const ANNOUNCING_TOGGLES = new Set<keyof GithubEventToggles>([
+  'pullRequestOpened',
+  'pullRequestReopened',
+  'issueOpened',
+  'issueReopened',
+]);
 
 /** The events that change who the announcement lists. */
 const UPDATING_TOGGLES = new Set<keyof GithubEventToggles>([
