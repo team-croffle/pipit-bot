@@ -179,6 +179,16 @@ export interface GithubMember {
   avatarUrl: string;
 }
 
+/** The account list, with enough about its origin to explain an empty one. */
+export interface GithubMemberList {
+  available: boolean;
+  members: GithubMember[];
+  /** Set when available: organisation members, per-repository assignees, or nobody. */
+  source?: 'organization' | 'assignees' | 'none';
+  /** Set when not available. */
+  reason?: 'no-credentials' | 'request-failed';
+}
+
 export interface DiscordEmoji {
   id: string;
   name: string;
