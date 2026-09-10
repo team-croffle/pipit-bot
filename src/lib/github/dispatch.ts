@@ -42,6 +42,12 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     return;
   }
 
+  // Used to vanish before reaching here, leaving no trace in the delivery log.
+  if (notification.silent) {
+    skip('Nobody to mention — the actor is the only person this event is about.');
+    return;
+  }
+
   const guild = getConfiguredGuild();
   if (!guild) {
     skip('Discord is not connected yet.');

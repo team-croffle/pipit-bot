@@ -27,6 +27,14 @@ export interface GithubNotification {
   assignee?: string;
   /** Who is worth pinging: the roles this event is about, minus the actor. */
   targets: string[];
+  /**
+   * True when the event exists only to tell somebody something and there is nobody
+   * left to tell — an author assigning themself, a reviewer commenting on their own
+   * review. Nothing new should be posted for it. It is still produced, because the
+   * message that opened the pull request may need updating; whether anything is
+   * sent is dispatch's decision, not this module's.
+   */
+  silent: boolean;
 }
 
 interface EventContext {
@@ -39,7 +47,8 @@ interface EventContext {
 type EventHandler = (context: EventContext) => GithubNotification | undefined;
 
 // Kinds that exist purely to notify a person: with nobody left to mention after
-// self-suppression, there is nothing worth posting.
+// self-suppression, there is nothing worth posting — the notification is marked
+// `silent` rather than dropped, so dispatch can still update an earlier message.
 const MENTION_ONLY_TOGGLES = new Set<keyof GithubEventToggles>([
   'pullRequestAssigned',
   'pullRequestReviewRequested',
@@ -112,10 +121,6 @@ function build(
     }
   }
 
-  if (unique.length === 0 && MENTION_ONLY_TOGGLES.has(toggle)) {
-    return undefined;
-  }
-
   return {
     toggle,
     label,
@@ -129,6 +134,7 @@ function build(
     reviewers: logins(subject.requestedReviewers),
     assignee: assignee?.login,
     targets: unique,
+    silent: unique.length === 0 && MENTION_ONLY_TOGGLES.has(toggle),
   };
 }
 
