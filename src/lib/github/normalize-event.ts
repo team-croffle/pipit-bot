@@ -1,7 +1,6 @@
 import {
   asRecord,
   asUser,
-  asUserList,
   readIssueLike,
   readRepoFullName,
   type GithubIssueLike,
@@ -187,14 +186,21 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
 
   if (context.action === 'review_requested') {
     const requested = asUser(context.payload.requested_reviewer);
-    const team = requested ? [requested] : asUserList(context.payload.requested_reviewers);
+    // A team request names the team in `requested_team`, not a person. There is no
+    // team-to-Discord mapping yet, so nobody is pinged — but the announcement still
+    // gets brought up to date, and `{assignee}` reads as the team.
+    // WHY not `requested_reviewers` as a fallback: that list is the people already
+    // asked, and using it re-pinged every existing reviewer on each team request.
+    const team = asRecord(context.payload.requested_team);
+    const slug = typeof team?.slug === 'string' ? team.slug : undefined;
+    const subject = requested ?? (slug ? { login: `team/${slug}` } : undefined);
     return build(
       context,
       pull,
       'pullRequestReviewRequested',
       EVENT_LABELS.pullRequestReviewRequested,
-      team,
-      requested,
+      requested ? [requested] : [],
+      subject,
     );
   }
 
