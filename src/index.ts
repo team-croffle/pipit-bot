@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 
 import { startApiServer } from './api/server.js';
 import { CustomClient } from './lib/client.js';
+import { loadTrackedMessages } from './lib/github/message-tracker.js';
 import { loadGithubNotifySettings } from './lib/github/settings.js';
 import { loadGuildEventSettings } from './lib/guild-event-settings.js';
 import { loadReactionRoleSettings } from './lib/reaction-roles/settings.js';
@@ -13,6 +14,7 @@ const main = async () => {
   try {
     await loadGuildEventSettings();
     await loadGithubNotifySettings();
+    await loadTrackedMessages();
     await loadReactionRoleSettings();
     startApiServer(env, {
       info(message: string) {

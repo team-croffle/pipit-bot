@@ -45,7 +45,7 @@ Production dashboard auth is **Authentik OIDC** (Authorization Code + PKCE). The
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback).
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `reaction-roles.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 ## GitHub notifications
 
@@ -70,6 +70,8 @@ Each event sends an **embed** composed on the same page — a plain line, a titl
 Which variables an event offers depends on what it can fill in — `{actor}` is the merger on a merge and the reviewer on a review, and `{reviewers}` (the outstanding request list) is not offered where GitHub has already emptied it. The editor lists the variables for the event being edited, and saving a template that names another one is rejected. Each event has its own default; an event you never edit follows it.
 
 Mentions belong on the plain line: Discord raises no notification for a mention that only appears inside an embed. The template is the operator's own markdown, but everything substituted into it is escaped, so a pull request title cannot forge a mention or a link.
+
+The message that announced a pull request or issue is remembered in `data/github-messages.json` (capped; oldest entries drop first). When somebody is assigned or asked to review later, that message is re-rendered with the current assignees and reviewers and edited in place, so it does not go stale. Assigning yourself only edits — no new message, nobody pinged. Assigning or requesting someone else edits and also sends that event's own message, because Discord does not notify people for a mention that appears through an edit. An item announced before the bot started tracking, or whose message was deleted, is simply not edited; recent deliveries show `edited` for an update that posted nothing new.
 
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
 

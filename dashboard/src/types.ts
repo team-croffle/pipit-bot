@@ -85,7 +85,7 @@ export interface GithubDelivery {
   at: string;
   repo: string;
   event: string;
-  outcome: 'sent' | 'failed' | 'skipped';
+  outcome: 'sent' | 'edited' | 'failed' | 'skipped';
   detail?: string;
 }
 

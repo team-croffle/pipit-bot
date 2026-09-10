@@ -310,9 +310,13 @@
 
   function outcomeVariant(
     outcome: GithubDelivery['outcome'],
-  ): 'default' | 'secondary' | 'destructive' {
+  ): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (outcome === 'sent') {
       return 'default';
+    }
+
+    if (outcome === 'edited') {
+      return 'outline';
     }
 
     return outcome === 'failed' ? 'destructive' : 'secondary';
