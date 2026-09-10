@@ -174,12 +174,21 @@ export async function listInstallationRepositories(
   }
 
   const token = await getInstallationToken(config);
-  const body = await callGithub<{ repositories: { full_name: string; private: boolean }[] }>(
-    `/installation/repositories?per_page=${PER_PAGE}`,
-    token,
-  );
+  // This endpoint wraps its page in `{ total_count, repositories }`, which is why it
+  // could not share paginate() and went without paging until rc.8.
+  const collected: { full_name: string; private: boolean }[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const body = await callGithub<{ repositories: { full_name: string; private: boolean }[] }>(
+      `/installation/repositories?per_page=${PER_PAGE}&page=${page}`,
+      token,
+    );
+    collected.push(...body.repositories);
+    if (body.repositories.length < PER_PAGE) {
+      break;
+    }
+  }
 
-  const repositories = body.repositories
+  const repositories = collected
     .map((repository) => ({ fullName: repository.full_name, private: repository.private }))
     .toSorted((a, b) => a.fullName.localeCompare(b.fullName));
 
