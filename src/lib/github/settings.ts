@@ -18,6 +18,7 @@ export interface GithubEventToggles {
   pullRequestMerged: boolean;
   /** Closed without merging. */
   pullRequestClosed: boolean;
+  pullRequestReopened: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
   /** Closed as completed. */
@@ -83,6 +84,7 @@ export const TOGGLE_KEYS = [
   'pullRequestApproved',
   'pullRequestMerged',
   'pullRequestClosed',
+  'pullRequestReopened',
   'issueOpened',
   'issueAssigned',
   'issueResolved',
@@ -108,23 +110,12 @@ const SPLIT_FROM_REVIEW_SUBMITTED = [
   'pullRequestApproved',
 ] as const satisfies readonly (keyof GithubEventToggles)[];
 
+// Derived from the key list, so a new event cannot be missed here — the same reason
+// the dashboard derives its copy from the label list.
 function emptyToggles(): GithubEventToggles {
-  return {
-    pullRequestOpened: false,
-    pullRequestUpdated: false,
-    pullRequestAssigned: false,
-    pullRequestReviewRequested: false,
-    pullRequestChangesRequested: false,
-    pullRequestApproved: false,
-    pullRequestMerged: false,
-    pullRequestClosed: false,
-    issueOpened: false,
-    issueAssigned: false,
-    issueResolved: false,
-    issueClosed: false,
-    issueReopened: false,
-    commentCreated: false,
-  };
+  return Object.fromEntries(
+    TOGGLE_KEYS.map((key) => [key, false]),
+  ) as unknown as GithubEventToggles;
 }
 
 function emptySettings(): GithubNotifySettings {

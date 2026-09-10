@@ -115,6 +115,7 @@ export interface GithubEventToggles {
   pullRequestMerged: boolean;
   /** Closed without merging. */
   pullRequestClosed: boolean;
+  pullRequestReopened: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
   /** Closed as completed. */

@@ -62,6 +62,12 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
     { name: 'Closed by', value: '{actor}', inline: true },
     { name: 'Author', value: '{author|{}|—}', inline: true },
   ]),
+  // Reads like an opening, because that is what it is for the people on it.
+  pullRequestReopened: template('#22c55e', [
+    { name: 'Reopened by', value: '{actor}', inline: true },
+    REVIEWERS,
+    ASSIGNEES,
+  ]),
   pullRequestAssigned: template('#f59e0b', [
     { name: 'Assigned', value: '{assignee|{}|—}', inline: true },
     { name: 'Assigned by', value: '{actor}', inline: true },
