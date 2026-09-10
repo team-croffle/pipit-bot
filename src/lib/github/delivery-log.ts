@@ -11,7 +11,8 @@
  * is its own roadmap item.
  */
 
-export type DeliveryOutcome = 'sent' | 'failed' | 'skipped';
+/** `edited` — nothing new was posted, but the message that opened the item was updated. */
+export type DeliveryOutcome = 'sent' | 'edited' | 'failed' | 'skipped';
 
 export interface DeliveryRecord {
   at: string;
