@@ -18,6 +18,15 @@ export class UserEvent extends Listener {
     for (const guild of this.container.client.guilds.cache.values()) {
       await refreshGuildInvites(guild);
     }
+
+    // WHY here: the bot's own emoji never arrive over the gateway, so the cache is
+    // empty until something fetches it. Until now only the dashboard picker did,
+    // which left a `:name:` in a notification as text after every restart.
+    try {
+      await this.container.client.application?.emojis.fetch();
+    } catch (error) {
+      this.container.logger.warn('[emoji] could not load the application emoji:', error);
+    }
   }
 
   private printBanner() {

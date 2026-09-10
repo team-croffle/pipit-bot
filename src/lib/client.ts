@@ -30,6 +30,9 @@ export class CustomClient extends SapphireClient {
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildInvites,
         GatewayIntentBits.GuildMessageReactions,
+        // Keeps the emoji cache current after start: without it a server emoji added
+        // or renamed while the bot runs is unknown to `:name:` resolution.
+        GatewayIntentBits.GuildExpressions,
       ],
       partials: [Partials.Message, Partials.Reaction, Partials.User, Partials.GuildMember],
       loadMessageCommandListeners: true,

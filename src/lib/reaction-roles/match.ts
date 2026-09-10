@@ -9,6 +9,7 @@
  * editor, but it is what a hand-edited settings file is most likely to contain.
  */
 
+import { container } from '@sapphire/framework';
 import type { EmojiIdentifierResolvable, Guild, MessageReaction } from 'discord.js';
 
 const MARKUP = /^<a?:(\w+):(\d{17,20})>$/;
@@ -33,9 +34,15 @@ function wanted(emoji: string, guild?: Guild): WantedEmoji {
   const shortcode = SHORTCODE.exec(trimmed);
   if (shortcode?.[1]) {
     const name = shortcode[1];
-    const custom = guild?.emojis.cache.find(
-      (candidate) => candidate.name?.toLowerCase() === name.toLowerCase(),
-    );
+    const wantedName = name.toLowerCase();
+    // Both sources the picker offers, guild first — the same rule the notification
+    // resolver applies. Without the application emoji a panel option using one of
+    // the bot's own emoji could never be reacted with, by the bot or by anybody.
+    const custom =
+      guild?.emojis.cache.find((candidate) => candidate.name?.toLowerCase() === wantedName) ??
+      container.client?.application?.emojis.cache.find(
+        (candidate) => candidate.name?.toLowerCase() === wantedName,
+      );
     return custom ? { id: custom.id, name } : { name };
   }
 
