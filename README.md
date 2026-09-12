@@ -1,12 +1,20 @@
-# pipit-hub (pipit-bot)
+# Pipit Hub
 
 <div align="center">
-  <img height="150" width="150" src="./docs/img/bot-icon-wt.png" alt="bot-icon"/>
+  <img height="150" width="150" src="./docs/img/pipit-mark.png" alt="Pipit"/>
 </div>
 
-Discord bot **Pipit** built with Sapphire and discord-player.
+<p align="center"><a href="./README.ko.md">한국어</a></p>
 
-Music sources are **pluggable**: pipit-bot requests a separate music worker and streams prepared files from a shared volume. See [docs/music-backend.md](./docs/music-backend.md).
+**Pipit** is a Discord bot for small development teams that gather and work together around Discord. It folds the team's workflow into the place they already talk — one bot, configured from one dashboard.
+
+- **Pull request and issue reminders** — a GitHub App reports opened, updated, reviewed, merged and closed items to the channel you choose, mentions the right people, and keeps the announcement current as assignees and reviewers change
+- **Reaction roles** — the bot publishes a panel message and hands out roles as members react to it
+- **Invite logger** — join and leave messages, invite tracking, roles on join
+- **Music** — shared playback for the voice channel, backed by a pluggable music worker
+- **Dashboard** — every setting above, light and dark, behind your own OIDC login
+
+Built with Sapphire and discord.js. Music sources are **pluggable**: pipit-bot requests a separate music worker and streams prepared files from a shared volume. See [docs/music-backend.md](./docs/music-backend.md).
 
 ## Stack
 

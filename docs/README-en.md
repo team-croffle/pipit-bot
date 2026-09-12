@@ -1,10 +1,10 @@
 # pipit-hub (pipit-bot)
 
 <div align="center">
-  <img height="150" width="150" src="./img/bot-icon-wt.png" alt="bot-icon"/>
+  <img height="150" width="150" src="./img/pipit-mark.png" alt="Pipit"/>
 </div>
 
-**Pipit** is a Discord bot built with Sapphire and discord-player.
+**Pipit** is a Discord bot for small development teams that gather and work together around Discord — GitHub reminders, reaction roles, invite logging and shared music, configured from one dashboard.
 
 Music is provided by a **pluggable worker** that writes audio to a shared volume; the bot only streams local files. See [music-backend.md](./music-backend.md).
 
@@ -31,4 +31,4 @@ Settings live in `data/runtime-config.json`, `data/guild-events.json` and `data/
 - `!p <query>` — opaque query sent to the music worker
 - Standard queue commands (`!skip`, `!pause`, `!queue`, …)
 
-English README for the legacy monolith layout is deprecated; use the root [README.md](../README.md).
+English README for the legacy monolith layout is deprecated; use the root [README.md](../README.md) (English) or [README.ko.md](../README.ko.md) (Korean).
