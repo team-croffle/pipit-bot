@@ -73,6 +73,9 @@ export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]
   pullRequestMerged: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   pullRequestClosed: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   pullRequestReopened: [...COMMON, 'actor', 'author', 'reviewers', 'assignees', 'mentions'],
+  // A reminder is built from the pull request as it stands, not from an event: its
+  // `{actor}` is the author, and `{reviewers}` the people who have not reviewed yet.
+  pullRequestReminded: [...COMMON, 'actor', 'author', 'reviewers', 'assignees', 'mentions'],
   issueOpened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueAssigned: [...COMMON, 'actor', 'assignee', 'assignees', 'mentions'],
   issueResolved: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
@@ -100,6 +103,7 @@ export const EVENT_LABELS: Record<GithubEventKey, string> = {
   pullRequestMerged: 'PR Merged',
   pullRequestClosed: 'PR Closed',
   pullRequestReopened: 'PR Reopened',
+  pullRequestReminded: 'PR Reminder',
   issueOpened: 'Issue Open',
   issueAssigned: 'Issue Assigned',
   issueResolved: 'Issue Resolved',

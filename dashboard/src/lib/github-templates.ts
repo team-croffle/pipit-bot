@@ -1,7 +1,13 @@
 import type { EmbedTemplate, GithubEventKey, GithubEventToggles } from '@/types';
 
 /** A pull request's life, then an issue's — the order the server lists them in. */
-export const eventLabels: { key: GithubEventKey; label: string; group: string }[] = [
+export const eventLabels: {
+  key: GithubEventKey;
+  label: string;
+  group: string;
+  /** Starts checked — a permission switch rather than a notification. */
+  defaultOn?: boolean;
+}[] = [
   { key: 'pullRequestOpened', label: 'PR 등록', group: 'PR' },
   { key: 'pullRequestUpdated', label: 'PR 업데이트 (새 커밋 · rebase)', group: 'PR' },
   { key: 'pullRequestAssigned', label: 'PR 담당자 배정', group: 'PR' },
@@ -11,6 +17,12 @@ export const eventLabels: { key: GithubEventKey; label: string; group: string }[
   { key: 'pullRequestMerged', label: 'PR 머지', group: 'PR' },
   { key: 'pullRequestClosed', label: 'PR 닫음 (머지 안 함)', group: 'PR' },
   { key: 'pullRequestReopened', label: 'PR 재오픈', group: 'PR' },
+  {
+    key: 'pullRequestReminded',
+    label: 'PR 리마인더 (!pr · 대시보드에서 다시 알리기 허용)',
+    group: 'PR',
+    defaultOn: true,
+  },
   { key: 'issueOpened', label: 'Issue 등록', group: 'Issue' },
   { key: 'issueAssigned', label: 'Issue 담당자 배정', group: 'Issue' },
   { key: 'issueResolved', label: 'Issue 해결 (Completed)', group: 'Issue' },
@@ -34,6 +46,7 @@ export const actorLabels: Record<GithubEventKey, string> = {
   pullRequestMerged: '머지를 실행한 사람',
   pullRequestClosed: 'PR을 닫은 사람',
   pullRequestReopened: 'PR을 다시 연 사람',
+  pullRequestReminded: 'PR 작성자',
   issueOpened: 'Issue를 연 사람',
   issueAssigned: '배정한 사람',
   issueResolved: 'Issue를 해결 처리한 사람',
@@ -95,6 +108,7 @@ const ACTOR_SAMPLE: Partial<Record<GithubEventKey, string>> = {
   pullRequestMerged: '@머지한사람',
   pullRequestClosed: '@닫은사람',
   pullRequestReopened: '@다시연사람',
+  pullRequestReminded: '@작성자',
   issueOpened: '@등록자',
   issueAssigned: '@배정한사람',
   issueResolved: '@해결한사람',
@@ -176,6 +190,6 @@ export const eventGroups: { name: string; events: typeof eventLabels }[] = [
 /** Derived from the label list, so a new event cannot be missed here. */
 export function emptyToggles(): GithubEventToggles {
   return Object.fromEntries(
-    eventLabels.map((event) => [event.key, false]),
+    eventLabels.map((event) => [event.key, event.defaultOn === true]),
   ) as unknown as GithubEventToggles;
 }
