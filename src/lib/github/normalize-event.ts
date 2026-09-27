@@ -41,6 +41,12 @@ export interface GithubNotification {
    * why it could not. `toggle` names the announcement's own event.
    */
   updateOnly?: boolean;
+  /**
+   * True when a person asked for this — `!pr` or the dashboard — rather than GitHub
+   * sending it. Dispatch then does not treat it as an echo of a fresh announcement:
+   * somebody asking a minute after the opening still means it.
+   */
+  manual?: boolean;
 }
 
 interface EventContext {

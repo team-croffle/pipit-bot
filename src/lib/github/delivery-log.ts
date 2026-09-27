@@ -32,11 +32,14 @@ export function recordDelivery(
   event: string,
   outcome: DeliveryOutcome,
   detail?: string,
-): void {
-  records.unshift({ at: new Date().toISOString(), repo, event, outcome, detail });
+): DeliveryRecord {
+  const record: DeliveryRecord = { at: new Date().toISOString(), repo, event, outcome, detail };
+  records.unshift(record);
   if (records.length > MAX_RECORDS) {
     records.length = MAX_RECORDS;
   }
+
+  return record;
 }
 
 /** Newest first. */
