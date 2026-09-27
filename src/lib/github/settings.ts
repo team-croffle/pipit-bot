@@ -19,6 +19,12 @@ export interface GithubEventToggles {
   /** Closed without merging. */
   pullRequestClosed: boolean;
   pullRequestReopened: boolean;
+  /**
+   * Whether a person may ask the bot to remind a pull request's pending reviewers —
+   * through `!pr` or the dashboard. No webhook event produces it; the toggle is a
+   * permission switch for the manual path, on unless it is switched off (v0.6.6).
+   */
+  pullRequestReminded: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
   /** Closed as completed. */
@@ -85,6 +91,7 @@ export const TOGGLE_KEYS = [
   'pullRequestMerged',
   'pullRequestClosed',
   'pullRequestReopened',
+  'pullRequestReminded',
   'issueOpened',
   'issueAssigned',
   'issueResolved',
@@ -110,11 +117,16 @@ const SPLIT_FROM_REVIEW_SUBMITTED = [
   'pullRequestApproved',
 ] as const satisfies readonly (keyof GithubEventToggles)[];
 
+// The toggles that start on. Every notification starts off — an operator opts into
+// each kind of message — but the reminder toggle only permits something a person
+// asks for by hand, so the sensible start is "allowed".
+const ON_BY_DEFAULT = new Set<keyof GithubEventToggles>(['pullRequestReminded']);
+
 // Derived from the key list, so a new event cannot be missed here — the same reason
 // the dashboard derives its copy from the label list.
 function emptyToggles(): GithubEventToggles {
   return Object.fromEntries(
-    TOGGLE_KEYS.map((key) => [key, false]),
+    TOGGLE_KEYS.map((key) => [key, ON_BY_DEFAULT.has(key)]),
   ) as unknown as GithubEventToggles;
 }
 
@@ -160,7 +172,11 @@ function asToggles(value: unknown): GithubEventToggles {
   const row = value as Record<string, unknown>;
   const toggles = emptyToggles();
   for (const key of TOGGLE_KEYS) {
-    toggles[key] = row[key] === true;
+    // A key the file does not have keeps its starting value — which is how a file
+    // saved before v0.6.6 reads with reminders allowed rather than silently blocked.
+    if (key in row) {
+      toggles[key] = row[key] === true;
+    }
   }
 
   if (row.reviewSubmitted === true) {

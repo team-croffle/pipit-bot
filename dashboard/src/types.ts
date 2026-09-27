@@ -116,6 +116,8 @@ export interface GithubEventToggles {
   /** Closed without merging. */
   pullRequestClosed: boolean;
   pullRequestReopened: boolean;
+  /** Permits the manual reminder (`!pr` / dashboard); no webhook event sets it. */
+  pullRequestReminded: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;
   /** Closed as completed. */

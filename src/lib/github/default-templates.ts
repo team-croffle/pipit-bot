@@ -68,6 +68,13 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
     REVIEWERS,
     ASSIGNEES,
   ]),
+  // Asked for by a person rather than fired by GitHub: the pull request is still
+  // waiting on the reviewers listed, and this is the nudge.
+  pullRequestReminded: template('#f59e0b', [
+    { name: 'Author', value: '{author|{}|—}', inline: true },
+    REVIEWERS,
+    ASSIGNEES,
+  ]),
   pullRequestAssigned: template('#f59e0b', [
     { name: 'Assigned', value: '{assignee|{}|—}', inline: true },
     { name: 'Assigned by', value: '{actor}', inline: true },
