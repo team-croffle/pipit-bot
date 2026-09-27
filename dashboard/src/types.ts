@@ -93,6 +93,14 @@ export interface GithubDelivery {
   detail?: string;
 }
 
+/** What became of a reminder asked for from the page. */
+export interface GithubReminderResult {
+  outcome: GithubDelivery['outcome'];
+  detail?: string;
+  channelId?: string;
+  targets: number;
+}
+
 export interface DiscordRole {
   id: string;
   name: string;
