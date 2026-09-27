@@ -9,7 +9,7 @@ import {
 
 import { getConfiguredGuild } from '../discord-guild.js';
 import { resolveTemplateEmojis } from '../embed/emoji.js';
-import { recordDelivery } from './delivery-log.js';
+import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
 import { formatGithubNotification } from './format-message.js';
 import {
   findTrackedMessage,
@@ -44,7 +44,17 @@ const UPDATING_TOGGLES = new Set<keyof GithubEventToggles>([
   'pullRequestAssigned',
   'pullRequestReviewRequested',
   'issueAssigned',
+  // A reminder is read off the live pull request, so it knows the current people.
+  'pullRequestReminded',
 ]);
+
+/** What became of one notification — the delivery record's verdict, plus where it went. */
+export interface DispatchResult {
+  outcome: DeliveryOutcome;
+  detail?: string;
+  /** The channel the message was posted in, when one was. */
+  channelId?: string;
+}
 
 /**
  * How long after the announcement an assignment or review request counts as part of
@@ -187,42 +197,40 @@ async function updateAnnouncement(
   }
 }
 
-export async function dispatchGithubNotification(notification: GithubNotification): Promise<void> {
+export async function dispatchGithubNotification(
+  notification: GithubNotification,
+): Promise<DispatchResult> {
   const settings = getGithubNotifySettings();
   // WHY: re-checked here because dispatch is fire-and-forget and could otherwise
-  // run after a settings update turned the feature off.
+  // run after a settings update turned the feature off. Not recorded: nothing was
+  // ever going to be delivered, so there is nothing for the dashboard to explain.
   if (!settings.enabled) {
-    return;
+    return { outcome: 'skipped', detail: 'GitHub notifications are switched off.' };
   }
 
-  const skip = (detail: string): void => {
+  const skip = (detail: string): DispatchResult =>
     recordDelivery(notification.repo, notification.label, 'skipped', detail);
-  };
 
   // Checked before the channel is resolved: with the fallback off, an unlisted
   // repository is skipped even when a default channel exists.
   if (!settings.notifyUnlistedRepos && !isRepoListed(settings, notification.repo)) {
-    skip('This repository is not in the list, and unlisted repositories are switched off.');
-    return;
+    return skip('This repository is not in the list, and unlisted repositories are switched off.');
   }
 
   const rule = resolveRepoRule(settings, notification.repo);
   if (!rule) {
-    skip('No channel is set for this repository or as the default.');
-    return;
+    return skip('No channel is set for this repository or as the default.');
   }
 
   // An update-only event answers to no toggle: it never posts, it only keeps the
   // announcement honest.
   if (!notification.updateOnly && !rule.events[notification.toggle]) {
-    skip(`The ${notification.toggle} event is switched off for this repository.`);
-    return;
+    return skip(`The ${notification.toggle} event is switched off for this repository.`);
   }
 
   const guild = getConfiguredGuild();
   if (!guild) {
-    skip('Discord is not connected yet.');
-    return;
+    return skip('Discord is not connected yet.');
   }
 
   // The announcement is brought up to date first, so the people it lists are right
@@ -231,31 +239,34 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
   const tracked = updates ? findTrackedMessage(notification.repo, notification.number) : undefined;
   let updateProblem: string | undefined;
   let updated = false;
-  if (updates) {
+  // A reminder for an item the bot never announced has nothing to bring up to date,
+  // and saying so would only clutter a verdict that is about the reminder itself.
+  if (updates && !(notification.manual === true && tracked === undefined)) {
     updateProblem = await updateAnnouncement(notification, tracked, settings, guild);
     updated = updateProblem === undefined;
   }
 
-  const echo = tracked !== undefined && echoesAnnouncement(notification, tracked);
+  const echo =
+    notification.manual !== true &&
+    tracked !== undefined &&
+    echoesAnnouncement(notification, tracked);
   if (notification.silent || echo) {
     const why = silentReason(notification, echo);
     if (updated) {
-      recordDelivery(
+      return recordDelivery(
         notification.repo,
         notification.label,
         'edited',
         `${why} The announcement was brought up to date.`,
       );
-    } else {
-      skip(`${why} ${updateProblem ?? ''}`.trim());
     }
-    return;
+
+    return skip(`${why} ${updateProblem ?? ''}`.trim());
   }
 
   const channel = sendableChannel(guild, rule.channelId);
   if (!channel) {
-    skip('The configured channel no longer exists, or is not one the bot can post in.');
-    return;
+    return skip('The configured channel no longer exists, or is not one the bot can post in.');
   }
 
   const message = formatGithubNotification(
@@ -265,8 +276,7 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     resolveTemplateEmojis(resolveTemplate(settings, notification.toggle), guild),
   );
   if (!message.content && !message.embed) {
-    skip('The template rendered an empty message.');
-    return;
+    return skip('The template rendered an empty message.');
   }
 
   try {
@@ -296,12 +306,15 @@ export async function dispatchGithubNotification(notification: GithubNotificatio
     } else if (updateProblem) {
       detail = `The announcement was not updated: ${updateProblem}`;
     }
-    recordDelivery(notification.repo, notification.label, 'sent', detail);
+    return {
+      ...recordDelivery(notification.repo, notification.label, 'sent', detail),
+      channelId: channel.id,
+    };
   } catch (error) {
     // WHY both: the log keeps the stack for a maintainer, the record gives the
     // operator the one line that explains the silence.
     container.logger.error('[github]', error);
-    recordDelivery(
+    return recordDelivery(
       notification.repo,
       notification.label,
       'failed',
