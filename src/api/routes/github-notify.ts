@@ -8,6 +8,7 @@ import {
 } from '../../lib/github/app-client.js';
 import { DEFAULT_EVENT_TEMPLATES } from '../../lib/github/default-templates.js';
 import { listDeliveries } from '../../lib/github/delivery-log.js';
+import { parsePullRequestReference, remindPullRequest } from '../../lib/github/remind.js';
 import {
   getGithubNotifyLoadError,
   getGithubNotifySettings,
@@ -52,6 +53,21 @@ export function mountGithubNotifyRoutes(
       const message = error instanceof Error ? error.message : 'Invalid settings';
       return c.json({ error: message }, 400);
     }
+  });
+
+  // The same reminder `!pr` sends, asked for from the page. The verdict comes back
+  // in the body whatever it is — a skipped reminder is an answer, not an error — and
+  // is also in the recent deliveries, where the operator would look for it anyway.
+  app.post('/api/github-notify/remind', dashboardViewer, dashboardWrite, async (c) => {
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const repo = typeof body?.repo === 'string' ? body.repo.trim() : '';
+    const number = typeof body?.number === 'number' ? body.number : Number(body?.number);
+    const reference = parsePullRequestReference(`${repo} ${number}`);
+    if (!reference) {
+      return c.json({ error: 'Give a repository as owner/name and a pull request number' }, 400);
+    }
+
+    return c.json(await remindPullRequest(reference));
   });
 
   app.get('/api/github/repositories', dashboardViewer, async (c) => {

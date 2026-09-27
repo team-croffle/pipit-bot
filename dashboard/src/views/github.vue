@@ -9,6 +9,7 @@
   import StateBlock from '@/components/common/state-block.vue';
   import SuggestInput from '@/components/common/suggest-input.vue';
   import AccountSelect from '@/components/github/account-select.vue';
+  import RemindCard from '@/components/github/remind-card.vue';
   import TemplateList from '@/components/github/template-list.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
   import { Badge } from '@/components/ui/badge';
@@ -468,6 +469,16 @@
             </div>
           </CardContent>
         </Card>
+
+        <RemindCard
+          :read-only="readOnly"
+          :enabled="settings.enabled"
+          :repositories="repositories"
+          :repositories-loading="repositoriesLoading"
+          :channels="channels"
+          @open="loadRepositories"
+          @reminded="refreshDeliveries"
+        />
 
         <Card>
           <CardHeader>
