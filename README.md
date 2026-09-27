@@ -75,6 +75,8 @@ Routing lives in `data/github-notify.json`: a default channel plus per-repositor
 
 Each event sends an **embed** composed on the same page — a plain line, a title, a description, fields, a footer, a colour and an optional timestamp. Every part is a template: `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignee}`, `{assignees}`, `{reviewers}` and `{mentions}` are substituted, and `{name|when set|when empty}` picks between two wordings depending on whether the value exists. A part that renders empty is left out.
 
+A pull request that has gone quiet can be **reminded about by hand** — `!pr owner/name #12` in Discord, or the "PR 다시 알리기" card on the GitHub page. The bot reads the pull request through the App (this is where `GITHUB_APP_ID` and the private key become necessary) and posts a `PR Reminder` to the repository's channel, mentioning everyone still asked to review plus the assignees, minus the author. Drafts, merged and closed pull requests, and ones with nobody waiting are not reminded about; the reason is answered in Discord and recorded in the recent deliveries. One reminder per pull request per five minutes. The `PR Reminder` event toggle is a permission switch for this — on by default, and switching it off for a repository blocks reminders there.
+
 Which variables an event offers depends on what it can fill in — `{actor}` is the merger on a merge and the reviewer on a review, and `{reviewers}` (the outstanding request list) is not offered where GitHub has already emptied it. The editor lists the variables for the event being edited, and saving a template that names another one is rejected. Each event has its own default; an event you never edit follows it.
 
 Mentions belong on the plain line: Discord raises no notification for a mention that only appears inside an embed. The template is the operator's own markdown, but everything substituted into it is escaped, so a pull request title cannot forge a mention or a link.
@@ -127,7 +129,12 @@ docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
 
 Dev streams are stored in `../shared/`.
 
-## Music commands
+## Commands
+
+- `!pr owner/name #12` (or `!pr owner/name 12`, `!pr <pull request URL>`) — reminds the reviewers who have not reviewed yet, plus the assignees, in the repository's notification channel. See the reminder section above
+- `!help` — lists every command with its description
+
+### Music commands
 
 - `!p <query>` / `!play <query>` — opaque query forwarded to the music worker
 - Queue controls: `!skip`, `!pause`, `!resume`, `!queue`, etc.

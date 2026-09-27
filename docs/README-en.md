@@ -28,6 +28,7 @@ Settings live in `data/runtime-config.json`, `data/guild-events.json` and `data/
 
 ## Commands
 
+- `!pr owner/name #12` — reminds a pull request's pending reviewers and assignees in its notification channel (needs the GitHub App credentials)
 - `!p <query>` — opaque query sent to the music worker
 - Standard queue commands (`!skip`, `!pause`, `!queue`, …)
 
