@@ -97,6 +97,10 @@ export interface GithubDelivery {
 export interface GithubReminderResult {
   outcome: GithubDelivery['outcome'];
   detail?: string;
+  /** What the number turned out to be, once the server read it. */
+  kind?: 'pull' | 'issue';
+  /** The repository the typed name resolved to. */
+  repo?: string;
   channelId?: string;
   targets: number;
 }
@@ -124,7 +128,7 @@ export interface GithubEventToggles {
   /** Closed without merging. */
   pullRequestClosed: boolean;
   pullRequestReopened: boolean;
-  /** Permits the manual reminder (`!pr` / dashboard); no webhook event sets it. */
+  /** Permits the manual reminder (`!remind` / dashboard); no webhook event sets it. */
   pullRequestReminded: boolean;
   issueOpened: boolean;
   issueAssigned: boolean;

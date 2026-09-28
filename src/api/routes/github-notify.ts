@@ -64,7 +64,13 @@ export function mountGithubNotifyRoutes(
     const number = typeof body?.number === 'number' ? body.number : Number(body?.number);
     const reference = parseItemReference(`${repo} ${number}`);
     if (!reference) {
-      return c.json({ error: 'Give a repository as owner/name and a pull request number' }, 400);
+      return c.json(
+        {
+          error:
+            'Give a repository (owner/name, or a name alone) and a pull request or issue number',
+        },
+        400,
+      );
     }
 
     return c.json(await remindReference(reference));
