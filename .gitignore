@@ -30,3 +30,6 @@ cookies.txt
 
 # Docker Compose stream cache
 data/
+
+# Local planning workspace (see .claude/skills/*-workflow)
+.ai/*
