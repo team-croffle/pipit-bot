@@ -12,7 +12,8 @@
   import type { DiscordChannel, GithubReminderResult } from '@/types';
 
   /**
-   * The manual reminder — the same one `!pr` sends — from the page.
+   * The manual reminder — the same one `!remind` sends — from the page. Pull requests
+   * and issues share one number space, so the server says which one it was.
    *
    * The card does not know whether the App credentials exist: the server answers
    * with a skipped verdict that says so, and that reads better than a greyed-out
@@ -28,7 +29,9 @@
 
   const emit = defineEmits<{ open: []; reminded: [] }>();
 
-  const repoPattern = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
+  // `owner/name`, or a name alone that the server matches against the installed list.
+  const repoPattern = /^[\w.-]{1,100}(?:\/[\w.-]{1,100})?$/;
+  const KIND_LABEL = { pull: 'PR', issue: 'Issue' } as const;
 
   const repo = ref('');
   // A number input hands v-model a number once it parses, and a string while it
@@ -62,12 +65,13 @@
       return '';
     }
 
+    const kind = verdict.kind ? ` (${KIND_LABEL[verdict.kind]})` : '';
     if (verdict.outcome === 'sent') {
-      return `${channelName(verdict.channelId)}에 ${verdict.targets}명을 불렀습니다.`;
+      return `${channelName(verdict.channelId)}에 ${verdict.targets}명을 불렀습니다${kind}.`;
     }
 
     if (verdict.outcome === 'edited') {
-      return '새로 보낼 것은 없고, 원래 알림 메시지만 최신 상태로 고쳤습니다.';
+      return `이미 끝난 항목이라 새로 보내지 않고, 처음 알림 메시지만 최신 상태로 고쳤습니다${kind}.`;
     }
 
     return verdict.outcome === 'failed' ? '보내지 못했습니다.' : '보내지 않았습니다.';
@@ -98,10 +102,11 @@
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-base">PR 다시 알리기</CardTitle>
+      <CardTitle class="text-base">다시 알리기</CardTitle>
       <CardDescription>
-        아직 리뷰하지 않은 리뷰어와 담당자를 저장소의 알림 채널에서 다시 부릅니다. 디스코드에서는
-        <code class="font-gothic">!pr owner/name #번호</code>로 같은 일을 할 수 있습니다.
+        PR은 아직 리뷰하지 않은 리뷰어와 담당자를, Issue는 담당자를 저장소의 알림 채널에서 다시
+        부릅니다. 번호만 넣으면 PR인지 Issue인지는 GitHub에서 확인합니다. 디스코드에서는
+        <code class="font-gothic">!remind owner/name #번호</code>로 같은 일을 할 수 있습니다.
       </CardDescription>
     </CardHeader>
     <CardContent class="flex flex-col gap-4">
@@ -118,12 +123,12 @@
             list-id="remind-repo-options"
             :loading="repositoriesLoading"
             :disabled="readOnly || busy"
-            placeholder="owner/name"
+            placeholder="owner/name 또는 name"
             @open="emit('open')"
           />
         </div>
         <div class="flex flex-col gap-1.5 sm:w-32">
-          <Label for="remind-number">PR 번호</Label>
+          <Label for="remind-number">PR · Issue 번호</Label>
           <Input
             id="remind-number"
             v-model="number"
