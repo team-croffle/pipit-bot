@@ -42,7 +42,7 @@ export interface GithubNotification {
    */
   updateOnly?: boolean;
   /**
-   * True when a person asked for this — `!pr` or the dashboard — rather than GitHub
+   * True when a person asked for this — `!remind` or the dashboard — rather than GitHub
    * sending it. Dispatch then does not treat it as an echo of a fresh announcement:
    * somebody asking a minute after the opening still means it.
    */

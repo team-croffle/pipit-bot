@@ -21,7 +21,7 @@ export interface GithubEventToggles {
   pullRequestReopened: boolean;
   /**
    * Whether a person may ask the bot to remind a pull request's pending reviewers —
-   * through `!pr` or the dashboard. No webhook event produces it; the toggle is a
+   * through `!remind` or the dashboard. No webhook event produces it; the toggle is a
    * permission switch for the manual path, on unless it is switched off (v0.6.6).
    */
   pullRequestReminded: boolean;

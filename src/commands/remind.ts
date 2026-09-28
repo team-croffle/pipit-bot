@@ -5,19 +5,23 @@ import type { Message } from 'discord.js';
 import { parseItemReference, remindReference } from '../lib/github/remind-reference.js';
 
 const USAGE = [
-  'Tell me which pull request to remind about.',
-  'Examples: `!pr owner/repo #12` · `!pr owner/repo 12` · `!pr https://github.com/owner/repo/pull/12`',
+  'Tell me which pull request or issue to remind about.',
+  'Examples: `!remind owner/repo #12` · `!remind repo #12` · `!remind https://github.com/owner/repo/issues/12`',
 ].join('\n');
 
+const NOUN = { pull: 'pull request', issue: 'issue' } as const;
+
 /**
- * Asks the reviewers who have not reviewed yet to take a look.
+ * Nudges whoever a pull request or issue is waiting on: the reviewers who have not
+ * reviewed yet and the assignees of a pull request, the assignees of an issue.
  *
+ * Pull requests and issues share one number space, so the number says which it is.
  * The reminder goes to the channel the repository's notifications go to — that is
  * where the team reads them — and this channel gets a one-line answer saying so, or
  * why nothing was sent. The verdict also lands in the dashboard's recent deliveries.
  */
 @ApplyOptions<Command.Options>({
-  description: 'Remind the pending reviewers of a pull request',
+  description: 'Remind whoever a pull request or issue is waiting on',
   runIn: ['GUILD_ANY'],
 })
 export class UserCommand extends Command {
@@ -30,7 +34,8 @@ export class UserCommand extends Command {
     }
 
     const result = await remindReference(reference);
-    const subject = `${result.repo}#${reference.number}`;
+    const noun = result.kind ? ` (${NOUN[result.kind]})` : '';
+    const subject = `${result.repo}#${reference.number}${noun}`;
 
     if (result.outcome === 'sent') {
       const where = result.channelId ? ` in <#${result.channelId}>` : '';
@@ -40,7 +45,9 @@ export class UserCommand extends Command {
     }
 
     if (result.outcome === 'edited') {
-      await message.reply(`Nothing new to send for ${subject}; the announcement was updated.`);
+      await message.reply(
+        `Nothing to send for ${subject}; its announcement was brought up to date.`,
+      );
       return;
     }
 

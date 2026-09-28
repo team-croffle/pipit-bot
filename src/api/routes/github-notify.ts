@@ -55,7 +55,7 @@ export function mountGithubNotifyRoutes(
     }
   });
 
-  // The same reminder `!pr` sends, asked for from the page. The verdict comes back
+  // The same reminder `!remind` sends, asked for from the page. The verdict comes back
   // in the body whatever it is — a skipped reminder is an answer, not an error — and
   // is also in the recent deliveries, where the operator would look for it anyway.
   app.post('/api/github-notify/remind', dashboardViewer, dashboardWrite, async (c) => {
