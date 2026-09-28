@@ -1,22 +1,27 @@
 /**
- * A reminder for one pull request, asked for by a person.
+ * A reminder for one pull request or issue, asked for by a person.
  *
  * WHY this exists: every notification so far is a reaction to a webhook. A pull
  * request that has sat unreviewed for three days sends no event, so nothing nudges
- * the reviewers. This reads the pull request as it stands and posts the nudge
- * through the same path a webhook would take — same channel rule, same wording
- * tables, same delivery record — so the operator finds it where everything else is.
+ * the reviewers. This reads the item as it stands and posts the nudge through the
+ * same path a webhook would take — same channel rule, same wording tables, same
+ * delivery record — so the operator finds it where everything else is.
  *
- * Shared by the `!pr` command and the dashboard; both hand in a repository and a
- * number and get one verdict back.
+ * A pull request waits on its pending reviewers and its assignees; an issue, which
+ * has no reviewers, on its assignees. The author is never pinged: they are the one
+ * waiting. Pull requests and issues share one number space, so the caller only
+ * hands in a repository and a number and the lookup says which it is.
+ *
+ * Shared by the reminder command and the dashboard; both get one verdict back.
  */
 
 import { container } from '@sapphire/framework';
 
 import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
 import { dispatchGithubNotification } from './dispatch.js';
-import { fetchPullRequest, type PullRequestSnapshot } from './item-lookup.js';
+import { fetchItem, type ItemSnapshot } from './item-lookup.js';
 import type { GithubNotification } from './normalize-event.js';
+import type { GithubIssueLike } from './payload-types.js';
 import { getGithubNotifySettings } from './settings.js';
 import { EVENT_LABELS } from './template.js';
 
@@ -26,19 +31,24 @@ export interface PullRequestReference {
   number: number;
 }
 
+export type ItemKind = 'pull' | 'issue';
+
 export interface ReminderResult {
   outcome: DeliveryOutcome;
   detail?: string;
+  /** Which of the two the number turned out to be, once it was read. */
+  kind?: ItemKind;
   /** Where the reminder was posted, when it was. */
   channelId?: string;
   /** How many people the reminder set out to mention. */
   targets: number;
 }
 
-const LABEL = EVENT_LABELS.pullRequestReminded;
-const TOGGLE = 'pullRequestReminded';
-// One reminder per pull request per five minutes. In memory: it exists to stop a
-// key being leaned on, not to keep a history, and a restart forgetting it is fine.
+const TOGGLES = { pull: 'pullRequestReminded', issue: 'issueReminded' } as const;
+// Before the lookup the kind is not known yet; the delivery record still needs a label.
+const GENERIC_LABEL = 'Reminder';
+// One reminder per number per five minutes. In memory: it exists to stop a key being
+// leaned on, not to keep a history, and a restart forgetting it is fine.
 const COOLDOWN_MS = 5 * 60 * 1000;
 const lastSent = new Map<string, number>();
 
@@ -83,8 +93,12 @@ function cooldownLeft(reference: PullRequestReference): number {
   return Math.max(0, Math.ceil((at + COOLDOWN_MS - Date.now()) / 1000));
 }
 
-/** Why an open pull request should not be reminded about, or undefined when it should. */
-function notWorthReminding(snapshot: PullRequestSnapshot): string | undefined {
+/** Why the item should not be reminded about, or undefined when it should. */
+function notWorthReminding(snapshot: ItemSnapshot): string | undefined {
+  if (snapshot.kind === 'issue') {
+    return snapshot.state === 'closed' ? 'This issue is closed.' : undefined;
+  }
+
   if (snapshot.merged) {
     return 'This pull request has already been merged.';
   }
@@ -100,38 +114,45 @@ function notWorthReminding(snapshot: PullRequestSnapshot): string | undefined {
   return undefined;
 }
 
-/**
- * The reminder as a notification: the author is its actor, and everyone still on
- * the pull request except the author is worth pinging. `requested_reviewers` is the
- * list GitHub trims as reviews land, so it already excludes people who reviewed.
- */
-function asNotification(
-  reference: PullRequestReference,
-  snapshot: PullRequestSnapshot,
-): GithubNotification {
-  const { pull } = snapshot;
-  const author = pull.user?.login ?? '';
-  const reviewers = (pull.requestedReviewers ?? []).map((user) => user.login);
-  const assignees = (pull.assignees ?? []).map((user) => user.login);
-
+/** The people worth pinging, in order, each once, never the author. */
+function waitingOn(author: string, groups: string[][]): string[] {
   const seen = new Set<string>([author.toLowerCase()]);
   const targets: string[] = [];
-  for (const login of [...reviewers, ...assignees]) {
+  for (const login of groups.flat()) {
     if (!seen.has(login.toLowerCase())) {
       seen.add(login.toLowerCase());
       targets.push(login);
     }
   }
 
+  return targets;
+}
+
+/**
+ * The reminder as a notification: the author is its actor. `requested_reviewers` is
+ * the list GitHub trims as reviews land, so it already excludes people who reviewed.
+ */
+function asNotification(
+  reference: PullRequestReference,
+  snapshot: ItemSnapshot,
+): GithubNotification {
+  const item: GithubIssueLike = snapshot.kind === 'pull' ? snapshot.pull : snapshot.issue;
+  const author = item.user?.login ?? '';
+  const reviewers =
+    snapshot.kind === 'pull' ? (item.requestedReviewers ?? []).map((user) => user.login) : [];
+  const assignees = (item.assignees ?? []).map((user) => user.login);
+  const targets = waitingOn(author, [reviewers, assignees]);
+  const toggle = TOGGLES[snapshot.kind];
+
   return {
-    toggle: TOGGLE,
-    label: LABEL,
+    toggle,
+    label: EVENT_LABELS[toggle],
     repo: reference.repo,
     number: reference.number,
-    title: pull.title,
-    isPullRequest: true,
+    title: item.title,
+    isPullRequest: snapshot.kind === 'pull',
     actor: author,
-    author: pull.user?.login,
+    author: item.user?.login,
     assignees,
     reviewers,
     targets,
@@ -140,14 +161,31 @@ function asNotification(
   };
 }
 
-export async function remindPullRequest(reference: PullRequestReference): Promise<ReminderResult> {
+/** Why nobody is pinged — teams are named, since they cannot be mentioned yet. */
+function nobodyWaiting(snapshot: ItemSnapshot): string {
+  if (snapshot.kind === 'issue') {
+    return 'Nobody is waiting on this issue: it has no assignees besides its author.';
+  }
+
+  if (snapshot.teams.length > 0) {
+    return `Only teams are waiting on this pull request (${snapshot.teams.join(', ')}); teams have no Discord mapping yet, so nobody can be mentioned.`;
+  }
+
+  return 'Nobody is waiting on this pull request: no pending reviewers and no assignees.';
+}
+
+export async function remindItem(reference: PullRequestReference): Promise<ReminderResult> {
   // Recorded like a webhook's verdict, so the dashboard's recent deliveries explain
   // a reminder that did not go out the same way they explain any other silence.
-  const verdict = (outcome: DeliveryOutcome, detail: string): ReminderResult => {
-    recordDelivery(reference.repo, LABEL, outcome, detail);
-    return { outcome, detail, targets: 0 };
+  const verdict = (outcome: DeliveryOutcome, detail: string, kind?: ItemKind): ReminderResult => {
+    recordDelivery(
+      reference.repo,
+      kind ? EVENT_LABELS[TOGGLES[kind]] : GENERIC_LABEL,
+      outcome,
+      detail,
+    );
+    return { outcome, detail, kind, targets: 0 };
   };
-  const skip = (detail: string): ReminderResult => verdict('skipped', detail);
 
   if (!getGithubNotifySettings().enabled) {
     return { outcome: 'skipped', detail: 'GitHub notifications are switched off.', targets: 0 };
@@ -155,31 +193,34 @@ export async function remindPullRequest(reference: PullRequestReference): Promis
 
   const config = container.config.githubApp;
   if (!config) {
-    return skip(
-      'The bot has no GitHub App credentials, so it cannot read the pull request. Set GITHUB_APP_ID and the private key.',
+    return verdict(
+      'skipped',
+      'The bot has no GitHub App credentials, so it cannot read the item. Set GITHUB_APP_ID and the private key.',
     );
   }
 
   const left = cooldownLeft(reference);
   if (left > 0) {
-    return skip(
-      `This pull request was reminded about a moment ago — try again in ${Math.ceil(left / 60)} minute(s).`,
+    return verdict(
+      'skipped',
+      `#${reference.number} was reminded about a moment ago — try again in ${Math.ceil(left / 60)} minute(s).`,
     );
   }
 
-  const lookup = await fetchPullRequest(config, reference.repo, reference.number);
+  const lookup = await fetchItem(config, reference.repo, reference.number);
   if (!lookup.ok) {
     return verdict(lookup.reason === 'failed' ? 'failed' : 'skipped', lookup.detail);
   }
 
-  const reason = notWorthReminding(lookup.snapshot);
+  const { snapshot } = lookup;
+  const reason = notWorthReminding(snapshot);
   if (reason) {
-    return skip(reason);
+    return verdict('skipped', reason, snapshot.kind);
   }
 
-  const notification = asNotification(reference, lookup.snapshot);
+  const notification = asNotification(reference, snapshot);
   if (notification.targets.length === 0) {
-    return skip('Nobody is waiting on this pull request: no pending reviewers and no assignees.');
+    return verdict('skipped', nobodyWaiting(snapshot), snapshot.kind);
   }
 
   const result = await dispatchGithubNotification(notification);
@@ -187,9 +228,16 @@ export async function remindPullRequest(reference: PullRequestReference): Promis
     lastSent.set(keyFor(reference), Date.now());
   }
 
+  // The people were pinged; the teams alongside them can only be named.
+  const teams =
+    snapshot.kind === 'pull' && snapshot.teams.length > 0
+      ? `Teams not mentioned (no Discord mapping yet): ${snapshot.teams.join(', ')}.`
+      : undefined;
+
   return {
     outcome: result.outcome,
-    detail: result.detail,
+    detail: [result.detail, teams].filter(Boolean).join(' ') || undefined,
+    kind: snapshot.kind,
     channelId: result.channelId,
     targets: notification.targets.length,
   };

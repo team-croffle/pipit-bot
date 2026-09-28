@@ -46,6 +46,7 @@ const UPDATING_TOGGLES = new Set<keyof GithubEventToggles>([
   'issueAssigned',
   // A reminder is read off the live pull request, so it knows the current people.
   'pullRequestReminded',
+  'issueReminded',
 ]);
 
 /** What became of one notification — the delivery record's verdict, plus where it went. */
