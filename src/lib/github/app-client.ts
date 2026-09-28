@@ -15,7 +15,6 @@ import { createSign } from 'node:crypto';
 import { container } from '@sapphire/framework';
 
 import type { GithubAppConfig } from '../env.js';
-import { asRecord, readIssueLike, type GithubIssueLike } from './payload-types.js';
 
 const API = 'https://api.github.com';
 const ACCEPT = 'application/vnd.github+json';
@@ -79,7 +78,7 @@ export class GithubResponseError extends Error {
   }
 }
 
-async function callGithub<T>(path: string, token: string): Promise<T> {
+export async function callGithub<T>(path: string, token: string): Promise<T> {
   const response = await fetch(`${API}${path}`, {
     headers: {
       accept: ACCEPT,
@@ -122,7 +121,7 @@ async function resolveInstallationId(config: GithubAppConfig, jwt: string): Prom
   return first.id;
 }
 
-async function getInstallationToken(config: GithubAppConfig): Promise<string> {
+export async function getInstallationToken(config: GithubAppConfig): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt - TOKEN_MARGIN_MS > now) {
     return cachedToken.token;
@@ -279,79 +278,4 @@ export async function listInstallationMembers(config: GithubAppConfig): Promise<
   };
   memberCache = { value: list, at: Date.now() };
   return list;
-}
-
-/** A pull request as it stands right now, read for a manual reminder. */
-export interface PullRequestSnapshot {
-  pull: GithubIssueLike;
-  state: 'open' | 'closed';
-  merged: boolean;
-}
-
-export type PullRequestLookup =
-  | { ok: true; snapshot: PullRequestSnapshot }
-  | { ok: false; reason: 'not-found' | 'forbidden' | 'failed'; detail: string };
-
-/**
- * Reads one pull request through the installation.
- *
- * The REST object names its fields the way the webhook's `pull_request` node does
- * (`number`, `title`, `user`, `assignees`, `requested_reviewers`, `draft`), so the
- * same reader turns it into the shape the notification path already understands.
- * `requested_reviewers` is the list GitHub trims as reviews land — which makes it
- * "who has not reviewed yet" without a second request for the reviews themselves.
- *
- * Never cached: the whole point of asking is to see the pull request as it is now.
- */
-export async function fetchPullRequest(
-  config: GithubAppConfig,
-  repo: string,
-  number: number,
-): Promise<PullRequestLookup> {
-  const path = `/repos/${repo}/pulls/${number}`;
-  try {
-    const token = await getInstallationToken(config);
-    const body = await callGithub<unknown>(path, token);
-    const pull = readIssueLike(body, true);
-    const row = asRecord(body);
-    if (!pull || !row) {
-      return { ok: false, reason: 'failed', detail: 'GitHub returned an unexpected shape.' };
-    }
-
-    return {
-      ok: true,
-      snapshot: {
-        pull,
-        state: row.state === 'closed' ? 'closed' : 'open',
-        merged: row.merged === true,
-      },
-    };
-  } catch (error) {
-    if (error instanceof GithubResponseError) {
-      // 404 is also what a repository outside the installation answers with.
-      if (error.status === 404) {
-        return {
-          ok: false,
-          reason: 'not-found',
-          detail: 'No such pull request, or the GitHub App is not installed on that repository.',
-        };
-      }
-
-      if (error.status === 403 || error.status === 401) {
-        return {
-          ok: false,
-          reason: 'forbidden',
-          detail:
-            'The GitHub App may not read pull requests — approve the Pull requests (read) permission.',
-        };
-      }
-    }
-
-    container.logger.warn('[github] pull request lookup failed:', error);
-    return {
-      ok: false,
-      reason: 'failed',
-      detail: error instanceof Error ? error.message : 'GitHub could not be reached.',
-    };
-  }
 }

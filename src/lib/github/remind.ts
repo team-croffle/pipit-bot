@@ -13,9 +13,9 @@
 
 import { container } from '@sapphire/framework';
 
-import { fetchPullRequest, type PullRequestSnapshot } from './app-client.js';
 import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
 import { dispatchGithubNotification } from './dispatch.js';
+import { fetchPullRequest, type PullRequestSnapshot } from './item-lookup.js';
 import type { GithubNotification } from './normalize-event.js';
 import { getGithubNotifySettings } from './settings.js';
 import { EVENT_LABELS } from './template.js';
