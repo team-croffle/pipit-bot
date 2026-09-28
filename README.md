@@ -75,7 +75,7 @@ Routing lives in `data/github-notify.json`: a default channel plus per-repositor
 
 Each event sends an **embed** composed on the same page — a plain line, a title, a description, fields, a footer, a colour and an optional timestamp. Every part is a template: `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignee}`, `{assignees}`, `{reviewers}` and `{mentions}` are substituted, and `{name|when set|when empty}` picks between two wordings depending on whether the value exists. A part that renders empty is left out.
 
-A pull request that has gone quiet can be **reminded about by hand** — `!pr owner/name #12` in Discord, or the "PR 다시 알리기" card on the GitHub page. The bot reads the pull request through the App (this is where `GITHUB_APP_ID` and the private key become necessary) and posts a `PR Reminder` to the repository's channel, mentioning everyone still asked to review plus the assignees, minus the author. Drafts, merged and closed pull requests, and ones with nobody waiting are not reminded about; the reason is answered in Discord and recorded in the recent deliveries. One reminder per pull request per five minutes. The `PR Reminder` event toggle is a permission switch for this — on by default, and switching it off for a repository blocks reminders there.
+A pull request or issue that has gone quiet can be **reminded about by hand** — `!remind owner/name #12` in Discord, or the "다시 알리기" card on the GitHub page. The repository may be given by its name alone (`!remind pipit-bot #12`) when exactly one installed repository has that name, and a pull request or issue link works too. The bot reads the item through the App (this is where `GITHUB_APP_ID` and the private key become necessary) and learns from GitHub which of the two the number is. A pull request gets a `PR Reminder` mentioning everyone still asked to review plus the assignees; an issue gets an `Issue Reminder` mentioning its assignees; the author is never mentioned. Teams asked to review are named but not mentioned, since they have no Discord mapping yet. Drafts and items with nobody waiting are not reminded about; for a merged or closed item nothing new is posted, but its announcement is brought up to date. The reason is answered in Discord and recorded in the recent deliveries. One reminder per item per five minutes. The `PR Reminder` and `Issue Reminder` event toggles are permission switches for this — on by default, and switching one off for a repository blocks that kind of reminder there.
 
 Which variables an event offers depends on what it can fill in — `{actor}` is the merger on a merge and the reviewer on a review, and `{reviewers}` (the outstanding request list) is not offered where GitHub has already emptied it. The editor lists the variables for the event being edited, and saving a template that names another one is rejected. Each event has its own default; an event you never edit follows it.
 
@@ -131,7 +131,7 @@ Dev streams are stored in `../shared/`.
 
 ## Commands
 
-- `!pr owner/name #12` (or `!pr owner/name 12`, `!pr <pull request URL>`) — reminds the reviewers who have not reviewed yet, plus the assignees, in the repository's notification channel. See the reminder section above
+- `!remind owner/name #12` (or `!remind name #12`, `!remind <pull request or issue URL>`) — reminds whoever a pull request or issue is waiting on, in the repository's notification channel. See the reminder section above. Replaced `!pr` in v0.6.6-rc.2
 - `!help` — lists every command with its description
 
 ### Music commands
