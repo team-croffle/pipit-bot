@@ -6,9 +6,9 @@ content. The notes are public: `AGENTS.md` §2 applies to every line.
 
 ## Titles
 
-| Kind | GitHub Release title | File |
-| --- | --- | --- |
-| Stable | `Release vX.Y.Z` | `pipit-bot_vX.Y.Z_release.md` |
+| Kind        | GitHub Release title      | File                               |
+| ----------- | ------------------------- | ---------------------------------- |
+| Stable      | `Release vX.Y.Z`          | `pipit-bot_vX.Y.Z_release.md`      |
 | Pre-release | `Pre-Release vX.Y.Z-rc.A` | `pipit-bot_vX.Y.Z-rc.A_release.md` |
 
 Headings inside the note use `Pipit Hub vX.Y.Z`.

@@ -7,11 +7,11 @@ Working rules for agents and collaborators in this repository. `CLAUDE.md` only 
 **Pipit** is a Discord bot for small development teams — GitHub reminders, reaction roles, invite logging and shared
 music, configured from one dashboard. This repository is one product made of three parts:
 
-| Part | Where | Stack |
-| --- | --- | --- |
-| Discord bot | `src/commands`, `src/listeners`, `src/preconditions`, `src/lib` | Sapphire, discord.js v14, discord-player v7 |
-| Embedded API | `src/api` (Hono) | `/api/*` for the dashboard (OIDC), `/internal/*` for the music worker (token), `/webhooks/github` |
-| Dashboard | `dashboard/` (Yarn workspace) | Vue 3, Vite, shadcn-vue, Tailwind — built to `dashboard/dist` and served at `GET /` |
+| Part         | Where                                                           | Stack                                                                                             |
+| ------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Discord bot  | `src/commands`, `src/listeners`, `src/preconditions`, `src/lib` | Sapphire, discord.js v14, discord-player v7                                                       |
+| Embedded API | `src/api` (Hono)                                                | `/api/*` for the dashboard (OIDC), `/internal/*` for the music worker (token), `/webhooks/github` |
+| Dashboard    | `dashboard/` (Yarn workspace)                                   | Vue 3, Vite, shadcn-vue, Tailwind — built to `dashboard/dist` and served at `GET /`               |
 
 Node.js 18+, TypeScript (ESM), Yarn 4. Quality: `tsc`, oxlint, oxfmt, husky + lint-staged. Remote: GitHub
 `team-croffle/pipit-bot` (`origin`), **public**.
@@ -120,14 +120,14 @@ committed and its contents never move into committed docs. The workflow is defin
 [.claude/skills/pipit-bot-workflow/SKILL.md](./.claude/skills/pipit-bot-workflow/SKILL.md) and driven by the commands in
 `.claude/commands/`:
 
-| Command | Does |
-| --- | --- |
-| `/planning-next` | Plans the next `.ai/ROADMAP.md` version: plan file + one work file per item |
-| `/planning-to <version>` | Plans every version up to the given one |
-| `/work [N]` | Does the next pending work item; finishing an rc's last item continues into `/test` and the rc loop |
-| `/work-to <N \| version-N \| version-rc.A \| version>` | Runs work items (and rc loops) up to a target |
-| `/test [version]` | Gates + scenarios, writes `.ai/test/…` |
-| `/release [rc\|patch\|minor\|major] [--dry-run]` | rc through the loop; stable only on explicit instruction |
+| Command                                                | Does                                                                                                |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `/planning-next`                                       | Plans the next `.ai/ROADMAP.md` version: plan file + one work file per item                         |
+| `/planning-to <version>`                               | Plans every version up to the given one                                                             |
+| `/work [N]`                                            | Does the next pending work item; finishing an rc's last item continues into `/test` and the rc loop |
+| `/work-to <N \| version-N \| version-rc.A \| version>` | Runs work items (and rc loops) up to a target                                                       |
+| `/test [version]`                                      | Gates + scenarios, writes `.ai/test/…`                                                              |
+| `/release [rc\|patch\|minor\|major] [--dry-run]`       | rc through the loop; stable only on explicit instruction                                            |
 
 The rc loop (push → PR → green checks → rebase-merge → release workflow → publish notes) is part of the workflow and runs
 without a separate approval once `/test` is green; stable releases, force pushes and tag deletion never do.
