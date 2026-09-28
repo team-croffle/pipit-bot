@@ -81,6 +81,9 @@ export const EVENT_VARIABLES: Record<GithubEventKey, readonly TemplateVariable[]
   issueResolved: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueClosed: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   issueReopened: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
+  // Like the pull request reminder, read off the issue as it stands: `{actor}` is the
+  // author. Issues have no reviewers, so the assignees are who it is waiting on.
+  issueReminded: [...COMMON, 'actor', 'author', 'assignees', 'mentions'],
   commentCreated: [...COMMON, 'actor', 'author', 'mentions'],
 };
 
@@ -109,6 +112,7 @@ export const EVENT_LABELS: Record<GithubEventKey, string> = {
   issueResolved: 'Issue Resolved',
   issueClosed: 'Issue Closed',
   issueReopened: 'Issue Reopened',
+  issueReminded: 'Issue Reminder',
   commentCreated: 'Comment',
 };
 
