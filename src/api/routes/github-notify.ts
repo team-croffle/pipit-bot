@@ -8,7 +8,7 @@ import {
 } from '../../lib/github/app-client.js';
 import { DEFAULT_EVENT_TEMPLATES } from '../../lib/github/default-templates.js';
 import { listDeliveries } from '../../lib/github/delivery-log.js';
-import { parsePullRequestReference, remindPullRequest } from '../../lib/github/remind.js';
+import { parsePullRequestReference, remindItem } from '../../lib/github/remind.js';
 import {
   getGithubNotifyLoadError,
   getGithubNotifySettings,
@@ -67,7 +67,7 @@ export function mountGithubNotifyRoutes(
       return c.json({ error: 'Give a repository as owner/name and a pull request number' }, 400);
     }
 
-    return c.json(await remindPullRequest(reference));
+    return c.json(await remindItem(reference));
   });
 
   app.get('/api/github/repositories', dashboardViewer, async (c) => {

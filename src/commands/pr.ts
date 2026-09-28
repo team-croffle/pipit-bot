@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { type Args, Command } from '@sapphire/framework';
 import type { Message } from 'discord.js';
 
-import { parsePullRequestReference, remindPullRequest } from '../lib/github/remind.js';
+import { parsePullRequestReference, remindItem } from '../lib/github/remind.js';
 
 const USAGE = [
   'Tell me which pull request to remind about.',
@@ -29,7 +29,7 @@ export class UserCommand extends Command {
       return;
     }
 
-    const result = await remindPullRequest(reference);
+    const result = await remindItem(reference);
     const subject = `${reference.repo}#${reference.number}`;
 
     if (result.outcome === 'sent') {
