@@ -174,6 +174,30 @@ function nobodyWaiting(snapshot: ItemSnapshot): string {
   return 'Nobody is waiting on this pull request: no pending reviewers and no assignees.';
 }
 
+/**
+ * A finished item — merged, or closed — has nobody left to nudge, but the message that
+ * announced it may still show an old title or old assignees. It is brought up to date
+ * and nothing new is posted. Nobody is pinged, so no cooldown applies either way.
+ */
+async function refreshAnnouncement(
+  reference: PullRequestReference,
+  snapshot: ItemSnapshot,
+  reason: string,
+): Promise<ReminderResult> {
+  const notification: GithubNotification = {
+    ...asNotification(reference, snapshot),
+    // The announcement's own event; the tracked message is re-rendered with its wording.
+    toggle: snapshot.kind === 'pull' ? 'pullRequestOpened' : 'issueOpened',
+    targets: [],
+    silent: true,
+    updateOnly: true,
+    note: reason,
+  };
+
+  const result = await dispatchGithubNotification(notification);
+  return { outcome: result.outcome, detail: result.detail, kind: snapshot.kind, targets: 0 };
+}
+
 export async function remindItem(reference: PullRequestReference): Promise<ReminderResult> {
   // Recorded like a webhook's verdict, so the dashboard's recent deliveries explain
   // a reminder that did not go out the same way they explain any other silence.
@@ -214,6 +238,10 @@ export async function remindItem(reference: PullRequestReference): Promise<Remin
 
   const { snapshot } = lookup;
   const reason = notWorthReminding(snapshot);
+  if (reason && snapshot.state === 'closed') {
+    return refreshAnnouncement(reference, snapshot, reason);
+  }
+
   if (reason) {
     return verdict('skipped', reason, snapshot.kind);
   }

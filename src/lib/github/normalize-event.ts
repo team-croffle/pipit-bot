@@ -47,6 +47,11 @@ export interface GithubNotification {
    * somebody asking a minute after the opening still means it.
    */
   manual?: boolean;
+  /**
+   * Why nothing new is posted, when the caller knows better than dispatch's generic
+   * wording — a reminder for a merged pull request says so instead of "nothing to post".
+   */
+  note?: string;
 }
 
 interface EventContext {
