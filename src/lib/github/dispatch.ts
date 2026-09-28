@@ -131,6 +131,10 @@ function echoesAnnouncement(notification: GithubNotification, tracked: TrackedMe
 
 /** The one line that explains why nothing was posted. */
 function silentReason(notification: GithubNotification, echo: boolean): string {
+  if (notification.note) {
+    return notification.note;
+  }
+
   if (echo) {
     return 'Everyone here was mentioned by the announcement a moment ago.';
   }
