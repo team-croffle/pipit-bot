@@ -113,6 +113,11 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
     { name: 'Reopened by', value: '{actor}', inline: true },
     ASSIGNEES,
   ]),
+  // The issue is still waiting on the assignees listed, and this is the nudge.
+  issueReminded: template('#f59e0b', [
+    { name: 'Author', value: '{author|{}|—}', inline: true },
+    ASSIGNEES,
+  ]),
   commentCreated: template('#64748b', [
     { name: 'Comment by', value: '{actor}', inline: true },
     { name: 'Author', value: '{author|{}|—}', inline: true },

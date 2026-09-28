@@ -32,6 +32,12 @@ export interface GithubEventToggles {
   /** Closed as not planned or duplicate. */
   issueClosed: boolean;
   issueReopened: boolean;
+  /**
+   * Whether a person may ask the bot to remind an issue's assignees — through
+   * `!remind` or the dashboard. The issue counterpart of `pullRequestReminded`, kept
+   * apart so the wording and the per-repository permission can differ (v0.6.6).
+   */
+  issueReminded: boolean;
   commentCreated: boolean;
 }
 
@@ -97,6 +103,7 @@ export const TOGGLE_KEYS = [
   'issueResolved',
   'issueClosed',
   'issueReopened',
+  'issueReminded',
   'commentCreated',
 ] as const satisfies readonly (keyof GithubEventToggles)[];
 
@@ -120,7 +127,7 @@ const SPLIT_FROM_REVIEW_SUBMITTED = [
 // The toggles that start on. Every notification starts off — an operator opts into
 // each kind of message — but the reminder toggle only permits something a person
 // asks for by hand, so the sensible start is "allowed".
-const ON_BY_DEFAULT = new Set<keyof GithubEventToggles>(['pullRequestReminded']);
+const ON_BY_DEFAULT = new Set<keyof GithubEventToggles>(['pullRequestReminded', 'issueReminded']);
 
 // Derived from the key list, so a new event cannot be missed here — the same reason
 // the dashboard derives its copy from the label list.

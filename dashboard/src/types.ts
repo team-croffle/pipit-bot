@@ -133,6 +133,8 @@ export interface GithubEventToggles {
   /** Closed as not planned or duplicate. */
   issueClosed: boolean;
   issueReopened: boolean;
+  /** Permits the manual issue reminder (`!remind` / dashboard). */
+  issueReminded: boolean;
   commentCreated: boolean;
 }
 

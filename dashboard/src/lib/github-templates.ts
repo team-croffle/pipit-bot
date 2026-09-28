@@ -19,7 +19,7 @@ export const eventLabels: {
   { key: 'pullRequestReopened', label: 'PR 재오픈', group: 'PR' },
   {
     key: 'pullRequestReminded',
-    label: 'PR 리마인더 (!pr · 대시보드에서 다시 알리기 허용)',
+    label: 'PR 리마인더 (!remind · 대시보드에서 다시 알리기 허용)',
     group: 'PR',
     defaultOn: true,
   },
@@ -28,6 +28,12 @@ export const eventLabels: {
   { key: 'issueResolved', label: 'Issue 해결 (Completed)', group: 'Issue' },
   { key: 'issueClosed', label: 'Issue 닫음 (Not planned · Duplicate)', group: 'Issue' },
   { key: 'issueReopened', label: 'Issue 재오픈', group: 'Issue' },
+  {
+    key: 'issueReminded',
+    label: 'Issue 리마인더 (!remind · 대시보드에서 다시 알리기 허용)',
+    group: 'Issue',
+    defaultOn: true,
+  },
   { key: 'commentCreated', label: '코멘트 작성 (리뷰 코멘트 포함)', group: '공통' },
 ];
 
@@ -52,6 +58,7 @@ export const actorLabels: Record<GithubEventKey, string> = {
   issueResolved: 'Issue를 해결 처리한 사람',
   issueClosed: 'Issue를 닫은 사람',
   issueReopened: 'Issue를 다시 연 사람',
+  issueReminded: 'Issue 작성자',
   commentCreated: '코멘트를 쓴 사람',
 };
 
@@ -114,6 +121,7 @@ const ACTOR_SAMPLE: Partial<Record<GithubEventKey, string>> = {
   issueResolved: '@해결한사람',
   issueClosed: '@닫은사람',
   issueReopened: '@다시연사람',
+  issueReminded: '@작성자',
   commentCreated: '@작성자',
 };
 
