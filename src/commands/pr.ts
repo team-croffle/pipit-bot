@@ -2,7 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { type Args, Command } from '@sapphire/framework';
 import type { Message } from 'discord.js';
 
-import { parsePullRequestReference, remindItem } from '../lib/github/remind.js';
+import { parseItemReference, remindReference } from '../lib/github/remind-reference.js';
 
 const USAGE = [
   'Tell me which pull request to remind about.',
@@ -23,14 +23,14 @@ const USAGE = [
 export class UserCommand extends Command {
   public override async messageRun(message: Message, args: Args): Promise<void> {
     const text = await args.rest('string').catch(() => '');
-    const reference = parsePullRequestReference(text);
+    const reference = parseItemReference(text);
     if (!reference) {
       await message.reply(USAGE);
       return;
     }
 
-    const result = await remindItem(reference);
-    const subject = `${reference.repo}#${reference.number}`;
+    const result = await remindReference(reference);
+    const subject = `${result.repo}#${reference.number}`;
 
     if (result.outcome === 'sent') {
       const where = result.channelId ? ` in <#${result.channelId}>` : '';

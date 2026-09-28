@@ -8,7 +8,7 @@ import {
 } from '../../lib/github/app-client.js';
 import { DEFAULT_EVENT_TEMPLATES } from '../../lib/github/default-templates.js';
 import { listDeliveries } from '../../lib/github/delivery-log.js';
-import { parsePullRequestReference, remindItem } from '../../lib/github/remind.js';
+import { parseItemReference, remindReference } from '../../lib/github/remind-reference.js';
 import {
   getGithubNotifyLoadError,
   getGithubNotifySettings,
@@ -62,12 +62,12 @@ export function mountGithubNotifyRoutes(
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     const repo = typeof body?.repo === 'string' ? body.repo.trim() : '';
     const number = typeof body?.number === 'number' ? body.number : Number(body?.number);
-    const reference = parsePullRequestReference(`${repo} ${number}`);
+    const reference = parseItemReference(`${repo} ${number}`);
     if (!reference) {
       return c.json({ error: 'Give a repository as owner/name and a pull request number' }, 400);
     }
 
-    return c.json(await remindItem(reference));
+    return c.json(await remindReference(reference));
   });
 
   app.get('/api/github/repositories', dashboardViewer, async (c) => {

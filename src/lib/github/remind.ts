@@ -25,7 +25,8 @@ import type { GithubIssueLike } from './payload-types.js';
 import { getGithubNotifySettings } from './settings.js';
 import { EVENT_LABELS } from './template.js';
 
-export interface PullRequestReference {
+/** A resolved item: its repository and number. Parsing and name lookup: remind-reference.ts. */
+export interface ItemReference {
   /** Lower-cased `owner/name`. */
   repo: string;
   number: number;
@@ -52,39 +53,12 @@ const GENERIC_LABEL = 'Reminder';
 const COOLDOWN_MS = 5 * 60 * 1000;
 const lastSent = new Map<string, number>();
 
-const REPO_NAME = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
-// `owner/name #12`, `owner/name 12`, or the pull request's own URL.
-const REFERENCE = /^([\w.-]+\/[\w.-]+)\s+#?(\d{1,9})$/;
-const URL_REFERENCE =
-  /^(?:https?:\/\/)?(?:www\.)?github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d{1,9})(?:[/?#].*)?$/i;
-
-/**
- * Reads the three spellings a person might use. Returns undefined for anything else,
- * including a repository name that could not be part of a URL — the name goes into
- * the API path, so only the characters GitHub itself allows get through.
- */
-export function parsePullRequestReference(text: string): PullRequestReference | undefined {
-  const trimmed = text.trim();
-  const match = URL_REFERENCE.exec(trimmed) ?? REFERENCE.exec(trimmed);
-  if (!match?.[1] || !match[2]) {
-    return undefined;
-  }
-
-  const repo = match[1].toLowerCase();
-  const number = Number(match[2]);
-  if (!REPO_NAME.test(repo) || !Number.isSafeInteger(number) || number < 1) {
-    return undefined;
-  }
-
-  return { repo, number };
-}
-
-function keyFor(reference: PullRequestReference): string {
+function keyFor(reference: ItemReference): string {
   return `${reference.repo}#${reference.number}`;
 }
 
 /** Seconds left on the cooldown, or 0 when a reminder may go now. */
-function cooldownLeft(reference: PullRequestReference): number {
+function cooldownLeft(reference: ItemReference): number {
   const at = lastSent.get(keyFor(reference));
   if (at === undefined) {
     return 0;
@@ -132,10 +106,7 @@ function waitingOn(author: string, groups: string[][]): string[] {
  * The reminder as a notification: the author is its actor. `requested_reviewers` is
  * the list GitHub trims as reviews land, so it already excludes people who reviewed.
  */
-function asNotification(
-  reference: PullRequestReference,
-  snapshot: ItemSnapshot,
-): GithubNotification {
+function asNotification(reference: ItemReference, snapshot: ItemSnapshot): GithubNotification {
   const item: GithubIssueLike = snapshot.kind === 'pull' ? snapshot.pull : snapshot.issue;
   const author = item.user?.login ?? '';
   const reviewers =
@@ -180,7 +151,7 @@ function nobodyWaiting(snapshot: ItemSnapshot): string {
  * and nothing new is posted. Nobody is pinged, so no cooldown applies either way.
  */
 async function refreshAnnouncement(
-  reference: PullRequestReference,
+  reference: ItemReference,
   snapshot: ItemSnapshot,
   reason: string,
 ): Promise<ReminderResult> {
@@ -198,7 +169,7 @@ async function refreshAnnouncement(
   return { outcome: result.outcome, detail: result.detail, kind: snapshot.kind, targets: 0 };
 }
 
-export async function remindItem(reference: PullRequestReference): Promise<ReminderResult> {
+export async function remindItem(reference: ItemReference): Promise<ReminderResult> {
   // Recorded like a webhook's verdict, so the dashboard's recent deliveries explain
   // a reminder that did not go out the same way they explain any other silence.
   const verdict = (outcome: DeliveryOutcome, detail: string, kind?: ItemKind): ReminderResult => {
