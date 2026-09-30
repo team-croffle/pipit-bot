@@ -108,6 +108,14 @@ export interface GithubReminderResult {
 export interface DiscordRole {
   id: string;
   name: string;
+  /** Whether anyone may mention the role; a non-mentionable one only pings from a bot with "모두 멘션". */
+  mentionable: boolean;
+}
+
+export interface DiscordRoleList {
+  roles: DiscordRole[];
+  /** True when the bot may ping any role regardless of `mentionable`. */
+  canMentionAll: boolean;
 }
 
 export interface DiscordMember {
