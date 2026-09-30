@@ -2,8 +2,9 @@ import { createReadStream, existsSync } from 'node:fs';
 import { join, normalize, relative } from 'node:path';
 import { Readable } from 'node:stream';
 
+import { container } from '@sapphire/framework';
 import { Hono, type Context } from 'hono';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { getCookie } from 'hono/cookie';
 import { stream } from 'hono/streaming';
 
 import { rootDir } from '../lib/constants.js';
@@ -23,17 +24,15 @@ import {
 } from '../lib/guild-event-settings.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
 import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
-import { buildLoginRedirect, buildLogoutRedirect, exchangeAuthorizationCode } from './auth/oidc.js';
-import { createSessionToken, SESSION_COOKIE, SESSION_TTL_MS } from './auth/session.js';
+import { SESSION_COOKIE } from './auth/session.js';
 import type { ApiVariables } from './context.js';
+import { mountAuthRoutes } from './routes/auth.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
 import { mountMusicRoutes } from './routes/music.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
-const OIDC_STATE_COOKIE = 'pipit_oidc_state';
-const OIDC_VERIFIER_COOKIE = 'pipit_oidc_verifier';
 
 const MIME_BY_EXT: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
@@ -49,15 +48,6 @@ const MIME_BY_EXT: Record<string, string> = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
-
-function cookieBase(config: EnvConfig) {
-  return {
-    httpOnly: true,
-    secure: config.nodeEnv === 'production',
-    sameSite: 'Lax' as const,
-    path: '/',
-  };
-}
 
 function looksLikeAsset(pathname: string): boolean {
   const name = pathname.split('/').at(-1) ?? '';
@@ -100,69 +90,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
 
   app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
-  app.get('/api/auth/login', async (c) => {
-    if (!config.oidc) {
-      return c.json({ error: 'OIDC is not configured' }, 503);
-    }
-
-    const { redirectTo, state, codeVerifier } = await buildLoginRedirect(config);
-    const base = cookieBase(config);
-    setCookie(c, OIDC_STATE_COOKIE, state, { ...base, maxAge: 600 });
-    setCookie(c, OIDC_VERIFIER_COOKIE, codeVerifier, { ...base, maxAge: 600 });
-    return c.redirect(redirectTo.href, 302);
-  });
-
-  app.get('/api/auth/callback', async (c) => {
-    if (!config.oidc) {
-      return c.json({ error: 'OIDC is not configured' }, 503);
-    }
-
-    const state = getCookie(c, OIDC_STATE_COOKIE);
-    const codeVerifier = getCookie(c, OIDC_VERIFIER_COOKIE);
-    if (!state || !codeVerifier) {
-      return c.json({ error: 'Missing OIDC state' }, 400);
-    }
-
-    try {
-      const identity = await exchangeAuthorizationCode(
-        config,
-        new URL(c.req.url),
-        state,
-        codeVerifier,
-      );
-      const token = createSessionToken(identity, config.oidc.sessionSecret);
-      const base = cookieBase(config);
-      setCookie(c, SESSION_COOKIE, token, {
-        ...base,
-        maxAge: Math.floor(SESSION_TTL_MS / 1000),
-      });
-      deleteCookie(c, OIDC_STATE_COOKIE, base);
-      deleteCookie(c, OIDC_VERIFIER_COOKIE, base);
-      return c.redirect('/', 302);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'OIDC callback failed';
-      return c.json({ error: message }, 400);
-    }
-  });
-
-  async function handleLogout(c: Context<{ Variables: ApiVariables }>) {
-    const cfg = c.get('config');
-    const base = cookieBase(cfg);
-    deleteCookie(c, SESSION_COOKIE, base);
-
-    if (cfg.oidc) {
-      const redirectUri = `${new URL(cfg.oidc.redirectUri).origin}/`;
-      const endSession = await buildLogoutRedirect(cfg, redirectUri);
-      if (endSession) {
-        return c.redirect(endSession.href, 302);
-      }
-    }
-
-    return c.redirect('/', 302);
-  }
-
-  app.post('/api/auth/logout', (c) => handleLogout(c));
-  app.get('/api/auth/logout', (c) => handleLogout(c));
+  mountAuthRoutes(app, config);
 
   app.get('/api/me', (c) => {
     const identity = resolveDashboardIdentity(config, getCookie(c, SESSION_COOKIE));
@@ -292,8 +220,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   });
 
   app.onError((error, c) => {
-    // oxlint-disable-next-line no-console
-    console.error('API handler error:', error);
+    container.logger.error('[api] unhandled error:', error);
     return c.json({ error: 'Internal server error' }, 500);
   });
 
