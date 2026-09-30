@@ -4,17 +4,46 @@ import type { EnvConfig, OidcConfig } from '../../lib/env.js';
 
 let cachedConfig: client.Configuration | undefined;
 
+/**
+ * Discovery against the issuer failed — DNS, TCP, TLS, a non-2xx or a malformed
+ * document. The routes answer this differently from a bad code or state, so it
+ * carries its own class rather than being inferred from a message.
+ */
+export class OidcDiscoveryError extends Error {
+  public constructor(issuer: string, cause: unknown) {
+    super(`OIDC discovery failed for ${issuer}`, { cause });
+    this.name = 'OidcDiscoveryError';
+  }
+}
+
+/** The innermost message of an error chain, e.g. `getaddrinfo ENOTFOUND host`. */
+export function describeErrorCause(error: unknown): string {
+  let current: unknown = error;
+  let message = current instanceof Error ? current.message : String(current);
+  while (current instanceof Error && current.cause !== undefined) {
+    current = current.cause;
+    message = current instanceof Error ? current.message : String(current);
+  }
+
+  return message;
+}
+
 export async function getOidcConfiguration(config: EnvConfig): Promise<client.Configuration> {
   if (!config.oidc) {
     throw new Error('OIDC is not configured');
   }
 
+  // A failed discovery is not cached, so the next request retries the issuer.
   if (!cachedConfig) {
-    cachedConfig = await client.discovery(
-      new URL(config.oidc.issuer),
-      config.oidc.clientId,
-      config.oidc.clientSecret,
-    );
+    try {
+      cachedConfig = await client.discovery(
+        new URL(config.oidc.issuer),
+        config.oidc.clientId,
+        config.oidc.clientSecret,
+      );
+    } catch (error) {
+      throw new OidcDiscoveryError(config.oidc.issuer, error);
+    }
   }
 
   return cachedConfig;
