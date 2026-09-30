@@ -7,9 +7,9 @@
   import MemberSelect from '@/components/common/member-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
-  import SuggestInput from '@/components/common/suggest-input.vue';
   import AccountSelect from '@/components/github/account-select.vue';
   import RemindCard from '@/components/github/remind-card.vue';
+  import RepoRuleRow from '@/components/github/repo-rule-row.vue';
   import TeamMappings from '@/components/github/team-mappings.vue';
   import TemplateList from '@/components/github/template-list.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -43,7 +43,6 @@
     DiscordMember,
     GithubAccountMapping,
     GithubDelivery,
-    GithubEventToggles,
     GithubMember,
     GithubMemberList,
     GithubNotifySettings,
@@ -282,22 +281,8 @@
     return `${on.length}개 이벤트`;
   }
 
-  function setRepoEvent(index: number, key: keyof GithubEventToggles, on: boolean): void {
-    const events = settings.value.repos[index]?.events;
-    if (events) {
-      events[key] = on;
-    }
-  }
-
-  // WHY: `events: null` means the repository inherits the defaults. Turning the
-  // override on seeds it from the current defaults so nothing silently changes.
-  function toggleRepoOverride(index: number, on: boolean): void {
-    const row = settings.value.repos[index];
-    if (!row) {
-      return;
-    }
-
-    row.events = on ? { ...settings.value.events } : null;
+  function setRepoRow(index: number, rule: GithubRepoRule): void {
+    settings.value.repos = settings.value.repos.map((row, item) => (item === index ? rule : row));
   }
 
   function addAccountRow(): void {
@@ -610,87 +595,18 @@
                     </TableRow>
                     <TableRow v-if="openRepos.has(index)" class="bg-muted/40 hover:bg-muted/40">
                       <TableCell colspan="4" class="p-4">
-                        <div class="flex flex-col gap-4">
-                          <div class="grid gap-3 sm:grid-cols-2">
-                            <div class="flex flex-col gap-1.5">
-                              <Label :for="`repo-name-${index}`">저장소</Label>
-                              <SuggestInput
-                                :id="`repo-name-${index}`"
-                                v-model="row.repo"
-                                :options="repositories"
-                                :list-id="`repo-options-${index}`"
-                                :loading="repositoriesLoading"
-                                :disabled="readOnly"
-                                placeholder="owner/name"
-                                @open="loadRepositories"
-                              />
-                            </div>
-                            <div class="flex flex-col gap-1.5">
-                              <Label :for="`repo-channel-${index}`">채널</Label>
-                              <ChannelSelect
-                                :id="`repo-channel-${index}`"
-                                v-model="row.channelId"
-                                :channels="channels"
-                                placeholder="기본 채널 사용"
-                                :empty-value="null"
-                                :disabled="readOnly"
-                              />
-                            </div>
-                          </div>
-
-                          <div class="flex items-center justify-between gap-4 border-t pt-4">
-                            <Label :for="`repo-ov-${index}`" class="flex-col items-start gap-1">
-                              <span>이 저장소에서 이벤트 재정의</span>
-                              <span class="text-muted-foreground text-xs font-normal">
-                                끄면 기본 알림 이벤트를 그대로 따릅니다
-                              </span>
-                            </Label>
-                            <Switch
-                              :id="`repo-ov-${index}`"
-                              :model-value="row.events !== null"
-                              :disabled="readOnly"
-                              @update:model-value="toggleRepoOverride(index, $event === true)"
-                            />
-                          </div>
-
-                          <div
-                            class="grid gap-3 sm:grid-cols-2"
-                            :class="row.events ? '' : 'pointer-events-none opacity-40'"
-                          >
-                            <div
-                              v-for="event in eventLabels"
-                              :key="event.key"
-                              class="flex items-center gap-2.5"
-                            >
-                              <Checkbox
-                                :id="`repo-${index}-${event.key}`"
-                                :model-value="
-                                  row.events ? row.events[event.key] : settings.events[event.key]
-                                "
-                                :disabled="readOnly || !row.events"
-                                @update:model-value="
-                                  setRepoEvent(index, event.key, $event === true)
-                                "
-                              />
-                              <Label :for="`repo-${index}-${event.key}`" class="font-normal">
-                                {{ event.label }}
-                              </Label>
-                            </div>
-                          </div>
-
-                          <div class="flex justify-end border-t pt-4">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              class="text-destructive hover:text-destructive"
-                              :disabled="readOnly"
-                              @click="removeRepoRow(index)"
-                            >
-                              <Trash2 />
-                              저장소 삭제
-                            </Button>
-                          </div>
-                        </div>
+                        <RepoRuleRow
+                          :model-value="row"
+                          :channels="channels"
+                          :repositories="repositories"
+                          :repositories-loading="repositoriesLoading"
+                          :default-events="settings.events"
+                          :read-only="readOnly"
+                          :id-prefix="`repo-${index}`"
+                          @update:model-value="setRepoRow(index, $event)"
+                          @remove="removeRepoRow(index)"
+                          @open-repositories="loadRepositories"
+                        />
                       </TableCell>
                     </TableRow>
                   </template>
