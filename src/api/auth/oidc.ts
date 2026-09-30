@@ -88,7 +88,7 @@ export async function buildLoginRedirect(config: EnvConfig): Promise<{
 
   const parameters: Record<string, string> = {
     redirect_uri: config.oidc!.redirectUri,
-    scope: 'openid profile email groups',
+    scope: config.oidc!.scopes.join(' '),
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
     state,
