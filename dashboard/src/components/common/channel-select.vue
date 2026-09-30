@@ -10,6 +10,7 @@
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+  import { EMPTY } from '@/lib/picker';
   import type { DiscordChannel } from '@/types';
 
   /**
@@ -32,10 +33,8 @@
   const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 
   const UNCATEGORIZED = '카테고리 없음';
-  // reka-ui carries the selection as a plain value, and an empty string reads as
-  // "nothing selected" to it. Both of our empty shapes (null and '') therefore ride
-  // through the component as this sentinel and are mapped back on the way out.
-  const EMPTY = '__none__';
+  // Both of our empty shapes (null and '') ride through the Select as EMPTY and
+  // are mapped back on the way out.
 
   const groups = computed(() => {
     const result: { category: string; channels: DiscordChannel[] }[] = [];
@@ -68,7 +67,7 @@
 
 <template>
   <Select v-model="selected" :disabled="disabled">
-    <SelectTrigger :id="id" class="w-full">
+    <SelectTrigger :id="id" class="w-full min-w-0">
       <SelectValue :placeholder="placeholder ?? '선택'">{{ label }}</SelectValue>
     </SelectTrigger>
     <SelectContent>

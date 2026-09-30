@@ -8,6 +8,7 @@
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+  import { EMPTY } from '@/lib/picker';
 
   /** A flat picker for the id/name lists the bot returns (roles, guild members). */
   const props = defineProps<{
@@ -19,10 +20,6 @@
   }>();
 
   const emit = defineEmits<{ 'update:modelValue': [string] }>();
-
-  // See channel-select: reka-ui treats '' as "no selection", so the unset state
-  // travels as a sentinel and is mapped back to '' on the way out.
-  const EMPTY = '__none__';
 
   const selected = computed({
     get: () => props.modelValue || EMPTY,

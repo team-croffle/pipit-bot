@@ -8,6 +8,7 @@
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+  import { EMPTY, PICKER_TEXT } from '@/lib/picker';
   import type { DiscordMember } from '@/types';
 
   const props = defineProps<{
@@ -19,9 +20,6 @@
   }>();
 
   const emit = defineEmits<{ 'update:modelValue': [string]; open: [] }>();
-
-  // See channel-select: reka-ui treats '' as "no selection".
-  const EMPTY = '__none__';
 
   const selected = computed({
     get: () => props.modelValue || EMPTY,
@@ -37,7 +35,7 @@
 
 <template>
   <Select v-model="selected" :disabled="disabled" @update:open="$event && emit('open')">
-    <SelectTrigger :id="id" class="w-full">
+    <SelectTrigger :id="id" class="w-full min-w-0">
       <SelectValue placeholder="멤버 선택">
         <span v-if="current" class="flex min-w-0 items-center gap-2">
           <img
@@ -49,12 +47,15 @@
           <span class="truncate">{{ current.name }}</span>
         </span>
         <!-- A mapping saved before the member list loaded still has to render. -->
-        <span v-else-if="modelValue" class="font-gothic truncate text-xs">{{ modelValue }}</span>
+        <span v-else-if="modelValue" class="font-gothic truncate">{{ modelValue }}</span>
+        <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
         <span v-else>멤버 선택</span>
       </SelectValue>
     </SelectTrigger>
     <SelectContent>
-      <div v-if="loading" class="text-muted-foreground px-2 py-1.5 text-sm">불러오는 중…</div>
+      <div v-if="loading" class="text-muted-foreground px-2 py-1.5 text-sm">
+        {{ PICKER_TEXT.loading }}
+      </div>
       <div v-else-if="members.length === 0" class="text-muted-foreground px-2 py-1.5 text-sm">
         가져온 멤버가 없습니다.
       </div>

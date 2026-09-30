@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue';
+  import { computed } from 'vue';
 
   import { Input } from '@/components/ui/input';
   import {
@@ -9,6 +9,7 @@
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+  import { EMPTY, MANUAL, PICKER_TEXT, useManualFallback } from '@/lib/picker';
   import type { DiscordRole } from '@/types';
 
   /**
@@ -30,43 +31,27 @@
 
   const emit = defineEmits<{ 'update:modelValue': [string]; open: [] }>();
 
-  // See channel-select: reka-ui treats '' as "no selection".
-  const EMPTY = '__none__';
-  const MANUAL = '__manual__';
-
   const current = computed(() => props.roles.find((role) => role.id === props.modelValue));
 
-  // An id that is not in the list has to render as typed, so the row opens in
-  // manual mode rather than looking empty — but not while the list is still on its way.
-  const manual = ref(false);
-
-  watch(
-    () => [props.modelValue, props.roles.length, props.loading, props.unavailable] as const,
-    () => {
-      if (props.unavailable || (props.modelValue && !props.loading && !current.value)) {
-        manual.value = true;
-      }
-    },
-    { immediate: true },
-  );
+  // An id the list does not know has to render as typed, so the row opens in
+  // manual mode rather than looking empty — once the list has actually arrived.
+  const { manual, onOpen, pick } = useManualFallback({
+    value: () => props.modelValue,
+    known: () => current.value !== undefined,
+    count: () => props.roles.length,
+    loading: () => props.loading,
+    unavailable: () => props.unavailable,
+    requestList: () => emit('open'),
+  });
 
   const selected = computed({
     get: () => (current.value ? props.modelValue : EMPTY),
-    set: (next: string) => {
-      if (next === MANUAL) {
-        manual.value = true;
-        emit('update:modelValue', '');
-        return;
-      }
-
-      manual.value = false;
-      emit('update:modelValue', next === EMPTY ? '' : next);
-    },
+    set: (next: string) => emit('update:modelValue', pick(next)),
   });
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="flex min-w-0 flex-col gap-1.5">
     <Input
       v-if="manual"
       :id="id"
@@ -78,23 +63,26 @@
       inputmode="numeric"
       @update:model-value="emit('update:modelValue', String($event))"
     />
-    <Select v-else v-model="selected" :disabled="disabled" @update:open="$event && emit('open')">
-      <SelectTrigger :id="id" class="w-full">
+    <Select v-else v-model="selected" :disabled="disabled" @update:open="onOpen">
+      <SelectTrigger :id="id" class="w-full min-w-0">
         <SelectValue placeholder="역할 선택">
           <span v-if="current" class="truncate">@{{ current.name }}</span>
-          <span v-else-if="loading" class="text-muted-foreground">역할 불러오는 중…</span>
+          <span v-else-if="modelValue" class="font-gothic truncate">{{ modelValue }}</span>
+          <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
           <span v-else>역할 선택</span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <div v-if="loading" class="text-muted-foreground px-2 py-1.5 text-sm">불러오는 중…</div>
+        <div v-if="loading" class="text-muted-foreground px-2 py-1.5 text-sm">
+          {{ PICKER_TEXT.loading }}
+        </div>
         <div v-else-if="roles.length === 0" class="text-muted-foreground px-2 py-1.5 text-sm">
           가져온 역할이 없습니다 — 직접 입력하세요.
         </div>
         <SelectItem v-for="role in roles" :key="role.id" :value="role.id">
           @{{ role.name }}
         </SelectItem>
-        <SelectItem :value="MANUAL">직접 입력…</SelectItem>
+        <SelectItem :value="MANUAL">{{ PICKER_TEXT.manual }}</SelectItem>
       </SelectContent>
     </Select>
     <button
@@ -104,7 +92,7 @@
       :disabled="disabled"
       @click="manual = false"
     >
-      목록에서 고르기
+      {{ PICKER_TEXT.back }}
     </button>
   </div>
 </template>
