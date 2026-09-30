@@ -63,6 +63,7 @@
     eventTemplates: {},
     repos: [],
     accounts: [],
+    teams: [],
   });
   const templateDefaults = ref<GithubTemplateDefaults | null>(null);
 
@@ -197,6 +198,7 @@
         eventTemplates: { ...loaded.eventTemplates },
         repos: loaded.repos ?? [],
         accounts: loaded.accounts ?? [],
+        teams: loaded.teams ?? [],
       };
       loadError.value = loaded.loadError ?? '';
       templateDefaults.value = defaultsBody;
@@ -369,6 +371,7 @@
         eventTemplates: settings.value.eventTemplates,
         repos,
         accounts,
+        teams: settings.value.teams,
       });
       settings.value = {
         ...result,
@@ -377,6 +380,7 @@
         eventTemplates: result.eventTemplates ?? {},
         repos: result.repos ?? [],
         accounts: result.accounts ?? [],
+        teams: result.teams ?? [],
       };
       saved.value = '저장했습니다.';
       loadError.value = '';

@@ -154,6 +154,12 @@ export interface GithubAccountMapping {
   discordUserId: string;
 }
 
+/** A GitHub team (`org/slug`) and the Discord role mentioned in its place. */
+export interface GithubTeamMapping {
+  githubTeam: string;
+  discordRoleId: string;
+}
+
 export type GithubEventKey = keyof GithubEventToggles;
 
 export interface EmbedFieldTemplate {
@@ -186,6 +192,7 @@ export interface GithubNotifySettings {
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
+  teams: GithubTeamMapping[];
   /** Set when the settings file on disk could not be read; defaults are in use. */
   loadError?: string | null;
 }
