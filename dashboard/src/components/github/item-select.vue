@@ -11,6 +11,7 @@
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+  import { EMPTY, MANUAL, PICKER_TEXT } from '@/lib/picker';
   import type { GithubOpenItem, GithubOpenItemList } from '@/types';
 
   /**
@@ -36,15 +37,13 @@
 
   const emit = defineEmits<{ 'update:modelValue': [number | ''] }>();
 
-  // See channel-select: reka-ui treats '' as "no selection".
-  const EMPTY = '__none__';
-  const MANUAL = '__manual__';
   const FULL_NAME = /^[\w.-]+\/[\w.-]+$/;
   const KIND_LABEL = { pull: 'PR', issue: 'Issue' } as const;
   const REASON_HINT = {
-    'no-credentials': 'GitHub App 자격증명이 없어 목록을 불러올 수 없습니다 — 번호를 직접 입력',
-    'not-installed': '이 저장소는 App에 설치돼 있지 않습니다 — 번호를 직접 입력',
-    'request-failed': '목록을 가져오지 못했습니다 — 번호를 직접 입력',
+    'no-credentials':
+      'GitHub App 자격증명이 없어 목록을 불러올 수 없습니다 — 번호를 직접 입력하세요.',
+    'not-installed': '이 저장소는 App에 설치돼 있지 않습니다 — 번호를 직접 입력하세요.',
+    'request-failed': '목록을 가져오지 못했습니다 — 번호를 직접 입력하세요.',
   } as const;
 
   const repoName = computed(() => props.repo.trim());
@@ -133,7 +132,7 @@
       return REASON_HINT[list.value.reason ?? 'request-failed'];
     }
     if (list.value && items.value.length === 0) {
-      return '열린 PR·Issue가 없습니다 — 번호를 직접 입력';
+      return '열린 PR·Issue가 없습니다 — 번호를 직접 입력하세요.';
     }
 
     return null;
@@ -194,7 +193,7 @@
             <span class="font-gothic">#{{ current.number }}</span> · {{ current.title }}
           </span>
           <span v-else-if="!repoName" class="text-muted-foreground">저장소를 먼저 고르세요</span>
-          <span v-else-if="loading" class="text-muted-foreground">열린 항목을 불러오는 중…</span>
+          <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
           <span v-else>PR · Issue 선택</span>
         </SelectValue>
       </SelectTrigger>
@@ -208,7 +207,7 @@
             <Badge v-if="item.draft" variant="outline" data-item-draft>초안</Badge>
           </span>
         </SelectItem>
-        <SelectItem :value="MANUAL">직접 입력…</SelectItem>
+        <SelectItem :value="MANUAL">{{ PICKER_TEXT.manual }}</SelectItem>
       </SelectContent>
     </Select>
     <p v-if="forcedHint" class="text-muted-foreground text-xs" data-item-hint>{{ forcedHint }}</p>
@@ -219,10 +218,10 @@
       :disabled="disabled"
       @click="backToList"
     >
-      목록에서 고르기
+      {{ PICKER_TEXT.back }}
     </button>
     <p v-else-if="list?.truncated" class="text-muted-foreground text-xs" data-item-hint>
-      최근 100건만 표시됩니다. 없는 번호는 직접 입력
+      최근 100건만 표시됩니다 — 없는 번호는 직접 입력하세요.
     </p>
   </div>
 </template>

@@ -173,6 +173,8 @@
       githubMembersInfo.value = body;
     } catch {
       githubMembersRequested = false;
+      // Same note as a failure the server reports, so the row is not left unexplained.
+      githubMembersInfo.value = { available: false, members: [], reason: 'request-failed' };
     } finally {
       githubMembersLoading.value = false;
     }
@@ -210,10 +212,12 @@
       templateDefaults.value = defaultsBody;
       channels.value = channelBody.channels;
       await refreshDeliveries();
-      // Existing mappings only store an id, so the names behind them are fetched
-      // after the page is up rather than holding it back.
+      // Existing mappings only store an id and a login, so the names and avatars
+      // behind both halves are fetched after the page is up rather than holding it
+      // back — the pair renders alike instead of one half waiting for a click.
       if (settings.value.accounts.length > 0) {
         void loadMembers();
+        void loadGithubMembers();
       }
     } catch (cause) {
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
@@ -566,24 +570,35 @@
             <p v-if="settings.repos.length === 0" class="text-muted-foreground text-sm">
               개별 설정된 저장소가 없습니다. 모든 저장소가 기본 채널과 기본 이벤트를 사용합니다.
             </p>
+            <!-- Below md the channel and event columns fold into the repository cell and
+                 the table drops its minimum width, so the expanded editor (one cell
+                 spanning the row) is as wide as the card instead of scrolling sideways. -->
             <div v-else class="overflow-x-auto">
-              <Table class="min-w-160">
+              <Table class="md:min-w-160">
                 <TableHeader>
                   <TableRow>
                     <TableHead>저장소</TableHead>
-                    <TableHead class="w-56">채널</TableHead>
-                    <TableHead class="w-56">이벤트</TableHead>
+                    <TableHead class="hidden w-56 md:table-cell">채널</TableHead>
+                    <TableHead class="hidden w-56 md:table-cell">이벤트</TableHead>
                     <TableHead class="w-28" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   <template v-for="(row, index) in settings.repos" :key="`repo-${index}`">
                     <TableRow>
-                      <TableCell class="font-gothic font-medium">
-                        {{ row.repo || '(이름 없음)' }}
+                      <TableCell class="whitespace-normal md:whitespace-nowrap">
+                        <span class="font-gothic font-medium break-all">
+                          {{ row.repo || '(이름 없음)' }}
+                        </span>
+                        <span class="text-muted-foreground mt-0.5 block text-xs md:hidden">
+                          {{ channelLabel(row.channelId) }} · {{ eventSummary(row) }}
+                          <Badge v-if="row.events" variant="secondary" class="ml-1">override</Badge>
+                        </span>
                       </TableCell>
-                      <TableCell>{{ channelLabel(row.channelId) }}</TableCell>
-                      <TableCell>
+                      <TableCell class="hidden md:table-cell">
+                        {{ channelLabel(row.channelId) }}
+                      </TableCell>
+                      <TableCell class="hidden md:table-cell">
                         {{ eventSummary(row) }}
                         <Badge v-if="row.events" variant="secondary" class="ml-1.5">override</Badge>
                       </TableCell>
@@ -594,7 +609,7 @@
                       </TableCell>
                     </TableRow>
                     <TableRow v-if="openRepos.has(index)" class="bg-muted/40 hover:bg-muted/40">
-                      <TableCell colspan="4" class="p-4">
+                      <TableCell colspan="4" class="p-4 whitespace-normal">
                         <RepoRuleRow
                           :model-value="row"
                           :channels="channels"
@@ -638,7 +653,8 @@
             <div
               v-for="(row, index) in settings.accounts"
               :key="`account-${index}`"
-              class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+              class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start"
+              data-account-row
             >
               <MemberSelect
                 v-model="row.discordUserId"

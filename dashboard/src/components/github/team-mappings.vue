@@ -24,6 +24,8 @@
   const roles = ref<DiscordRole[]>([]);
   const rolesLoading = ref(false);
   const rolesFailed = ref(false);
+  // Fetched fine, but the guild has no role to offer — the rows fall back to ids.
+  const rolesEmpty = ref(false);
   const canMentionAll = ref(false);
   let rolesRequested = false;
 
@@ -38,6 +40,7 @@
     try {
       const body = await fetchJson<DiscordRoleList>('/api/discord/roles');
       roles.value = body.roles;
+      rolesEmpty.value = body.roles.length === 0;
       canMentionAll.value = body.canMentionAll;
     } catch {
       rolesRequested = false;
@@ -148,6 +151,9 @@
     </div>
     <p v-if="rolesFailed" class="text-muted-foreground text-xs">
       역할 목록을 가져오지 못했습니다 — 역할 ID를 직접 입력하세요.
+    </p>
+    <p v-else-if="rolesEmpty && modelValue.length > 0" class="text-muted-foreground text-xs">
+      가져온 역할이 없습니다 — 역할 ID를 직접 입력하세요.
     </p>
   </div>
 </template>
