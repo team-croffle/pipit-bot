@@ -50,11 +50,13 @@ Discussion of a specific worker implementation does not belong in this repositor
 - `/internal/*` is never exposed publicly; callback auth requires `INTERNAL_TOKEN`.
 - There is **no main/edge role split** and no edge-node concept. Do not reintroduce `ROLE`, `MainOnly`/`EdgeOnly`
   preconditions or similar.
-- Dashboard auth: Authentik OIDC (Authorization Code + PKCE, this app is the client). With `OIDC_ISSUER` unset, the dev
-  identity `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` applies. Write access maps from `DASHBOARD_ADMIN_GROUPS`.
-- Runtime settings persist as JSON under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`,
-  `github-messages.json`, `reaction-roles.json`). No hard-coded settings in source; every loader tolerates a missing file
-  and reports a damaged one (`loadSettingsFile`).
+- Dashboard auth: OIDC (Authorization Code + PKCE; Authentik and Dex are known to work — never assume one provider), this
+  app is the client. `OIDC_SCOPES` sets the requested scopes (default `openid profile email groups`; must include
+  `openid`). With `OIDC_ISSUER` unset, the dev identity `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` applies. Write access
+  maps from `DASHBOARD_ADMIN_GROUPS`, matched against the `groups` claim. An unreachable provider is a `502`, not a `500`.
+- Runtime settings persist as JSON under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json` —
+  routing, the login-to-user map and the `teams` team-to-role map —, `github-messages.json`, `reaction-roles.json`). No
+  hard-coded settings in source; every loader tolerates a missing file and reports a damaged one (`loadSettingsFile`).
 - GitHub notifications: one public route `POST /webhooks/github` with `X-Hub-Signature-256` verification; everything
   substituted into a message is sanitized (`sanitizeGithubText`), only mapped Discord ids may ping, embeds carry the
   link (no `SuppressEmbeds`). Read `src/lib/github/*.ts` headers before changing behaviour — each records **why**.

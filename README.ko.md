@@ -46,12 +46,14 @@ OIDC_ISSUER=
 OIDC_CLIENT_ID=
 OIDC_CLIENT_SECRET=
 OIDC_REDIRECT_URI=
+# 기본값: openid profile email groups
+OIDC_SCOPES=
 DASHBOARD_SESSION_SECRET=
 ```
 
-프로덕션 대시보드 인증은 **Authentik OIDC**(Authorization Code + PKCE)입니다. 봇이 OIDC 클라이언트이며, 이 compose에 outpost 컨테이너는 없습니다. 프로덕션에서는 `OIDC_*`와 `DASHBOARD_SESSION_SECRET`을 설정하세요. `/internal/*`은 공개 호스트에 노출하지 않습니다. music worker 콜백은 `INTERNAL_TOKEN`을 씁니다.
+프로덕션 대시보드 인증은 **OIDC**(Authorization Code + PKCE)입니다 — Authentik과 Dex는 동작이 확인됐고, 이 플로우를 지원하는 다른 제공자도 쓸 수 있습니다. 봇이 OIDC 클라이언트이며, 이 compose에 인증 프록시 컨테이너는 없습니다. 프로덕션에서는 `OIDC_*`와 `DASHBOARD_SESSION_SECRET`을 설정하세요. `/internal/*`은 공개 호스트에 노출하지 않습니다. music worker 콜백은 `INTERNAL_TOKEN`을 씁니다.
 
-`OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다.
+`OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다: 제공자가 내려주는 `groups` 클레임과 대소문자 구분 없이 전체 일치로 비교합니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 제공자에 연결할 수 없으면 `/api/auth/login`과 콜백은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다.
 
 봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
 
@@ -71,11 +73,13 @@ PR·이슈 활동은 **GitHub App**이 전달합니다. App 하나를 등록해 
 
 `GITHUB_APP_ID`와 개인 키가 있으면 대시보드가 설치된 저장소와 조직 멤버를 직접 입력하는 대신 제안합니다. 키는 `GITHUB_APP_PRIVATE_KEY_PATH`(파일 — 마운트된 시크릿이 보통 오는 형태)나 `GITHUB_APP_PRIVATE_KEY`(PEM 자체, 원문 또는 base64)로 주고, 둘 다 있으면 경로가 우선합니다. `GITHUB_APP_INSTALLATION_ID`는 선택 사항이며, 없으면 첫 번째 설치를 씁니다. 어느 것도 필수는 아닙니다: 리마인더는 webhook secret만으로 동작하고, 피커는 일반 텍스트 입력으로 되돌아갑니다. 계정 목록은 조직 멤버를 읽는데, 이는 App의 **Organization › Members (read)** 권한이 필요합니다. 없으면 설치된 각 저장소의 assignable 사용자를 대신 제안하고, 대시보드는 어느 목록을 보여주는지 표시합니다.
 
-라우팅은 `data/github-notify.json`에 있습니다: 기본 채널, 저장소별 채널·이벤트 종류 override, 멘션에 쓰는 GitHub 로그인→디스코드 사용자 매핑. 매핑되지 않은 로그인은 일반 텍스트로 나갑니다. 자기 규칙이 없는 저장소는 기본 채널로 보내되, `notifyUnlistedRepos`를 끄면 목록에 있는 저장소만 보고합니다. 이 기능은 기본 비활성(`enabled: false`)으로 출하됩니다.
+라우팅은 `data/github-notify.json`에 있습니다: 기본 채널, 저장소별 채널·이벤트 종류 override, 멘션에 쓰는 GitHub 로그인→디스코드 사용자 매핑, GitHub 팀→디스코드 역할 매핑(`teams`). 매핑되지 않은 로그인은 일반 텍스트로 나갑니다. 자기 규칙이 없는 저장소는 기본 채널로 보내되, `notifyUnlistedRepos`를 끄면 목록에 있는 저장소만 보고합니다. 이 기능은 기본 비활성(`enabled: false`)으로 출하됩니다.
+
+리뷰는 사람뿐 아니라 **팀**에도 요청될 수 있습니다. GitHub 페이지의 "팀 → 역할" 카드에서 팀(`org/slug`, org는 저장소 소유자)을 디스코드 역할에 매핑하면, 그 팀에 대한 리뷰 요청은 — webhook으로 오든 `!remind`로 오든 — 역할을 멘션합니다(`<@&role>`). 매핑이 없는 팀은 지금까지처럼 이름만 적고 멘션하지 않습니다. 핑이 실제로 사람들에게 닿으려면 역할이 누구나 멘션할 수 있어야 하거나("Allow anyone to @mention this role"), 봇이 그 채널에서 **Mention Everyone** 권한을 가져야 합니다. 둘 다 아니면 카드가 해당 행에 경고를 띄우고, 역할을 멘션하지 못한 경우 발송 기록에도 그렇게 남습니다. 매핑은 `data/github-notify.json`의 `teams`(`[{ githubTeam, discordRoleId }]`)에 저장되며, 이 키가 생기기 전에 쓰인 파일도 그대로 읽힙니다.
 
 각 이벤트는 같은 페이지에서 구성하는 **임베드**를 보냅니다 — 평문 줄, 제목, 내용, 필드, 꼬리말, 색, 선택적 시간. 모든 부분이 템플릿입니다: `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignee}`, `{assignees}`, `{reviewers}`, `{mentions}`가 치환되고, `{name|있을 때|없을 때}`는 값 유무에 따라 문구를 고릅니다. 비어 있게 렌더되는 부분은 빠집니다.
 
-조용해진 PR이나 Issue는 **손으로 다시 알릴 수 있습니다** — 디스코드에서 `!remind owner/name #12`, 또는 GitHub 페이지의 "다시 알리기" 카드. 설치된 저장소 중 이름이 하나로 정해지면 이름만 써도 되고(`!remind pipit-bot #12`), PR·Issue 링크도 받습니다. 봇이 App으로 항목을 읽어(여기서부터 `GITHUB_APP_ID`와 개인 키가 필요합니다) 번호가 PR인지 Issue인지 GitHub에서 확인합니다. PR이면 아직 리뷰 요청이 남은 사람과 담당자를 부르는 `PR Reminder`를, Issue면 담당자를 부르는 `Issue Reminder`를 보내며, 작성자는 부르지 않습니다. 리뷰를 요청받은 팀은 디스코드 매핑이 아직 없어 이름만 적고 멘션하지 않습니다. 초안이거나 기다리는 사람이 없으면 보내지 않고, 머지됐거나 닫힌 항목은 새로 보내지 않되 처음 알림 메시지를 최신 상태로 고칩니다. 사유는 디스코드에 답하고 최근 발송에 남깁니다. 같은 항목은 5분에 한 번만 보냅니다. `PR Reminder`·`Issue Reminder` 이벤트 토글은 이 기능의 허용 스위치입니다 — 기본 켬이고, 저장소에서 끄면 그 저장소에서는 그 종류를 다시 알리지 않습니다.
+조용해진 PR이나 Issue는 **손으로 다시 알릴 수 있습니다** — 디스코드에서 `!remind owner/name #12`, 또는 GitHub 페이지의 "다시 알리기" 카드. 설치된 저장소 중 이름이 하나로 정해지면 이름만 써도 되고(`!remind pipit-bot #12`), PR·Issue 링크도 받습니다. 봇이 App으로 항목을 읽어(여기서부터 `GITHUB_APP_ID`와 개인 키가 필요합니다) 번호가 PR인지 Issue인지 GitHub에서 확인합니다. PR이면 아직 리뷰 요청이 남은 사람과 담당자를 부르는 `PR Reminder`를, Issue면 담당자를 부르는 `Issue Reminder`를 보내며, 작성자는 부르지 않습니다. 리뷰를 요청받은 팀은 매핑된 역할로 멘션하고(위 참고), 매핑이 없으면 이름만 적습니다. 응답은 둘을 합쳐 "Reminded N people or teams"로 셉니다. 초안이거나 기다리는 사람이 없으면 보내지 않고, 머지됐거나 닫힌 항목은 새로 보내지 않되 처음 알림 메시지를 최신 상태로 고칩니다. 사유는 디스코드에 답하고 최근 발송에 남깁니다. 같은 항목은 5분에 한 번만 보냅니다. `PR Reminder`·`Issue Reminder` 이벤트 토글은 이 기능의 허용 스위치입니다 — 기본 켬이고, 저장소에서 끄면 그 저장소에서는 그 종류를 다시 알리지 않습니다.
 
 이벤트가 제공하는 변수는 그 이벤트가 채울 수 있는 것에 따라 다릅니다 — `{actor}`는 머지에서는 머지한 사람, 리뷰에서는 리뷰어이고, `{reviewers}`(아직 남은 요청 목록)는 GitHub가 이미 비운 자리에서는 제공되지 않습니다. 편집기는 편집 중인 이벤트의 변수를 나열하고, 다른 변수를 쓴 템플릿은 저장이 거부됩니다. 이벤트마다 기본값이 있고, 편집하지 않은 이벤트는 그것을 따릅니다.
 
