@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { BellRing } from 'lucide-vue-next';
-  import { computed, ref } from 'vue';
+  import { computed, ref, watch } from 'vue';
 
   import { postJson } from '@/api';
-  import SuggestInput from '@/components/common/suggest-input.vue';
+  import RepoSelect from '@/components/common/repo-select.vue';
+  import ItemSelect from '@/components/github/item-select.vue';
   import { Alert, AlertDescription } from '@/components/ui/alert';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-  import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
   import type { DiscordChannel, GithubReminderResult } from '@/types';
 
@@ -34,24 +34,20 @@
   const KIND_LABEL = { pull: 'PR', issue: 'Issue' } as const;
 
   const repo = ref('');
-  // A number input hands v-model a number once it parses, and a string while it
-  // does not (or when empty) — so the ref takes both and the check reads it as text.
-  const number = ref<string | number>('');
+  // The picker hands over a positive integer, or '' while there is none.
+  const number = ref<number | ''>('');
   const busy = ref(false);
   const result = ref<GithubReminderResult | null>(null);
   const error = ref('');
 
-  const parsedNumber = computed(() => {
-    const value = Number(String(number.value).trim());
-    return Number.isInteger(value) && value > 0 ? value : null;
+  // A number picked for one repository means nothing for the next.
+  watch(repo, () => {
+    number.value = '';
   });
 
   const canSend = computed(
     () =>
-      !props.readOnly &&
-      !busy.value &&
-      repoPattern.test(repo.value.trim()) &&
-      parsedNumber.value !== null,
+      !props.readOnly && !busy.value && repoPattern.test(repo.value.trim()) && number.value !== '',
   );
 
   function channelName(channelId: string | undefined): string {
@@ -78,7 +74,7 @@
   });
 
   async function send(): Promise<void> {
-    if (!canSend.value || parsedNumber.value === null) {
+    if (!canSend.value || number.value === '') {
       return;
     }
 
@@ -88,7 +84,7 @@
     try {
       result.value = await postJson<GithubReminderResult>('/api/github-notify/remind', {
         repo: repo.value.trim(),
-        number: parsedNumber.value,
+        number: number.value,
       });
       emit('reminded');
     } catch (cause) {
@@ -105,7 +101,7 @@
       <CardTitle class="text-base">다시 알리기</CardTitle>
       <CardDescription>
         PR은 아직 리뷰하지 않은 리뷰어와 담당자를, Issue는 담당자를 저장소의 알림 채널에서 다시
-        부릅니다. 번호만 넣으면 PR인지 Issue인지는 GitHub에서 확인합니다. 디스코드에서는
+        부릅니다. 열린 PR·Issue는 목록에서 고르고, 닫힌 항목은 번호를 직접 넣습니다. 디스코드에서는
         <code class="font-gothic">!remind owner/name #번호</code>로 같은 일을 할 수 있습니다.
       </CardDescription>
     </CardHeader>
@@ -113,34 +109,31 @@
       <p v-if="!enabled" class="text-muted-foreground text-sm">
         알림 사용이 꺼져 있어 리마인더도 보내지 않습니다.
       </p>
-      <form class="flex flex-col gap-3 sm:flex-row sm:items-end" @submit.prevent="send">
+      <!-- items-start, not items-end: the pickers grow a hint line underneath, and the
+           button lines up with the fields (label + gap = mt-5), not with the hints. -->
+      <form class="flex flex-col gap-3 sm:flex-row sm:items-start" @submit.prevent="send">
         <div class="flex min-w-0 flex-1 flex-col gap-1.5">
           <Label for="remind-repo">저장소</Label>
-          <SuggestInput
+          <RepoSelect
             id="remind-repo"
             v-model="repo"
             :options="repositories"
-            list-id="remind-repo-options"
             :loading="repositoriesLoading"
             :disabled="readOnly || busy"
             placeholder="owner/name 또는 name"
             @open="emit('open')"
           />
         </div>
-        <div class="flex flex-col gap-1.5 sm:w-32">
-          <Label for="remind-number">PR · Issue 번호</Label>
-          <Input
+        <div class="flex min-w-0 flex-col gap-1.5 sm:w-64">
+          <Label for="remind-number">PR · Issue</Label>
+          <ItemSelect
             id="remind-number"
             v-model="number"
-            type="number"
-            min="1"
-            inputmode="numeric"
-            class="font-gothic"
-            placeholder="12"
+            :repo="repo"
             :disabled="readOnly || busy"
           />
         </div>
-        <Button type="submit" :disabled="!canSend" class="sm:shrink-0">
+        <Button type="submit" :disabled="!canSend" class="sm:mt-5 sm:shrink-0">
           <BellRing />
           {{ busy ? '보내는 중…' : '다시 알리기' }}
         </Button>
