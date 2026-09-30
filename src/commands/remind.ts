@@ -39,7 +39,8 @@ export class UserCommand extends Command {
 
     if (result.outcome === 'sent') {
       const where = result.channelId ? ` in <#${result.channelId}>` : '';
-      const who = result.targets === 1 ? '1 person' : `${result.targets} people`;
+      // A target is a person, or a team standing behind its mapped role.
+      const who = result.targets === 1 ? '1 person or team' : `${result.targets} people or teams`;
       await message.reply(`Reminded ${who} about ${subject}${where}.`);
       return;
     }

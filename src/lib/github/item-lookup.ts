@@ -26,8 +26,8 @@ export interface PullRequestSnapshot {
   merged: boolean;
   /**
    * Teams still asked to review, by slug. GitHub keeps them apart from
-   * `requested_reviewers`, and there is no team-to-Discord mapping yet (v0.6.7), so
-   * they can only be named, never mentioned.
+   * `requested_reviewers`. The organisation is the repository owner; the reminder
+   * turns each slug into the `org/slug` key the role mappings are stored under.
    */
   teams: string[];
 }

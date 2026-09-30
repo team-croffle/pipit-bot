@@ -1,9 +1,10 @@
 import { escapeMarkdown, type APIEmbed } from 'discord.js';
 
 import { renderEmbedTemplate, type EmbedTemplate } from './embed-template.js';
-import { resolveGithubMentions } from './mentions.js';
+import { resolveGithubMentions, resolveTeamMentions } from './mentions.js';
 import type { GithubNotification } from './normalize-event.js';
 import type { GithubAccountMapping } from './settings.js';
+import type { GithubTeamMapping } from './team-mappings.js';
 import type { TemplateValues } from './template.js';
 
 const MAX_TITLE_LENGTH = 200;
@@ -22,6 +23,8 @@ export interface RenderedMessage {
   content: string;
   embed: APIEmbed | undefined;
   userIds: string[];
+  /** The roles standing for the teams the message is about — `allowedMentions.roles`. */
+  roleIds: string[];
 }
 
 /**
@@ -52,12 +55,14 @@ export function buildGithubIssueUrl(
  *
  * The template is trusted — an admin wrote it in the dashboard, so its markdown is
  * kept. Every value put into it is not: each one is sanitized here, and only ids
- * that came from the saved account mapping ever reach `userIds`.
+ * that came from the saved account and team mappings ever reach `userIds` and
+ * `roleIds`.
  */
 export function formatGithubNotification(
   notification: GithubNotification,
   accounts: GithubAccountMapping[],
   template: EmbedTemplate,
+  teams: GithubTeamMapping[] = [],
 ): RenderedMessage {
   const userIds: string[] = [];
   const mention = (logins: string[]): string => {
@@ -71,6 +76,12 @@ export function formatGithubNotification(
     return resolved.text;
   };
 
+  const teamMentions = resolveTeamMentions(notification.teams, teams);
+  // A team review request names the team as its subject (`team/<slug>`), and
+  // `{assignee}` reads as that team — its role when one is mapped, the inert
+  // `team/<slug>` otherwise. The same text serves both places.
+  const subjectIsTeam = notification.assignee?.startsWith('team/') === true;
+
   const values: TemplateValues = {
     repo: sanitizeGithubText(notification.repo),
     pr_number: String(notification.number),
@@ -79,13 +90,21 @@ export function formatGithubNotification(
     event: notification.label,
     actor: mention([notification.actor]),
     author: mention(notification.author ? [notification.author] : []),
-    assignee: mention(notification.assignee ? [notification.assignee] : []),
+    assignee: subjectIsTeam
+      ? teamMentions.text
+      : mention(notification.assignee ? [notification.assignee] : []),
     assignees: mention(notification.assignees),
     reviewers: mention(notification.reviewers),
-    mentions: mention(notification.targets),
+    // People first, then the teams asked alongside them.
+    mentions: [mention(notification.targets), teamMentions.text].filter(Boolean).join(' '),
   };
 
   const rendered = renderEmbedTemplate(template, values);
 
-  return { content: rendered.content, embed: rendered.embed, userIds };
+  return {
+    content: rendered.content,
+    embed: rendered.embed,
+    userIds,
+    roleIds: teamMentions.roleIds,
+  };
 }

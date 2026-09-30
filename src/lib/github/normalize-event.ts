@@ -7,6 +7,7 @@ import {
   type GithubUser,
 } from './payload-types.js';
 import type { GithubEventToggles } from './settings.js';
+import { normalizeTeamKey } from './team-mappings.js';
 import { EVENT_LABELS } from './template.js';
 
 export interface GithubNotification {
@@ -26,6 +27,13 @@ export interface GithubNotification {
   assignee?: string;
   /** Who is worth pinging: the roles this event is about, minus the actor. */
   targets: string[];
+  /**
+   * The teams this event is about, as `org/slug` keys (the organisation is the
+   * repository owner — a `requested_team` node names no org). Whether a team can be
+   * pinged depends on the operator's role mappings, which dispatch consults; a team
+   * with no mapping is only named.
+   */
+  teams: string[];
   /**
    * True when the event exists only to tell somebody something and there is nobody
    * left to tell — an author assigning themself, a reviewer commenting on their own
@@ -120,6 +128,7 @@ function build(
   label: string,
   targets: (GithubUser | undefined)[],
   assignee?: GithubUser,
+  teams: string[] = [],
 ): GithubNotification | undefined {
   const actor = context.actor.login.toLowerCase();
   const unique: string[] = [];
@@ -151,7 +160,10 @@ function build(
     reviewers: logins(subject.requestedReviewers),
     assignee: assignee?.login,
     targets: unique,
-    silent: unique.length === 0 && MENTION_ONLY_TOGGLES.has(toggle),
+    teams,
+    // A team is not silent here even when no person is left: whether its role can
+    // be pinged is dispatch's call, once it has looked the mapping up.
+    silent: unique.length === 0 && teams.length === 0 && MENTION_ONLY_TOGGLES.has(toggle),
   };
 }
 
@@ -182,6 +194,7 @@ function updateOnly(
     assignees: logins(subject.assignees),
     reviewers: logins(subject.requestedReviewers),
     targets: [],
+    teams: [],
     silent: true,
     updateOnly: true,
   };
@@ -265,14 +278,16 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
 
   if (context.action === 'review_requested') {
     const requested = asUser(context.payload.requested_reviewer);
-    // A team request names the team in `requested_team`, not a person. There is no
-    // team-to-Discord mapping yet, so nobody is pinged — but the announcement still
-    // gets brought up to date, and `{assignee}` reads as the team.
+    // A team request names the team in `requested_team`, not a person. The team
+    // travels as `teams` — dispatch pings the role the operator mapped to it, or
+    // only brings the announcement up to date when there is none — and
+    // `{assignee}` reads as the team either way.
     // WHY not `requested_reviewers` as a fallback: that list is the people already
     // asked, and using it re-pinged every existing reviewer on each team request.
     const team = asRecord(context.payload.requested_team);
-    const slug = typeof team?.slug === 'string' ? team.slug : undefined;
+    const slug = typeof team?.slug === 'string' && team.slug ? team.slug : undefined;
     const subject = requested ?? (slug ? { login: `team/${slug}` } : undefined);
+    const owner = context.repo.slice(0, context.repo.indexOf('/'));
     return build(
       context,
       pull,
@@ -280,6 +295,7 @@ function handlePullRequest(context: EventContext): GithubNotification | undefine
       EVENT_LABELS.pullRequestReviewRequested,
       requested ? [requested] : [],
       subject,
+      slug ? [normalizeTeamKey(owner, slug)] : [],
     );
   }
 

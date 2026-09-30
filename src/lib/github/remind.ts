@@ -7,9 +7,10 @@
  * same path a webhook would take — same channel rule, same wording tables, same
  * delivery record — so the operator finds it where everything else is.
  *
- * A pull request waits on its pending reviewers and its assignees; an issue, which
- * has no reviewers, on its assignees. The author is never pinged: they are the one
- * waiting. Pull requests and issues share one number space, so the caller only
+ * A pull request waits on its pending reviewers, the teams asked to review, and its
+ * assignees; an issue, which has no reviewers, on its assignees. The author is never
+ * pinged: they are the one waiting. A team is pinged through the role the operator
+ * mapped to it; one without a mapping is only named. Pull requests and issues share one number space, so the caller only
  * hands in a repository and a number and the lookup says which it is.
  *
  * Shared by the reminder command and the dashboard; both get one verdict back.
@@ -20,9 +21,11 @@ import { container } from '@sapphire/framework';
 import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
 import { dispatchGithubNotification } from './dispatch.js';
 import { fetchItem, type ItemSnapshot } from './item-lookup.js';
+import { unmappedTeams } from './mentions.js';
 import type { GithubNotification } from './normalize-event.js';
 import type { GithubIssueLike } from './payload-types.js';
 import { getGithubNotifySettings } from './settings.js';
+import { normalizeTeamKey } from './team-mappings.js';
 import { EVENT_LABELS } from './template.js';
 
 /** A resolved item: its repository and number. Parsing and name lookup: remind-reference.ts. */
@@ -41,7 +44,7 @@ export interface ReminderResult {
   kind?: ItemKind;
   /** Where the reminder was posted, when it was. */
   channelId?: string;
-  /** How many people the reminder set out to mention. */
+  /** How many people — and mapped teams, each counted once — the reminder set out to mention. */
   targets: number;
 }
 
@@ -113,6 +116,10 @@ function asNotification(reference: ItemReference, snapshot: ItemSnapshot): Githu
     snapshot.kind === 'pull' ? (item.requestedReviewers ?? []).map((user) => user.login) : [];
   const assignees = (item.assignees ?? []).map((user) => user.login);
   const targets = waitingOn(author, [reviewers, assignees]);
+  // The lookup gives slugs; the mappings are keyed by `org/slug`, org being the owner.
+  const owner = reference.repo.slice(0, reference.repo.indexOf('/'));
+  const teams =
+    snapshot.kind === 'pull' ? snapshot.teams.map((slug) => normalizeTeamKey(owner, slug)) : [];
   const toggle = TOGGLES[snapshot.kind];
 
   return {
@@ -127,19 +134,25 @@ function asNotification(reference: ItemReference, snapshot: ItemSnapshot): Githu
     assignees,
     reviewers,
     targets,
-    silent: targets.length === 0,
+    teams,
+    silent: targets.length === 0 && teams.length === 0,
     manual: true,
   };
 }
 
-/** Why nobody is pinged — teams are named, since they cannot be mentioned yet. */
-function nobodyWaiting(snapshot: ItemSnapshot): string {
+/** The slug part of an `org/slug` key — the owner is the repository's, so it says nothing. */
+function slugOf(team: string): string {
+  return team.slice(team.indexOf('/') + 1);
+}
+
+/** Why nobody is pinged — teams without a role are named, since that is all they can be. */
+function nobodyWaiting(snapshot: ItemSnapshot, unmapped: string[]): string {
   if (snapshot.kind === 'issue') {
     return 'Nobody is waiting on this issue: it has no assignees besides its author.';
   }
 
-  if (snapshot.teams.length > 0) {
-    return `Only teams are waiting on this pull request (${snapshot.teams.join(', ')}); teams have no Discord mapping yet, so nobody can be mentioned.`;
+  if (unmapped.length > 0) {
+    return `Only teams without a Discord role mapping are waiting on this pull request (${unmapped.map(slugOf).join(', ')}), so nobody can be mentioned.`;
   }
 
   return 'Nobody is waiting on this pull request: no pending reviewers and no assignees.';
@@ -218,8 +231,10 @@ export async function remindItem(reference: ItemReference): Promise<ReminderResu
   }
 
   const notification = asNotification(reference, snapshot);
-  if (notification.targets.length === 0) {
-    return verdict('skipped', nobodyWaiting(snapshot), snapshot.kind);
+  const unmapped = unmappedTeams(notification.teams, getGithubNotifySettings().teams);
+  const mappedTeams = notification.teams.length - unmapped.length;
+  if (notification.targets.length === 0 && mappedTeams === 0) {
+    return verdict('skipped', nobodyWaiting(snapshot, unmapped), snapshot.kind);
   }
 
   const result = await dispatchGithubNotification(notification);
@@ -227,10 +242,10 @@ export async function remindItem(reference: ItemReference): Promise<ReminderResu
     lastSent.set(keyFor(reference), Date.now());
   }
 
-  // The people were pinged; the teams alongside them can only be named.
+  // The people and mapped teams were pinged; a team without a role can only be named.
   const teams =
-    snapshot.kind === 'pull' && snapshot.teams.length > 0
-      ? `Teams not mentioned (no Discord mapping yet): ${snapshot.teams.join(', ')}.`
+    unmapped.length > 0
+      ? `Teams without a Discord role mapping were not mentioned: ${unmapped.map(slugOf).join(', ')}.`
       : undefined;
 
   return {
@@ -238,6 +253,6 @@ export async function remindItem(reference: ItemReference): Promise<ReminderResu
     detail: [result.detail, teams].filter(Boolean).join(' ') || undefined,
     kind: snapshot.kind,
     channelId: result.channelId,
-    targets: notification.targets.length,
+    targets: notification.targets.length + mappedTeams,
   };
 }
