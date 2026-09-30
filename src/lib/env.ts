@@ -21,6 +21,8 @@ export interface OidcConfig {
   clientSecret: string;
   redirectUri: string;
   sessionSecret: string;
+  /** Requested at sign-in, space-separated in the request; always contains `openid`. */
+  scopes: string[];
 }
 
 export interface EnvConfig {
@@ -157,7 +159,33 @@ function parseOidc(nodeEnv: string): OidcConfig | null {
     throw new Error('DASHBOARD_SESSION_SECRET is required when OIDC_ISSUER is set');
   }
 
-  return { issuer: normalizedIssuer, clientId, clientSecret, redirectUri, sessionSecret };
+  return {
+    issuer: normalizedIssuer,
+    clientId,
+    clientSecret,
+    redirectUri,
+    sessionSecret,
+    scopes: parseOidcScopes(process.env.OIDC_SCOPES),
+  };
+}
+
+// WHY a setting: providers differ in what they release without being asked. Some
+// only put `groups` into the token when that scope is requested, and the dashboard's
+// admin check depends on it — so `groups` is in the default, and an operator whose
+// provider names things differently can say so.
+const DEFAULT_OIDC_SCOPES = ['openid', 'profile', 'email', 'groups'];
+
+function parseOidcScopes(raw: string | undefined): string[] {
+  const scopes = [...new Set((raw ?? '').split(/[\s,]+/).filter(Boolean))];
+  if (scopes.length === 0) {
+    return DEFAULT_OIDC_SCOPES;
+  }
+
+  if (!scopes.includes('openid')) {
+    throw new Error('OIDC_SCOPES must include openid');
+  }
+
+  return scopes;
 }
 
 export function loadEnv(): EnvConfig {
