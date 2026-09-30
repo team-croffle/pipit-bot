@@ -3,11 +3,13 @@ import type { Hono } from 'hono';
 
 import type { EnvConfig } from '../../lib/env.js';
 import {
+  GithubResponseError,
   listInstallationMembers,
   listInstallationRepositories,
 } from '../../lib/github/app-client.js';
 import { DEFAULT_EVENT_TEMPLATES } from '../../lib/github/default-templates.js';
 import { listDeliveries } from '../../lib/github/delivery-log.js';
+import { listOpenItems } from '../../lib/github/open-items.js';
 import { parseItemReference, remindReference } from '../../lib/github/remind-reference.js';
 import {
   getGithubNotifyLoadError,
@@ -19,7 +21,10 @@ import { EVENT_LABELS, EVENT_VARIABLES } from '../../lib/github/template.js';
 import { dashboardViewer, dashboardWrite } from '../auth/dashboard.js';
 import type { ApiVariables } from '../context.js';
 
-/** Reminder settings, and the two lists the App installation can offer the pickers. */
+// Same grammar the settings use for a repository rule.
+const repoName = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
+
+/** Reminder settings, and the lists the App installation can offer the pickers. */
 export function mountGithubNotifyRoutes(
   app: Hono<{ Variables: ApiVariables }>,
   config: EnvConfig,
@@ -90,6 +95,37 @@ export function mountGithubNotifyRoutes(
     } catch (error) {
       container.logger.warn('[github] repository list failed:', error);
       return c.json({ available: false, repositories: [] });
+    }
+  });
+
+  // The number picker: open pull requests and issues of one repository. `reason`
+  // follows the members route so the dashboard can explain an empty list.
+  app.get('/api/github/repositories/:owner/:name/open-items', dashboardViewer, async (c) => {
+    const repo = `${c.req.param('owner')}/${c.req.param('name')}`;
+    if (!repoName.test(repo)) {
+      return c.json({ error: 'Invalid repository name' }, 400);
+    }
+
+    const githubApp = config.githubApp;
+    if (!githubApp) {
+      return c.json({ available: false, items: [], truncated: false, reason: 'no-credentials' });
+    }
+
+    try {
+      return c.json({ available: true, ...(await listOpenItems(githubApp, repo)) });
+    } catch (error) {
+      const gone =
+        error instanceof GithubResponseError && (error.status === 404 || error.status === 403);
+      if (!gone) {
+        container.logger.warn('[github] open item list failed:', error);
+      }
+
+      return c.json({
+        available: false,
+        items: [],
+        truncated: false,
+        reason: gone ? 'not-installed' : 'request-failed',
+      });
     }
   });
 
