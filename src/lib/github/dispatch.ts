@@ -11,6 +11,7 @@ import { getConfiguredGuild } from '../discord-guild.js';
 import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
 import { formatGithubNotification } from './format-message.js';
+import { unmappedTeams } from './mentions.js';
 import {
   findTrackedMessage,
   forgetMessage,
@@ -18,6 +19,7 @@ import {
   type TrackedMessage,
 } from './message-tracker.js';
 import type { GithubNotification } from './normalize-event.js';
+import { describeUnmentionableRoles } from './role-mentions.js';
 import {
   getGithubNotifySettings,
   isRepoListed,
@@ -88,7 +90,10 @@ function sendableChannel(
  *
  * Its actor is the author — a pull request is opened by the person who wrote it —
  * and its mentions line lists everyone currently on the item minus the author, the
- * way the opening did. Nothing about the assignment event itself survives here.
+ * way the opening did. Nothing about the assignment event itself survives here —
+ * not the one team it named either: the announcement knows the item's people, not
+ * its teams, and listing whichever team the latest event happened to carry would
+ * make the line change with every edit.
  */
 function asAnnouncement(
   notification: GithubNotification,
@@ -111,14 +116,31 @@ function asAnnouncement(
     actor: author,
     assignee: undefined,
     targets,
+    teams: [],
     silent: false,
     updateOnly: false,
   };
 }
 
+/**
+ * What a message pinged, as the tracker records it: lower-cased logins, and mapped
+ * teams as `team:org/slug` — a login can never contain `:`, so the two cannot meet.
+ */
+function mentionKeys(notification: GithubNotification, mappedTeams: string[]): string[] {
+  return [
+    ...notification.targets.map((login) => login.toLowerCase()),
+    ...mappedTeams.map((team) => `team:${team}`),
+  ];
+}
+
 /** True when everyone this event would ping was already pinged by a fresh announcement. */
-function echoesAnnouncement(notification: GithubNotification, tracked: TrackedMessage): boolean {
-  if (notification.targets.length === 0) {
+function echoesAnnouncement(
+  notification: GithubNotification,
+  mappedTeams: string[],
+  tracked: TrackedMessage,
+): boolean {
+  const keys = mentionKeys(notification, mappedTeams);
+  if (keys.length === 0) {
     return false;
   }
 
@@ -126,7 +148,7 @@ function echoesAnnouncement(notification: GithubNotification, tracked: TrackedMe
     return false;
   }
 
-  return notification.targets.every((login) => tracked.mentioned.includes(login.toLowerCase()));
+  return keys.every((key) => tracked.mentioned.includes(key));
 }
 
 /** The one line that explains why nothing was posted. */
@@ -143,8 +165,8 @@ function silentReason(notification: GithubNotification, echo: boolean): string {
     return 'Nothing to post for this event.';
   }
 
-  if (notification.assignee?.startsWith('team/')) {
-    return 'A team was asked to review; teams have no Discord mapping yet, so nobody is mentioned.';
+  if (notification.teams.length > 0) {
+    return 'A team was asked to review; it has no Discord role mapped, so nobody is mentioned.';
   }
 
   return 'Nobody to mention — the actor is the only person this event is about.';
@@ -174,6 +196,7 @@ async function updateAnnouncement(
     asAnnouncement(notification, tracked.toggle),
     settings.accounts,
     resolveTemplateEmojis(resolveTemplate(settings, tracked.toggle), guild),
+    settings.teams,
   );
   if (!rendered.content && !rendered.embed) {
     return 'The announcement wording renders empty.';
@@ -251,11 +274,17 @@ export async function dispatchGithubNotification(
     updated = updateProblem === undefined;
   }
 
+  // A team pings through its mapped role. With nobody else to tell, an event about
+  // unmapped teams only is as silent as one about the actor alone.
+  const unmapped = unmappedTeams(notification.teams, settings.teams);
+  const mappedTeams = notification.teams.filter((team) => !unmapped.includes(team));
+  const nobodyMapped =
+    notification.targets.length === 0 && notification.teams.length > 0 && mappedTeams.length === 0;
   const echo =
     notification.manual !== true &&
     tracked !== undefined &&
-    echoesAnnouncement(notification, tracked);
-  if (notification.silent || echo) {
+    echoesAnnouncement(notification, mappedTeams, tracked);
+  if (notification.silent || nobodyMapped || echo) {
     const why = silentReason(notification, echo);
     if (updated) {
       return recordDelivery(
@@ -279,10 +308,18 @@ export async function dispatchGithubNotification(
     settings.accounts,
     // Shortcodes become real emoji here, before any payload value is substituted in.
     resolveTemplateEmojis(resolveTemplate(settings, notification.toggle), guild),
+    settings.teams,
   );
   if (!message.content && !message.embed) {
     return skip('The template rendered an empty message.');
   }
+
+  // The message goes out either way; the record says when its role ping could not
+  // have landed, which is otherwise invisible — the text still reads `@team`.
+  const rolesProblem =
+    message.roleIds.length > 0
+      ? describeUnmentionableRoles(guild, channel, message.roleIds)
+      : undefined;
 
   try {
     const sent = await channel.send({
@@ -290,7 +327,7 @@ export async function dispatchGithubNotification(
       embeds: message.embed ? [message.embed] : [],
       // WHY: the body carries attacker-controlled text, so nothing may be parsed
       // out of it. Only ids that passed snowflake validation on save can ping.
-      allowedMentions: { parse: [], users: message.userIds, roles: [] },
+      allowedMentions: { parse: [], users: message.userIds, roles: message.roleIds },
       // WHY no SuppressEmbeds here, which v0.6.2 set to stop {pr_url} unfurling a
       // preview card: that flag also hides the embed the bot attaches itself. The
       // link rides on the embed title instead, where it does not unfurl.
@@ -301,18 +338,28 @@ export async function dispatchGithubNotification(
         channelId: channel.id,
         messageId: sent.id,
         toggle: notification.toggle,
-        mentioned: notification.targets.map((login) => login.toLowerCase()),
+        mentioned: mentionKeys(notification, mappedTeams),
       });
     }
 
-    let detail: string | undefined;
+    const parts: string[] = [];
     if (updated) {
-      detail = 'The announcement was brought up to date as well.';
+      parts.push('The announcement was brought up to date as well.');
     } else if (updateProblem) {
-      detail = `The announcement was not updated: ${updateProblem}`;
+      parts.push(`The announcement was not updated: ${updateProblem}`);
     }
+
+    if (rolesProblem) {
+      parts.push(rolesProblem);
+    }
+
     return {
-      ...recordDelivery(notification.repo, notification.label, 'sent', detail),
+      ...recordDelivery(
+        notification.repo,
+        notification.label,
+        'sent',
+        parts.length > 0 ? parts.join(' ') : undefined,
+      ),
       channelId: channel.id,
     };
   } catch (error) {
