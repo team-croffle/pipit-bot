@@ -10,6 +10,7 @@
   import SuggestInput from '@/components/common/suggest-input.vue';
   import AccountSelect from '@/components/github/account-select.vue';
   import RemindCard from '@/components/github/remind-card.vue';
+  import TeamMappings from '@/components/github/team-mappings.vue';
   import TemplateList from '@/components/github/template-list.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
   import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,7 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
+  import { prepareTeamMappings } from '@/lib/github-teams';
   import { emptyToggles, eventGroups, eventLabels } from '@/lib/github-templates';
   import type {
     DashboardIdentity,
@@ -182,6 +184,11 @@
   const loading = ref(true);
   /** The server could not read its file and is running on defaults. */
   const loadError = ref('');
+  /**
+   * The page itself could not be fetched. Kept apart from `error` — a rejected save
+   * has to show above the form, not replace it, or the row cannot be fixed.
+   */
+  const loadFailed = ref('');
 
   onMounted(async () => {
     try {
@@ -213,7 +220,7 @@
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : '설정을 불러오지 못했습니다.';
+      loadFailed.value = cause instanceof Error ? cause.message : '설정을 불러오지 못했습니다.';
     } finally {
       loading.value = false;
     }
@@ -302,6 +309,10 @@
   function removeAccountRow(index: number): void {
     settings.value.accounts = settings.value.accounts.filter((_, item) => item !== index);
   }
+
+  function addTeamRow(): void {
+    settings.value.teams = [...settings.value.teams, { githubTeam: '', discordRoleId: '' }];
+  }
   async function refreshDeliveries(): Promise<void> {
     try {
       const body = await fetchJson<{ deliveries: GithubDelivery[] }>(
@@ -362,6 +373,12 @@
       return;
     }
 
+    const prepared = prepareTeamMappings(settings.value.teams);
+    if (prepared.error) {
+      error.value = prepared.error;
+      return;
+    }
+
     try {
       const result = await putJson<GithubNotifySettings>('/api/github-notify', {
         enabled: settings.value.enabled,
@@ -371,7 +388,7 @@
         eventTemplates: settings.value.eventTemplates,
         repos,
         accounts,
-        teams: settings.value.teams,
+        teams: prepared.teams,
       });
       settings.value = {
         ...result,
@@ -407,7 +424,7 @@
       읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
     </p>
 
-    <StateBlock :loading="loading" :error="loading ? '' : error && !saved ? error : ''">
+    <StateBlock :loading="loading" :error="loadFailed">
       <div class="flex flex-col gap-5">
         <Alert v-if="loadError" variant="destructive">
           <AlertTitle>저장된 설정 파일을 읽지 못했습니다</AlertTitle>
@@ -734,6 +751,26 @@
             <p v-if="githubMembersNote" class="text-muted-foreground text-xs">
               {{ githubMembersNote }}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-base">팀 → 역할</CardTitle>
+            <CardDescription>
+              리뷰를 팀에 요청하면 매핑된 역할을 멘션합니다. 역할이 멘션 가능하거나 봇에 '모두 멘션'
+              권한이 있어야 실제로 알림이 갑니다. 팀은 조직/팀-슬러그 형식이며, 목록에 없는 역할은
+              "직접 입력"으로 ID를 넣습니다.
+            </CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm" :disabled="readOnly" @click="addTeamRow">
+                <Plus />
+                팀 추가
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <TeamMappings v-model="settings.teams" :read-only="readOnly" />
           </CardContent>
         </Card>
 

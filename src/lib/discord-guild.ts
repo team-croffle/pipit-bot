@@ -144,11 +144,28 @@ export async function listGuildEmojis(guild: Guild): Promise<GuildEmojiOption[]>
     .toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-export function listAssignableRoles(guild: Guild): { id: string; name: string }[] {
+export interface RoleOption {
+  id: string;
+  name: string;
+  /**
+   * Whether anyone may mention the role. A mention of a role that is not
+   * mentionable only pings when the sender holds "Mention @everyone, @here and
+   * All Roles" — the dashboard needs both facts to warn before a mapping is saved
+   * that would never notify anyone.
+   */
+  mentionable: boolean;
+}
+
+export function listAssignableRoles(guild: Guild): RoleOption[] {
   return [...guild.roles.cache.values()]
     .filter((role) => role.id !== guild.id && !role.managed)
-    .map((role) => ({ id: role.id, name: role.name }))
+    .map((role) => ({ id: role.id, name: role.name, mentionable: role.mentionable }))
     .toSorted((a, b) => a.name.localeCompare(b.name));
+}
+
+/** True when the bot can ping any role, mentionable or not. */
+export function canMentionAllRoles(guild: Guild): boolean {
+  return guild.members.me?.permissions.has(PermissionFlagsBits.MentionEveryone) ?? false;
 }
 
 const MEMBER_CACHE_TTL_MS = 5 * 60 * 1000;

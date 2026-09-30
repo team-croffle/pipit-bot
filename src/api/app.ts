@@ -9,6 +9,7 @@ import { stream } from 'hono/streaming';
 
 import { rootDir } from '../lib/constants.js';
 import {
+  canMentionAllRoles,
   getConfiguredGuild,
   listAssignableRoles,
   listGuildEmojis,
@@ -146,7 +147,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
       return c.json({ error: 'Discord guild is not ready.' }, 503);
     }
 
-    return c.json({ roles: listAssignableRoles(guild) });
+    return c.json({ roles: listAssignableRoles(guild), canMentionAll: canMentionAllRoles(guild) });
   });
 
   /**
