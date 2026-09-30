@@ -5,6 +5,7 @@ import { dataDir } from '../constants.js';
 import { loadSettingsFile } from '../settings-file.js';
 import { defaultTemplateFor, LEGACY_DEFAULT_TEMPLATE } from './default-templates.js';
 import { parseEmbedTemplate, parseEmbedTemplateMap, type EmbedTemplate } from './embed-template.js';
+import { asTeamMappings, type GithubTeamMapping } from './team-mappings.js';
 import { EVENT_VARIABLES } from './template.js';
 
 export interface GithubEventToggles {
@@ -72,6 +73,8 @@ export interface GithubNotifySettings {
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
   accounts: GithubAccountMapping[];
+  /** Teams asked to review → the Discord role that stands for them. */
+  teams: GithubTeamMapping[];
 }
 
 export interface ResolvedRepoRule {
@@ -146,6 +149,7 @@ function emptySettings(): GithubNotifySettings {
     eventTemplates: {},
     repos: [],
     accounts: [],
+    teams: [],
   };
 }
 
@@ -354,6 +358,7 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
     eventTemplates,
     repos: asRepoRules(body.repos ?? []),
     accounts: asAccountMappings(body.accounts ?? []),
+    teams: asTeamMappings(body.teams ?? []),
   };
 }
 
