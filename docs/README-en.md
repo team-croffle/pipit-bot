@@ -22,9 +22,9 @@ DASHBOARD_DEV_USER=dev
 DASHBOARD_DEV_ROLE=admin
 ```
 
-Dashboard `/api` uses Authentik OIDC (app is the client). Keep `/internal/*` on the Docker network. Without OIDC env, local identity uses `DASHBOARD_DEV_ROLE`. Music worker callbacks use `INTERNAL_TOKEN`.
+Dashboard `/api` uses OIDC with Authorization Code + PKCE (the app is the client; Authentik and Dex are known to work). `OIDC_SCOPES` defaults to `openid profile email groups`, and `DASHBOARD_ADMIN_GROUPS` is matched against the `groups` claim. Keep `/internal/*` on the Docker network. Without OIDC env, local identity uses `DASHBOARD_DEV_ROLE`. Music worker callbacks use `INTERNAL_TOKEN`.
 
-Settings live in `data/runtime-config.json`, `data/guild-events.json` and `data/reaction-roles.json`.
+Settings live in `data/runtime-config.json`, `data/guild-events.json`, `data/github-notify.json` (including the `teams` map from GitHub teams to Discord roles) and `data/reaction-roles.json`.
 
 ## Commands
 
