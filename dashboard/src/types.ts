@@ -219,6 +219,21 @@ export interface GithubMember {
 }
 
 /** The account list, with enough about its origin to explain an empty one. */
+/** One open pull request or issue, as the number picker lists it. */
+export interface GithubOpenItem {
+  number: number;
+  title: string;
+  kind: 'pull' | 'issue';
+  draft: boolean;
+}
+
+export interface GithubOpenItemList {
+  available: boolean;
+  items: GithubOpenItem[];
+  truncated: boolean;
+  reason?: 'no-credentials' | 'not-installed' | 'request-failed';
+}
+
 export interface GithubMemberList {
   available: boolean;
   members: GithubMember[];
