@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { getVoiceConnection, useQueue } from 'discord-player';
 import type { Message } from 'discord.js';
+
+import { leaveVoiceChannel } from '../../lib/music/voice-connection.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Leaves the voice channel and stops music playback',
@@ -20,19 +21,6 @@ export class UserCommand extends Command {
       return 'No guild ID provided';
     }
 
-    const queue = useQueue(guildId);
-    const connection = getVoiceConnection(guildId);
-
-    if (!queue && !connection) {
-      return 'No active music session found in this server.';
-    }
-
-    if (queue) {
-      queue.delete();
-    } else if (connection) {
-      connection.destroy();
-    }
-
-    return 'Left the voice channel successfully.';
+    return leaveVoiceChannel(guildId).message;
   }
 }

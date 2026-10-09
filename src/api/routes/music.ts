@@ -1,5 +1,6 @@
 import type { Hono } from 'hono';
 
+import { getConfiguredGuild } from '../../lib/discord-guild.js';
 import {
   canEnqueuePlayback,
   clearQueue,
@@ -11,12 +12,14 @@ import {
   stopPlayback,
   type LoopMode,
 } from '../../lib/music/playback.js';
+import { PLAYER_NODE_OPTIONS } from '../../lib/music/player-node-options.js';
 import { schedulePlayWhenReady, submitMusicJob } from '../../lib/music/prepare-track.js';
 import {
   removeQueuedTrack,
   setVolumeLevel,
   skipToQueuedTrack,
 } from '../../lib/music/queue-actions.js';
+import { joinVoiceChannel, leaveVoiceChannel } from '../../lib/music/voice-connection.js';
 import { isVolumeLevel } from '../../lib/music/volume-levels.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import { internalAuth } from '../auth/internal.js';
@@ -95,6 +98,57 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = setVolumeLevel(body.level);
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/voice/join', dashboardViewer, async (c) => {
+    const body = await c.req.json<{ channelId?: unknown }>();
+    if (typeof body.channelId !== 'string' || !body.channelId) {
+      return c.json({ error: 'channelId is required' }, 400);
+    }
+
+    const guild = getConfiguredGuild();
+    if (!guild) {
+      return c.json({ error: 'Discord guild is not ready.' }, 503);
+    }
+
+    const channel = guild.channels.cache.get(body.channelId);
+    if (!channel?.isVoiceBased()) {
+      return c.json({ ok: false, message: 'That is not a voice channel in this server.' }, 400);
+    }
+
+    const me = guild.members.me;
+    if (me && !channel.permissionsFor(me).has(['ViewChannel', 'Connect', 'Speak'])) {
+      return c.json(
+        { ok: false, message: `The bot cannot connect and speak in ${channel.name}.` },
+        400,
+      );
+    }
+
+    try {
+      const result = await joinVoiceChannel(channel);
+      // The player leaves an empty channel on its own after the cooldown; say so now
+      // rather than have the bot vanish half a minute later with no explanation.
+      const empty = channel.members.every((member) => member.user.bot);
+      const seconds = Math.round(PLAYER_NODE_OPTIONS.leaveOnEmptyCooldown / 1000);
+      const message =
+        result.ok && empty
+          ? `${result.message} Nobody is there, so the bot leaves after ${seconds} seconds.`
+          : result.message;
+      return c.json({ ...result, message }, result.ok ? 200 : 400);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to join the voice channel.';
+      return c.json({ ok: false, message }, 503);
+    }
+  });
+
+  app.post('/api/music/voice/leave', dashboardViewer, (c) => {
+    const guild = getConfiguredGuild();
+    if (!guild) {
+      return c.json({ error: 'Discord guild is not ready.' }, 503);
+    }
+
+    const result = leaveVoiceChannel(guild.id);
     return c.json(result, result.ok ? 200 : 400);
   });
 

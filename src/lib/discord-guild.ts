@@ -69,6 +69,53 @@ export function listTextChannels(guild: Guild): ChannelOption[] {
     .map(({ id, name, category, canPost }) => ({ id, name, category, canPost }));
 }
 
+export interface VoiceChannelOption {
+  id: string;
+  name: string;
+  category: string | null;
+  /** False when the bot lacks the permissions to connect and speak there. */
+  canJoin: boolean;
+  /** People in the channel, bots not counted — an empty channel makes the player leave. */
+  memberCount: number;
+}
+
+function canBotJoin(channel: GuildBasedChannel): boolean {
+  const me = channel.guild.members.me;
+  if (!me) {
+    return true;
+  }
+
+  const permissions = channel.permissionsFor(me);
+  return (
+    permissions?.has(PermissionFlagsBits.ViewChannel) === true &&
+    permissions.has(PermissionFlagsBits.Connect) &&
+    permissions.has(PermissionFlagsBits.Speak)
+  );
+}
+
+/** Voice and stage channels, in the same sidebar order as `listTextChannels`. */
+export function listVoiceChannels(guild: Guild): VoiceChannelOption[] {
+  return [...guild.channels.cache.values()]
+    .filter((channel) => channel.isVoiceBased())
+    .map((channel) => ({
+      id: channel.id,
+      name: channel.name,
+      category: channel.parent?.name ?? null,
+      canJoin: canBotJoin(channel),
+      memberCount: channel.members.filter((member) => !member.user.bot).size,
+      categoryPosition: channel.parent?.rawPosition ?? -1,
+      position: channel.rawPosition,
+    }))
+    .toSorted((a, b) => a.categoryPosition - b.categoryPosition || a.position - b.position)
+    .map(({ id, name, category, canJoin, memberCount }) => ({
+      id,
+      name,
+      category,
+      canJoin,
+      memberCount,
+    }));
+}
+
 export interface GuildEmojiOption {
   id: string;
   name: string;

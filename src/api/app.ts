@@ -15,6 +15,7 @@ import {
   listGuildEmojis,
   listGuildMembers,
   listTextChannels,
+  listVoiceChannels,
 } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
 import {
@@ -139,6 +140,15 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     }
 
     return c.json({ channels: listTextChannels(guild) });
+  });
+
+  app.get('/api/discord/voice-channels', dashboardViewer, (c) => {
+    const guild = getConfiguredGuild();
+    if (!guild) {
+      return c.json({ error: 'Discord guild is not ready.' }, 503);
+    }
+
+    return c.json({ channels: listVoiceChannels(guild) });
   });
 
   app.get('/api/discord/roles', dashboardViewer, (c) => {
