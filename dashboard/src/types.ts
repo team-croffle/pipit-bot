@@ -76,6 +76,16 @@ export interface PublishPanelResult {
   warnings: string[];
 }
 
+export interface DiscordVoiceChannel {
+  id: string;
+  name: string;
+  category: string | null;
+  /** False when the bot may not connect and speak there. */
+  canJoin: boolean;
+  /** People in the room, bots not counted. */
+  memberCount: number;
+}
+
 export interface DiscordChannel {
   id: string;
   name: string;

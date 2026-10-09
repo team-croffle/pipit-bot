@@ -43,7 +43,7 @@
     }
 
     return props.playback && !props.playback.canEnqueue
-      ? '트랙을 추가하려면 먼저 봇을 보이스 채널에 참여시키세요.'
+      ? '트랙을 추가하려면 보이스 카드에서 봇을 통화방에 참여시키세요.'
       : '';
   });
 
@@ -109,6 +109,7 @@
       <!-- One reserved line for all three notices: they used to be separate paragraphs
            that appeared and vanished, and every appearance resized the card. -->
       <p
+        data-playback-status
         class="min-h-5 text-sm"
         :class="error ? 'text-destructive' : 'text-muted-foreground'"
         :role="error ? 'alert' : undefined"
