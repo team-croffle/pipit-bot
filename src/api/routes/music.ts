@@ -12,6 +12,12 @@ import {
   type LoopMode,
 } from '../../lib/music/playback.js';
 import { schedulePlayWhenReady, submitMusicJob } from '../../lib/music/prepare-track.js';
+import {
+  removeQueuedTrack,
+  setVolumeLevel,
+  skipToQueuedTrack,
+} from '../../lib/music/queue-actions.js';
+import { isVolumeLevel } from '../../lib/music/volume-levels.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import { internalAuth } from '../auth/internal.js';
 import type { ApiVariables } from '../context.js';
@@ -59,6 +65,36 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = setLoopMode(mode as LoopMode);
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/remove', dashboardViewer, async (c) => {
+    const body = await c.req.json<{ trackId?: unknown }>();
+    if (typeof body.trackId !== 'string' || !body.trackId) {
+      return c.json({ error: 'trackId is required' }, 400);
+    }
+
+    const result = removeQueuedTrack({ id: body.trackId });
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/skipto', dashboardViewer, async (c) => {
+    const body = await c.req.json<{ trackId?: unknown }>();
+    if (typeof body.trackId !== 'string' || !body.trackId) {
+      return c.json({ error: 'trackId is required' }, 400);
+    }
+
+    const result = skipToQueuedTrack({ id: body.trackId });
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/volume', dashboardViewer, async (c) => {
+    const body = await c.req.json<{ level?: unknown }>();
+    if (!isVolumeLevel(body.level)) {
+      return c.json({ error: 'level must be low, mid, or high' }, 400);
+    }
+
+    const result = setVolumeLevel(body.level);
     return c.json(result, result.ok ? 200 : 400);
   });
 

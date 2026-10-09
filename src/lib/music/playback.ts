@@ -2,10 +2,15 @@ import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 
 import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
+import { volumeLevelOf, type VolumeLevel } from './volume-levels.js';
 
-const QUEUE_PREVIEW_LIMIT = 20;
+// WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
+// queue that long is already past what anyone scrolls through.
+const QUEUE_PREVIEW_LIMIT = 100;
 
 export interface PlaybackTrackItem {
+  /** The player's id for the queued track — stable while it waits, unlike its position. */
+  id: string;
   index: number;
   title: string;
   duration: string | null;
@@ -35,6 +40,10 @@ export interface PlaybackState {
   tracks: PlaybackTrackItem[];
   pendingCount: number;
   durationFormatted: string | null;
+  /** Raw player volume, or null without a session. */
+  volume: number | null;
+  /** The named level the volume matches, or null when it was set to something else. */
+  volumeLevel: VolumeLevel | null;
 }
 
 export interface PlaybackActionResult {
@@ -55,7 +64,7 @@ function repeatModeLabel(mode: number): PlaybackRepeatMode {
   }
 }
 
-function formatTrackTitle(track: Track): string {
+export function formatTrackTitle(track: Track): string {
   const title = track.title?.trim();
   return title || 'Unknown';
 }
@@ -98,6 +107,7 @@ function buildState(
   tracks: PlaybackTrackItem[],
   pendingCount: number,
   durationFormatted: string | null,
+  volume: number | null = null,
 ): PlaybackState {
   const status = resolveStatus(voiceChannelId, active, paused);
   return {
@@ -112,16 +122,23 @@ function buildState(
     tracks,
     pendingCount,
     durationFormatted,
+    volume,
+    volumeLevel: volumeLevelOf(volume),
   };
 }
 
-function getGuildQueue() {
+/** A command passes its own guild; the dashboard acts on the configured one. */
+export function getGuildQueue(guildId?: string) {
+  if (guildId) {
+    return useQueue(guildId) ?? undefined;
+  }
+
   const guild = getConfiguredGuild();
   if (!guild) {
     return undefined;
   }
 
-  return useQueue(guild.id);
+  return useQueue(guild.id) ?? undefined;
 }
 
 export function getPlaybackState(): PlaybackState {
@@ -168,12 +185,14 @@ export function getPlaybackState(): PlaybackState {
           positionLabel: '0:00',
         },
     queue.tracks.store.slice(0, QUEUE_PREVIEW_LIMIT).map((track, index) => ({
+      id: track.id,
       index: index + 1,
       title: formatTrackTitle(track),
       duration: track.duration ?? null,
     })),
     queue.tracks.size,
     queue.tracks.size > 0 ? queue.durationFormatted : null,
+    queue.node.volume,
   );
 }
 
