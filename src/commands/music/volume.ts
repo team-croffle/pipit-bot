@@ -3,13 +3,8 @@ import { type Args, Command } from '@sapphire/framework';
 import { useQueue } from 'discord-player';
 import type { Message } from 'discord.js';
 
-const VOLUME_LEVELS = {
-  low: 30,
-  mid: 50,
-  high: 100,
-} as const;
-
-type VolumeLevel = keyof typeof VOLUME_LEVELS;
+import { setVolumeLevel } from '../../lib/music/queue-actions.js';
+import { isVolumeLevel, VOLUME_LEVELS } from '../../lib/music/volume-levels.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Set volume: low (30), mid (50), high (100)',
@@ -41,13 +36,12 @@ export class UserCommand extends Command {
       return `Current volume: **${queue.node.volume}**\nUsage: \`!volume low\` / \`!volume mid\` / \`!volume high\``;
     }
 
-    const level = input.toLowerCase() as VolumeLevel;
-    if (!(level in VOLUME_LEVELS)) {
+    const level = input.toLowerCase();
+    if (!isVolumeLevel(level)) {
       return `Invalid level. Use: \`!volume low\` / \`!volume mid\` / \`!volume high\``;
     }
 
-    const value = VOLUME_LEVELS[level];
-    queue.node.setVolume(value);
-    return `Volume set to **${level}** (${value}).`;
+    const result = setVolumeLevel(level, guildId);
+    return result.ok ? `Volume set to **${level}** (${VOLUME_LEVELS[level]}).` : result.message;
   }
 }

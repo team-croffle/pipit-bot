@@ -1,7 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { type Args, Command } from '@sapphire/framework';
-import { useQueue } from 'discord-player';
 import type { Message } from 'discord.js';
+
+import { skipToQueuedTrack } from '../../lib/music/queue-actions.js';
 
 @ApplyOptions<Command.Options>({
   description: 'Skip to a track in the queue by 1-based index',
@@ -26,20 +27,7 @@ export class UserCommand extends Command {
       return 'Please provide a valid track index to skip to.';
     }
 
-    const queue = useQueue(guildId);
-    if (!queue) {
-      return 'No active music session found in this server.';
-    }
-
-    const track = queue.tracks.find((_, i) => i === idx - 1);
-    if (!track) {
-      return `No track found at index ${idx}.`;
-    }
-
-    if (queue.node.skipTo(idx - 1)) {
-      return `Skipped to: **${track.title}**`;
-    }
-
-    return 'Failed to skip to that track.';
+    const result = skipToQueuedTrack({ index: idx }, guildId);
+    return result.ok ? `Skipped to: **${result.title}**` : result.message;
   }
 }

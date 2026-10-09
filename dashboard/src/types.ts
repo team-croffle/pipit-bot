@@ -269,6 +269,7 @@ export interface PlaybackCurrentTrack {
 }
 
 export interface PlaybackTrackItem {
+  id: string;
   index: number;
   title: string;
   duration: string | null;
@@ -289,7 +290,11 @@ export interface PlaybackState {
   tracks: PlaybackTrackItem[];
   pendingCount: number;
   durationFormatted: string | null;
+  volume: number | null;
+  volumeLevel: PlaybackVolumeLevel | null;
 }
+
+export type PlaybackVolumeLevel = 'low' | 'mid' | 'high';
 
 export interface PlaybackActionResult {
   ok: boolean;
