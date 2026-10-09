@@ -97,6 +97,17 @@ A panel can be held at **one reaction** — the bot takes each member's reaction
 
 The bot checks before it sends: it must be able to post and react in the channel, and every role must sit below its own and not be one Discord manages. Holding a panel at one reaction also needs `Manage Messages`, as does putting the emoji back in order after one is inserted in the middle — Discord fixes a reaction's place when it is first added, so the only repair is to clear them and react again. A panel that could never grant its roles is refused with the reason, rather than failing silently when a member reacts. Panels live in `data/reaction-roles.json`.
 
+## Music
+
+Everything the music commands do can be done from the dashboard's **Music** page as well:
+
+- **Voice** — pick a voice channel and the bot joins it; pick another while it is connected and it moves there without stopping the current track. The picker shows how many people are in each room, because the player leaves an empty one after 30 seconds. **Leave** disconnects it
+- **Queue** — every queued track (up to 100 listed) with its own **skip to** and **remove**. Rows are addressed by the player's track id, so a list that is a moment out of date never removes the wrong track. Skipping to a track drops the ones ahead of it, as `!skipto` does
+- **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `!playnext`
+- **Volume** — low / mid / high, the same three levels as `!volume`, while something is playing
+
+The dashboard and the commands share one queue, so either can pick up where the other left off.
+
 ## Source abstraction
 
 This repository describes its music backend only as an external **music worker** —
@@ -140,8 +151,12 @@ Dev streams are stored in `../shared/`.
 
 ### Music commands
 
-- `!p <query>` / `!play <query>` — opaque query forwarded to the music worker
-- Queue controls: `!skip`, `!pause`, `!resume`, `!queue`, etc.
+- `!p <query>` / `!play <query>` — opaque query forwarded to the music worker; `!pn <query>` / `!playnext <query>` puts it at the front of the queue
+- `!join`, `!leave` — join your voice channel, or leave
+- Playback: `!pause`, `!resume`, `!skip`, `!stop`, `!loop track|queue|off`, `!volume low|mid|high`
+- Queue: `!queue`, `!skipto <n>`, `!rm <n>`, `!clear`
+
+The dashboard's Music page does the same (see [Music](#music)).
 
 The bot does not validate or parse the query string.
 
