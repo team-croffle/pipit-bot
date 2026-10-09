@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { container } from '@sapphire/framework';
-import { useMainPlayer } from 'discord-player';
+import { useMainPlayer, useQueue, type Track } from 'discord-player';
 
 import {
   getJob,
@@ -39,8 +39,35 @@ export async function submitMusicJob(jobId: string, query: string): Promise<JobR
   return getJob(jobId)!;
 }
 
-async function playPreparedTrack(track: TrackMeta): Promise<void> {
-  const { voiceChannel } = await ensureBotVoiceChannel();
+/**
+ * Puts a prepared file at the front of the queue, the way `!playnext` does. Returns
+ * the inserted track, or null when nothing is playing — then there is no "next" to
+ * jump ahead of, and the caller plays it the ordinary way instead.
+ */
+export async function insertNextIfPlaying(guildId: string, file: string): Promise<Track | null> {
+  const queue = useQueue(guildId);
+  if (!queue?.currentTrack) {
+    return null;
+  }
+
+  const search = await useMainPlayer().search(toLocalPlayQuery(file));
+  const track = search.tracks[0];
+  if (!track) {
+    throw new Error('No tracks were found for that query.');
+  }
+
+  queue.node.insert(track, 0);
+  return track;
+}
+
+async function playPreparedTrack(track: TrackMeta, next: boolean): Promise<void> {
+  const { guild, voiceChannel } = await ensureBotVoiceChannel();
+
+  // Checked when the file is ready, not when it was asked for: the track that was
+  // playing then may have ended while the worker prepared this one.
+  if (next && (await insertNextIfPlaying(guild.id, track.file))) {
+    return;
+  }
 
   const player = useMainPlayer();
   const playQuery = toLocalPlayQuery(track.file);
@@ -49,7 +76,7 @@ async function playPreparedTrack(track: TrackMeta): Promise<void> {
   });
 }
 
-export function schedulePlayWhenReady(jobId: string): void {
+export function schedulePlayWhenReady(jobId: string, options: { next?: boolean } = {}): void {
   void (async () => {
     const job = await waitForJob(jobId);
     if (!job.track) {
@@ -57,7 +84,7 @@ export function schedulePlayWhenReady(jobId: string): void {
     }
 
     trackMetaByFile.set(job.track.file, job.track);
-    await playPreparedTrack(job.track);
+    await playPreparedTrack(job.track, options.next === true);
   })().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : 'Failed to play prepared track.';
     container.logger.error('[dashboard-play]', error);

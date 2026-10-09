@@ -1,11 +1,11 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { type Args, Command } from '@sapphire/framework';
-import { useMainPlayer, useQueue } from 'discord-player';
+import { useMainPlayer } from 'discord-player';
 import type { Message } from 'discord.js';
 
 import { toLocalPlayQuery } from '../../lib/music/local-file-extractor.js';
 import { PLAYER_NODE_OPTIONS } from '../../lib/music/player-node-options.js';
-import { prepareTrack } from '../../lib/music/prepare-track.js';
+import { insertNextIfPlaying, prepareTrack } from '../../lib/music/prepare-track.js';
 import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
 
 @ApplyOptions<Command.Options>({
@@ -36,26 +36,18 @@ export class UserCommand extends Command {
     }
 
     const player = useMainPlayer();
-    const queue = useQueue(guild.id);
 
     try {
       const feedbackMessage = await message.channel.send(`Preparing \`${query.trim()}\`...`);
 
       await connectPlayerToChannel(voiceChannel);
       const trackMeta = await prepareTrack(query);
-      const playQuery = toLocalPlayQuery(trackMeta.file);
-
-      if (queue?.currentTrack) {
-        const search = await player.search(playQuery);
-        const track = search.tracks[0];
-        if (!track) {
-          return feedbackMessage.edit('No tracks were found for that query.');
-        }
-
-        queue.node.insert(track, 0);
-        return feedbackMessage.edit(`\`${track.title}\` will play next.`);
+      const inserted = await insertNextIfPlaying(guild.id, trackMeta.file);
+      if (inserted) {
+        return feedbackMessage.edit(`\`${inserted.title}\` will play next.`);
       }
 
+      const playQuery = toLocalPlayQuery(trackMeta.file);
       const { track } = await player.play(
         voiceChannel as unknown as Parameters<typeof player.play>[0],
         playQuery,
