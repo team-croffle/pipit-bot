@@ -1,16 +1,20 @@
 /**
  * The message the server meant for the operator.
  *
- * Every route answers a failure with `{ error }`, so showing the raw body would put
+ * Routes answer a failure with `{ error }` (or `{ ok: false, message }`), so showing the raw body would put
  * JSON punctuation in front of a person. The text is used as-is when it is not JSON,
  * which is what a proxy or a crash returns.
  */
 async function failureMessage(response: Response): Promise<string> {
   const detail = await response.text();
   try {
-    const body = JSON.parse(detail) as { error?: unknown };
+    const body = JSON.parse(detail) as { error?: unknown; ok?: unknown; message?: unknown };
     if (typeof body.error === 'string' && body.error) {
       return body.error;
+    }
+    // The playback actions answer a refusal ("already paused") as `{ ok: false, message }`.
+    if (body.ok === false && typeof body.message === 'string' && body.message) {
+      return body.message;
     }
   } catch {
     // Not JSON — fall through to the raw text.

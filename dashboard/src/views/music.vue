@@ -46,7 +46,7 @@
             />
             <div class="grid gap-4 lg:grid-cols-2">
               <QueueCard :playback="playback" :busy="busy" @action="run" @repeat="setRepeat" />
-              <VoiceCard :playback="playback" />
+              <VoiceCard :playback="playback" :busy="busy" @action="run" />
             </div>
           </div>
         </StateBlock>
