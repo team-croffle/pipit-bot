@@ -65,7 +65,8 @@ export function usePlayback() {
     await run('/api/music/playback/loop', { mode }, '반복 모드를 바꾸지 못했습니다.');
   }
 
-  async function enqueue(query: string): Promise<boolean> {
+  /** `next` puts the track at the front of the queue, like `!playnext`. */
+  async function enqueue(query: string, next = false): Promise<boolean> {
     const trimmed = query.trim();
     if (!trimmed || !playback.value?.canEnqueue) {
       return false;
@@ -73,8 +74,14 @@ export function usePlayback() {
 
     busy.value = true;
     try {
-      await postJson('/api/music/jobs', { jobId: crypto.randomUUID(), query: trimmed });
-      message.value = '트랙을 준비하고 있습니다…';
+      await postJson('/api/music/jobs', {
+        jobId: crypto.randomUUID(),
+        query: trimmed,
+        ...(next ? { next: true } : {}),
+      });
+      message.value = next
+        ? '다음 순서로 재생할 트랙을 준비하고 있습니다…'
+        : '트랙을 준비하고 있습니다…';
       error.value = '';
       await refresh();
       return true;

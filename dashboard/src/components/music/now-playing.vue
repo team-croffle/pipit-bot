@@ -1,10 +1,25 @@
 <script setup lang="ts">
-  import { Music, Pause, Play, Repeat, SkipForward, Square } from 'lucide-vue-next';
+  import {
+    ChevronDown,
+    ListStart,
+    Music,
+    Pause,
+    Play,
+    Repeat,
+    SkipForward,
+    Square,
+  } from 'lucide-vue-next';
   import { computed, ref } from 'vue';
 
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent } from '@/components/ui/card';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+  } from '@/components/ui/dropdown-menu';
   import { Input } from '@/components/ui/input';
   import type { PlaybackRepeatMode, PlaybackState, PlaybackStatus } from '@/types';
 
@@ -50,7 +65,7 @@
   const emit = defineEmits<{
     action: [path: string];
     repeat: [mode: PlaybackRepeatMode];
-    enqueue: [query: string];
+    enqueue: [query: string, next: boolean];
   }>();
 
   const query = ref('');
@@ -79,12 +94,16 @@
     emit('repeat', next);
   }
 
-  function submit(): void {
+  const cannotAdd = computed(
+    () => !props.playback?.canEnqueue || props.busy || !query.value.trim(),
+  );
+
+  function submit(next = false): void {
     if (!query.value.trim()) {
       return;
     }
 
-    emit('enqueue', query.value);
+    emit('enqueue', query.value, next);
     query.value = '';
   }
 </script>
@@ -92,18 +111,50 @@
 <template>
   <Card>
     <CardContent class="flex flex-col gap-5">
-      <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="submit">
+      <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="submit()">
         <Input
+          id="enqueue-query"
           v-model="query"
           type="text"
           placeholder="검색어나 링크를 입력하세요…"
           class="flex-1"
           :disabled="!playback?.canEnqueue || busy"
         />
-        <Button type="submit" :disabled="!playback?.canEnqueue || busy || !query.trim()">
-          <Play />
-          재생
-        </Button>
+        <!-- A split button: the plain action stays one click, and "play next" — the
+             dashboard side of !playnext — sits one step away instead of beside it as a
+             second primary button. -->
+        <div class="flex">
+          <Button
+            type="submit"
+            data-enqueue-submit
+            class="flex-1 rounded-r-none"
+            :disabled="cannotAdd"
+          >
+            <Play />
+            재생
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button
+                type="button"
+                data-enqueue-menu
+                size="icon"
+                class="border-primary-foreground/20 rounded-l-none border-l"
+                :disabled="cannotAdd"
+                aria-label="추가 방법 선택"
+                title="추가 방법 선택"
+              >
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem @select="submit(true)">
+                <ListStart />
+                다음에 재생
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </form>
 
       <!-- One reserved line for all three notices: they used to be separate paragraphs
