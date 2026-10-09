@@ -164,9 +164,13 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   });
 
   app.post('/api/music/jobs', dashboardViewer, async (c) => {
-    const body = await c.req.json<{ jobId?: string; query?: string }>();
+    const body = await c.req.json<{ jobId?: string; query?: string; next?: unknown }>();
     if (!body.jobId || !body.query?.trim()) {
       return c.json({ error: 'jobId and query are required' }, 400);
+    }
+
+    if (body.next !== undefined && typeof body.next !== 'boolean') {
+      return c.json({ error: 'next must be a boolean' }, 400);
     }
 
     if (!canEnqueuePlayback()) {
@@ -175,7 +179,7 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
 
     try {
       const job = await submitMusicJob(body.jobId, body.query.trim());
-      schedulePlayWhenReady(body.jobId);
+      schedulePlayWhenReady(body.jobId, { next: body.next });
       return c.json(job, 201);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to enqueue job';
