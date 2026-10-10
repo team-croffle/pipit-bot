@@ -308,6 +308,7 @@ export interface PlaybackState {
   durationFormatted: string | null;
   volume: number;
   volumeLevel: PlaybackVolumeLevel;
+  notice: { message: string; at: number } | null;
 }
 
 export type PlaybackVolumeLevel = 'low' | 'mid' | 'high';

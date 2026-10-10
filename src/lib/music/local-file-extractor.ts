@@ -107,6 +107,12 @@ export class LocalFileExtractor extends BaseExtractor {
   }
 }
 
+/** The absolute path of a `local:` track on this host, or null for anything else. */
+export function localTrackPath(url: string): string | null {
+  const relativeFile = resolveRelativeFile(url);
+  return relativeFile ? join(getEnv().streamRoot, relativeFile) : null;
+}
+
 export function toLocalPlayQuery(file: string): string {
   return `${LOCAL_PREFIX}${file.replace(/\\/g, '/').replace(/^\/+/, '')}`;
 }
