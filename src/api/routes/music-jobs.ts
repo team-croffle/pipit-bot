@@ -1,5 +1,6 @@
 import type { Hono } from 'hono';
 
+import { readFailureCode } from '../../lib/music/failure-codes.js';
 import { canEnqueuePlayback } from '../../lib/music/playback.js';
 import {
   retryMusicJob,
@@ -53,8 +54,8 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
       schedulePlayWhenReady(body.jobId, { next: body.next });
       return c.json(job, 201);
     } catch (error) {
+      // submitMusicJob has already failed the job (code unavailable).
       const message = error instanceof Error ? error.message : 'Failed to enqueue job';
-      resolveFailed(body.jobId, message);
       return c.json({ error: message }, 503);
     }
   });
@@ -90,10 +91,6 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
       return c.json(await retryMusicJob(original), 201);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to enqueue job';
-      const retryId = getJob(original.jobId)?.retriedAs;
-      if (retryId) {
-        resolveFailed(retryId, message);
-      }
       return c.json({ error: message }, 503);
     }
   });
@@ -109,8 +106,10 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
   });
 
   app.post('/internal/music/jobs/:jobId/failed', internalAuth, async (c) => {
-    const body = await c.req.json<{ error?: string }>();
-    const job = resolveFailed(c.req.param('jobId'), body.error ?? 'Job failed');
+    const body = await c.req.json<{ error?: unknown; code?: unknown }>();
+    const error =
+      typeof body.error === 'string' && body.error ? body.error.slice(0, 500) : 'Job failed';
+    const job = resolveFailed(c.req.param('jobId'), error, readFailureCode(body.code));
     return c.json(job);
   });
 }

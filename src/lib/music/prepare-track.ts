@@ -14,6 +14,7 @@ import {
   type TrackMeta,
 } from '../../api/jobs/pending-registry.js';
 import { enqueueMusicJob } from './backend-client.js';
+import { describeFailure } from './failure-codes.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
 import { ensureBotVoiceChannel } from './voice-connection.js';
@@ -58,7 +59,18 @@ export async function submitMusicJob(
   }
 
   registerJob(jobId, trimmed, options);
-  await enqueueMusicJob(jobId, trimmed);
+  try {
+    await enqueueMusicJob(jobId, trimmed);
+  } catch (error) {
+    // Ended here, once, for every caller: a command's job used to stay pending when
+    // the worker could not be reached.
+    resolveFailed(
+      jobId,
+      error instanceof Error ? error.message : 'Music service is unavailable.',
+      'unavailable',
+    );
+    throw error;
+  }
   return getJob(jobId)!;
 }
 
@@ -126,9 +138,23 @@ export async function prepareTrack(
   options: { next?: boolean } = {},
 ): Promise<TrackMeta> {
   const jobId = randomUUID();
-  await submitMusicJob(jobId, query, { origin: 'command', next: options.next });
+  let job: JobRecord;
+  try {
+    await submitMusicJob(jobId, query, { origin: 'command', next: options.next });
+    job = await waitForJob(jobId);
+  } catch (error) {
+    // The command answers with what the failure means, not only the worker's words.
+    const failed = getJob(jobId);
+    throw new Error(
+      failed && failed.status !== 'pending'
+        ? describeFailure(failed.code, failed.error)
+        : error instanceof Error
+          ? error.message
+          : 'Failed to prepare track.',
+      { cause: error },
+    );
+  }
 
-  const job = await waitForJob(jobId);
   if (!job.track) {
     throw new Error(job.error ?? 'Failed to prepare track.');
   }
