@@ -46,11 +46,17 @@
       : '재생 중';
   });
 
-  // Priority, not stacking: an error is the thing to read, then whatever the last
-  // action reported, then the reason enqueueing is unavailable.
+  // Priority, not stacking: an error is the thing to read, then the player's own
+  // notice, then whatever the last action reported, then why enqueueing is unavailable.
   const status = computed(() => {
     if (props.error) {
       return props.error;
+    }
+
+    // Something the player did on its own (a track skipped for a missing file) is
+    // news the last action's own reply is not.
+    if (props.playback?.notice) {
+      return props.playback.notice.message;
     }
 
     if (props.message) {
