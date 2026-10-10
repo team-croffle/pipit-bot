@@ -4,6 +4,7 @@ import { join, normalize } from 'node:path';
 import { BaseExtractor, type ExtractorInfo, type ExtractorStreamable, Track } from 'discord-player';
 
 import { getEnv } from '../env.js';
+import { PcmVolume } from './pcm-volume.js';
 import { consumeTrackMeta, getTrackMeta } from './prepare-track.js';
 import { formatDurationFromSeconds } from './track-format.js';
 
@@ -100,7 +101,7 @@ export class LocalFileExtractor extends BaseExtractor {
     }
 
     return {
-      stream: createReadStream(absolutePath),
+      stream: createReadStream(absolutePath).pipe(new PcmVolume()),
       $fmt: 'pcm',
     };
   }

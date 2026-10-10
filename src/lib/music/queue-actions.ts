@@ -1,3 +1,7 @@
+import { container } from '@sapphire/framework';
+
+import { getConfiguredGuild } from '../discord-guild.js';
+import { setPcmVolumeLevel } from './pcm-volume.js';
 import { formatTrackTitle, getGuildQueue, type PlaybackActionResult } from './playback.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
@@ -73,18 +77,13 @@ export function skipToQueuedTrack(ref: QueuedTrackRef, guildId?: string): Queued
   return { ok: true, message: `Skipped to: ${title}`, title };
 }
 
+/** Needs the bot in a voice channel, not a playing track — see pcm-volume.ts. */
 export function setVolumeLevel(level: VolumeLevel, guildId?: string): PlaybackActionResult {
-  const queue = getGuildQueue(guildId);
-  if (!queue) {
-    return { ok: false, message: NO_SESSION };
+  const guild = guildId ? container.client.guilds.cache.get(guildId) : getConfiguredGuild();
+  if (!guild?.members.me?.voice.channelId) {
+    return { ok: false, message: 'Join a voice channel first.' };
   }
 
-  const value = VOLUME_LEVELS[level];
-  // The player only holds a volume while something is streaming; setting it with
-  // nothing playing reports false and changes nothing.
-  if (!queue.node.setVolume(value)) {
-    return { ok: false, message: 'Nothing is playing, so there is no volume to set.' };
-  }
-
-  return { ok: true, message: `Volume set to ${level} (${value}).` };
+  setPcmVolumeLevel(level);
+  return { ok: true, message: `Volume set to ${level} (${VOLUME_LEVELS[level]}).` };
 }
