@@ -104,7 +104,7 @@ Everything the music commands do can be done from the dashboard's **Music** page
 - **Voice** — pick a voice channel and the bot joins it; pick another while it is connected and it moves there without stopping the current track. The picker shows how many people are in each room, because the player leaves an empty one after 30 seconds. **Leave** disconnects it
 - **Queue** — every queued track (up to 100 listed) with its own **skip to** and **remove**. Rows are addressed by the player's track id, so a list that is a moment out of date never removes the wrong track. Skipping to a track drops the ones ahead of it, as `!skipto` does
 - **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `!playnext`
-- **Volume** — low / mid / high, the same three levels as `!volume`, while something is playing
+- **Volume** — low / mid / high, the same three levels as `!volume`, whenever the bot is in a voice channel — playing or not
 
 The dashboard and the commands share one queue, so either can pick up where the other left off.
 
