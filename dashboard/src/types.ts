@@ -19,6 +19,8 @@ export interface JobRecord {
   status: JobStatus;
   track?: TrackMeta;
   error?: string;
+  code?: string;
+  lateResult?: { status: 'ready' | 'failed'; track?: TrackMeta; error?: string; at: number };
   createdAt: number;
   updatedAt: number;
 }
