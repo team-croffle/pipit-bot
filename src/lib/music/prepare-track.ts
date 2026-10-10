@@ -18,6 +18,23 @@ import { ensureBotVoiceChannel } from './voice-connection.js';
 
 const trackMetaByFile = new Map<string, TrackMeta>();
 
+// WHY a cap: an entry is consumed when the player loads the file, so a track that
+// never got played (its play call failed, or it was prepared after a timeout) would
+// otherwise stay for the life of the process. Far more than any queue holds.
+const TRACK_META_KEEP = 200;
+
+function rememberTrackMeta(track: TrackMeta): void {
+  trackMetaByFile.delete(track.file);
+  trackMetaByFile.set(track.file, track);
+  while (trackMetaByFile.size > TRACK_META_KEEP) {
+    const oldest = trackMetaByFile.keys().next().value;
+    if (oldest === undefined) {
+      break;
+    }
+    trackMetaByFile.delete(oldest);
+  }
+}
+
 export function getTrackMeta(file: string): TrackMeta | undefined {
   return trackMetaByFile.get(file);
 }
@@ -83,7 +100,7 @@ export function schedulePlayWhenReady(jobId: string, options: { next?: boolean }
       throw new Error(job.error ?? 'Failed to prepare track.');
     }
 
-    trackMetaByFile.set(job.track.file, job.track);
+    rememberTrackMeta(job.track);
     await playPreparedTrack(job.track, options.next === true);
   })().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : 'Failed to play prepared track.';
@@ -104,6 +121,6 @@ export async function prepareTrack(query: string): Promise<TrackMeta> {
     throw new Error(job.error ?? 'Failed to prepare track.');
   }
 
-  trackMetaByFile.set(job.track.file, job.track);
+  rememberTrackMeta(job.track);
   return job.track;
 }
