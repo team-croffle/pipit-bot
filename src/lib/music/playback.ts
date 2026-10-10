@@ -2,6 +2,7 @@ import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 
 import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
+import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolumeLevel } from './pcm-volume.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
@@ -44,6 +45,8 @@ export interface PlaybackState {
   /** The bot's volume (pcm-volume.ts) — set even when nothing plays. */
   volume: number;
   volumeLevel: VolumeLevel;
+  /** Something the player did on its own that deserves a word, e.g. a skipped track. */
+  notice: PlaybackNotice | null;
 }
 
 export interface PlaybackActionResult {
@@ -123,6 +126,7 @@ function buildState(
     durationFormatted,
     volume: VOLUME_LEVELS[getVolumeLevel()],
     volumeLevel: getVolumeLevel(),
+    notice: getRecentNotice(),
   };
 }
 

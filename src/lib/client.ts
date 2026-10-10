@@ -5,6 +5,7 @@ import { GatewayIntentBits, Partials } from 'discord.js';
 
 import type { EnvConfig } from './env.js';
 import { LocalFileExtractor } from './music/local-file-extractor.js';
+import { watchMissingFiles } from './music/missing-file.js';
 import { getRuntimeConfig } from './runtime-config.js';
 
 export class CustomClient extends SapphireClient {
@@ -51,6 +52,8 @@ export class CustomClient extends SapphireClient {
     this.player.events.on('error', (_, error) => {
       container.logger.error('[queue]', error);
     });
+
+    watchMissingFiles(this.player);
   }
 
   public override async login(token?: string) {
