@@ -185,8 +185,8 @@ export function waitForJob(jobId: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promi
     // have looked like a success nobody acted on.
     const timeout = setTimeout(() => {
       waiters.delete(jobId);
-      resolveFailed(jobId, 'Timed out preparing track.', 'timeout');
-      reject(new Error('Timed out preparing track.'));
+      resolveFailed(jobId, 'Preparing the track took too long.', 'timeout');
+      reject(new Error('Preparing the track took too long.'));
     }, timeoutMs);
 
     waiters.set(jobId, {
