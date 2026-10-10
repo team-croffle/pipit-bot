@@ -300,8 +300,8 @@ export interface PlaybackState {
   tracks: PlaybackTrackItem[];
   pendingCount: number;
   durationFormatted: string | null;
-  volume: number | null;
-  volumeLevel: PlaybackVolumeLevel | null;
+  volume: number;
+  volumeLevel: PlaybackVolumeLevel;
 }
 
 export type PlaybackVolumeLevel = 'low' | 'mid' | 'high';

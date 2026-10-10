@@ -72,13 +72,11 @@
     { value: 'high', label: '높음' },
   ];
 
-  const volumeHint = computed(() => {
-    if (!props.playback?.active) {
-      return '재생 중일 때 바꿀 수 있습니다.';
-    }
-
-    return props.playback.volumeLevel ? '' : `지금 볼륨 ${props.playback.volume ?? '—'}`;
-  });
+  // The bot keeps its own volume, so it can be set as soon as it is in a room —
+  // nothing has to be playing.
+  const volumeHint = computed(() =>
+    props.playback?.voiceChannelId ? '' : '통화방에 참여하면 바꿀 수 있습니다.',
+  );
 
   function setVolume(level: PlaybackVolumeLevel): void {
     if (props.playback?.volumeLevel !== level) {
@@ -153,7 +151,7 @@
             size="sm"
             :variant="playback?.volumeLevel === level.value ? 'default' : 'outline'"
             :aria-pressed="playback?.volumeLevel === level.value"
-            :disabled="busy || !playback?.active"
+            :disabled="busy || !playback?.voiceChannelId"
             @click="setVolume(level.value)"
           >
             {{ level.label }}
