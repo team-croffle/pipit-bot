@@ -1,8 +1,8 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { type Args, Command } from '@sapphire/framework';
-import { useQueue } from 'discord-player';
 import type { Message } from 'discord.js';
 
+import { getVolumeLevel } from '../../lib/music/pcm-volume.js';
 import { setVolumeLevel } from '../../lib/music/queue-actions.js';
 import { isVolumeLevel, VOLUME_LEVELS } from '../../lib/music/volume-levels.js';
 
@@ -25,15 +25,10 @@ export class UserCommand extends Command {
       return 'No guild ID provided';
     }
 
-    const queue = useQueue(guildId);
-    if (!queue) {
-      return 'No active music session found in this server.';
-    }
-
     const input = await args.pick('string').catch(() => null);
 
     if (!input) {
-      return `Current volume: **${queue.node.volume}**\nUsage: \`!volume low\` / \`!volume mid\` / \`!volume high\``;
+      return `Current volume: **${getVolumeLevel()}** (${VOLUME_LEVELS[getVolumeLevel()]})\nUsage: \`!volume low\` / \`!volume mid\` / \`!volume high\``;
     }
 
     const level = input.toLowerCase();

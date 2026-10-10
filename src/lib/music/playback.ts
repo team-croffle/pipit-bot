@@ -2,7 +2,8 @@ import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 
 import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
-import { volumeLevelOf, type VolumeLevel } from './volume-levels.js';
+import { getVolumeLevel } from './pcm-volume.js';
+import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
 // WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
 // queue that long is already past what anyone scrolls through.
@@ -40,10 +41,9 @@ export interface PlaybackState {
   tracks: PlaybackTrackItem[];
   pendingCount: number;
   durationFormatted: string | null;
-  /** Raw player volume, or null without a session. */
-  volume: number | null;
-  /** The named level the volume matches, or null when it was set to something else. */
-  volumeLevel: VolumeLevel | null;
+  /** The bot's volume (pcm-volume.ts) — set even when nothing plays. */
+  volume: number;
+  volumeLevel: VolumeLevel;
 }
 
 export interface PlaybackActionResult {
@@ -107,7 +107,6 @@ function buildState(
   tracks: PlaybackTrackItem[],
   pendingCount: number,
   durationFormatted: string | null,
-  volume: number | null = null,
 ): PlaybackState {
   const status = resolveStatus(voiceChannelId, active, paused);
   return {
@@ -122,8 +121,8 @@ function buildState(
     tracks,
     pendingCount,
     durationFormatted,
-    volume,
-    volumeLevel: volumeLevelOf(volume),
+    volume: VOLUME_LEVELS[getVolumeLevel()],
+    volumeLevel: getVolumeLevel(),
   };
 }
 
@@ -192,7 +191,6 @@ export function getPlaybackState(): PlaybackState {
     })),
     queue.tracks.size,
     queue.tracks.size > 0 ? queue.durationFormatted : null,
-    queue.node.volume,
   );
 }
 
