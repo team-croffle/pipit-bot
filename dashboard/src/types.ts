@@ -5,7 +5,7 @@ export interface DashboardIdentity {
   canControlPlayback: boolean;
 }
 
-export type JobStatus = 'pending' | 'ready' | 'failed';
+export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';
 
 export interface TrackMeta {
   title: string;
@@ -21,6 +21,10 @@ export interface JobRecord {
   error?: string;
   code?: string;
   lateResult?: { status: 'ready' | 'failed'; track?: TrackMeta; error?: string; at: number };
+  origin?: 'command' | 'dashboard';
+  next?: boolean;
+  retryOf?: string;
+  retriedAs?: string;
   createdAt: number;
   updatedAt: number;
 }

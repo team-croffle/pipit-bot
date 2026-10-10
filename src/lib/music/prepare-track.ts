@@ -5,9 +5,11 @@ import { useMainPlayer, useQueue, type Track } from 'discord-player';
 
 import {
   getJob,
+  markRetried,
   registerJob,
   resolveFailed,
   waitForJob,
+  type JobOptions,
   type JobRecord,
   type TrackMeta,
 } from '../../api/jobs/pending-registry.js';
@@ -45,13 +47,17 @@ export function consumeTrackMeta(file: string): TrackMeta | undefined {
   return meta;
 }
 
-export async function submitMusicJob(jobId: string, query: string): Promise<JobRecord> {
+export async function submitMusicJob(
+  jobId: string,
+  query: string,
+  options: JobOptions = {},
+): Promise<JobRecord> {
   const trimmed = query.trim();
   if (!trimmed) {
     throw new Error('Provide something to play.');
   }
 
-  registerJob(jobId, trimmed);
+  registerJob(jobId, trimmed, options);
   await enqueueMusicJob(jobId, trimmed);
   return getJob(jobId)!;
 }
@@ -104,17 +110,23 @@ export function schedulePlayWhenReady(jobId: string, options: { next?: boolean }
     await playPreparedTrack(job.track, options.next === true);
   })().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : 'Failed to play prepared track.';
-    container.logger.error('[dashboard-play]', error);
     const current = getJob(jobId);
+    if (current?.status === 'cancelled') {
+      return;
+    }
+    container.logger.error('[dashboard-play]', error);
     if (current?.status === 'pending') {
       resolveFailed(jobId, message);
     }
   });
 }
 
-export async function prepareTrack(query: string): Promise<TrackMeta> {
+export async function prepareTrack(
+  query: string,
+  options: { next?: boolean } = {},
+): Promise<TrackMeta> {
   const jobId = randomUUID();
-  await submitMusicJob(jobId, query);
+  await submitMusicJob(jobId, query, { origin: 'command', next: options.next });
 
   const job = await waitForJob(jobId);
   if (!job.track) {
@@ -123,4 +135,21 @@ export async function prepareTrack(query: string): Promise<TrackMeta> {
 
   rememberTrackMeta(job.track);
   return job.track;
+}
+
+/**
+ * Asks the worker again for a failed or cancelled job's query, as a new job. The
+ * retry plays through the dashboard path whatever the original came from — the
+ * command that asked first has long since answered — and keeps "play next".
+ */
+export async function retryMusicJob(original: JobRecord): Promise<JobRecord> {
+  const retryId = randomUUID();
+  markRetried(original.jobId, retryId);
+  const job = await submitMusicJob(retryId, original.query, {
+    origin: 'dashboard',
+    next: original.next,
+    retryOf: original.jobId,
+  });
+  schedulePlayWhenReady(retryId, { next: original.next });
+  return job;
 }

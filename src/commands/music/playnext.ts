@@ -41,7 +41,7 @@ export class UserCommand extends Command {
       const feedbackMessage = await message.channel.send(`Preparing \`${query.trim()}\`...`);
 
       await connectPlayerToChannel(voiceChannel);
-      const trackMeta = await prepareTrack(query);
+      const trackMeta = await prepareTrack(query, { next: true });
       const inserted = await insertNextIfPlaying(guild.id, trackMeta.file);
       if (inserted) {
         return feedbackMessage.edit(`\`${inserted.title}\` will play next.`);

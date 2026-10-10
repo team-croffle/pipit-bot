@@ -24,6 +24,7 @@
     pending: 'secondary',
     ready: 'default',
     failed: 'destructive',
+    cancelled: 'secondary',
   };
 
   function formatTime(epochMs: number): string {
