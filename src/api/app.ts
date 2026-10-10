@@ -31,6 +31,7 @@ import type { ApiVariables } from './context.js';
 import { mountAuthRoutes } from './routes/auth.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
+import { mountMusicJobRoutes } from './routes/music-jobs.js';
 import { mountMusicRoutes } from './routes/music.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
 
@@ -186,6 +187,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   mountGithubNotifyRoutes(app, config);
   mountGithubWebhookRoutes(app);
   mountMusicRoutes(app);
+  mountMusicJobRoutes(app);
   mountReactionRoleRoutes(app);
 
   app.get('*', async (c) => {

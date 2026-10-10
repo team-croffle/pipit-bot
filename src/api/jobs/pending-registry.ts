@@ -1,4 +1,7 @@
-export type JobStatus = 'pending' | 'ready' | 'failed';
+export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';
+
+/** Where a job was asked for — a retry always plays through the dashboard path. */
+export type JobOrigin = 'command' | 'dashboard';
 
 export interface TrackMeta {
   title: string;
@@ -19,8 +22,20 @@ export interface JobRecord {
    * often. Kept for the record; it does not reopen the job or play anything.
    */
   lateResult?: { status: 'ready' | 'failed'; track?: TrackMeta; error?: string; at: number };
+  origin?: JobOrigin;
+  /** Asked for as "play next"; a retry keeps it. */
+  next?: boolean;
+  /** The job this one retries, and the job that retried this one. */
+  retryOf?: string;
+  retriedAs?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface JobOptions {
+  origin?: JobOrigin;
+  next?: boolean;
+  retryOf?: string;
 }
 
 interface PendingWaiter {
@@ -54,7 +69,7 @@ function now(): number {
   return Date.now();
 }
 
-export function registerJob(jobId: string, query: string): JobRecord {
+export function registerJob(jobId: string, query: string, options: JobOptions = {}): JobRecord {
   const existing = jobs.get(jobId);
   if (existing) {
     return existing;
@@ -64,6 +79,7 @@ export function registerJob(jobId: string, query: string): JobRecord {
     jobId,
     query,
     status: 'pending',
+    ...options,
     createdAt: now(),
     updatedAt: now(),
   };
@@ -124,6 +140,33 @@ export function resolveFailed(jobId: string, error: string, code?: string): JobR
   record.code = code;
   settle(record, (waiter) => waiter.reject(new Error(error)));
   return record;
+}
+
+/**
+ * Cancels a pending job on the bot's side only — the worker is not told, since the
+ * contract has no way to (it finishes the file, and its own cleanup removes it). The
+ * job's waiter is rejected, and the worker's later answer is recorded as a late
+ * result, never played. Returns undefined for an unknown job; any other status is
+ * returned untouched for the caller to refuse.
+ */
+export function cancelJob(jobId: string): JobRecord | undefined {
+  const record = jobs.get(jobId);
+  if (record?.status !== 'pending') {
+    return record;
+  }
+
+  record.status = 'cancelled';
+  record.error = 'Cancelled from the dashboard.';
+  settle(record, (waiter) => waiter.reject(new Error('Cancelled from the dashboard.')));
+  return record;
+}
+
+export function markRetried(jobId: string, retryId: string): void {
+  const record = jobs.get(jobId);
+  if (record) {
+    record.retriedAs = retryId;
+    record.updatedAt = now();
+  }
 }
 
 export function waitForJob(jobId: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<JobRecord> {
