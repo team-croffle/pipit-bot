@@ -24,6 +24,7 @@ import {
   parseGuildEventSettings,
   saveGuildEventSettings,
 } from '../lib/guild-event-settings.js';
+import { syncBanners } from '../lib/music/banner/manager.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
 import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
 import { SESSION_COOKIE } from './auth/session.js';
@@ -113,6 +114,8 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     }
 
     const updated = updateRuntimeConfig({ musicChannelIds: body.musicChannelIds });
+    // A channel added or removed gains or loses its remote-control banner.
+    void syncBanners().catch(() => undefined);
     return c.json(updated);
   });
 
