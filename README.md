@@ -102,11 +102,21 @@ The bot checks before it sends: it must be able to post and react in the channel
 Everything the music commands do can be done from the dashboard's **Music** page as well:
 
 - **Voice** — pick a voice channel and the bot joins it; pick another while it is connected and it moves there without stopping the current track. The picker shows how many people are in each room, because the player leaves an empty one after 30 seconds. **Leave** disconnects it
-- **Queue** — every queued track (up to 100 listed) with its own **skip to** and **remove**. Rows are addressed by the player's track id, so a list that is a moment out of date never removes the wrong track. Skipping to a track drops the ones ahead of it, as `!skipto` does
+- **Queue** — every queued track (up to 100 listed) with its own **up**, **down**, **skip to** and **remove** (folded into one menu on a phone), plus **shuffle**, which reorders the waiting tracks once. Rows are addressed by the player's track id, so a list that is a moment out of date never touches the wrong track. Skipping to a track drops the ones ahead of it, as `!skipto` does
+- **Recent tracks** — what this session has played (the last 20), and **previous**, which goes back one track and puts the current one at the front of the queue. The history ends with the session
 - **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `!playnext`
 - **Volume** — low / mid / high, the same three levels as `!volume`, whenever the bot is in a voice channel — playing or not
 
 The dashboard and the commands share one queue, so either can pick up where the other left off.
+
+### Music jobs
+
+Each request is a **job** the music worker prepares before the bot can play it. The **Music jobs** card lists them with their state:
+
+- a job still being prepared can be **cancelled** — the bot stops waiting and never plays it, even if the file arrives later
+- a failed or cancelled job can be **retried** as a new job with the same request (still at the front if it was "play next"); failures a retry cannot fix, such as nothing found, offer no retry
+- a failure shows its reason — the worker may send a short code with it (see [docs/music-backend.md](./docs/music-backend.md)) — and a job that takes too long fails as a timeout instead of waiting forever
+- a queued track whose prepared file has gone is skipped, and the skip is announced in the music channel and on the dashboard
 
 ## Source abstraction
 
@@ -154,7 +164,7 @@ Dev streams are stored in `../shared/`.
 - `!p <query>` / `!play <query>` — opaque query forwarded to the music worker; `!pn <query>` / `!playnext <query>` puts it at the front of the queue
 - `!join`, `!leave` — join your voice channel, or leave
 - Playback: `!pause`, `!resume`, `!skip`, `!stop`, `!loop track|queue|off`, `!volume low|mid|high`
-- Queue: `!queue`, `!skipto <n>`, `!rm <n>`, `!clear`
+- Queue: `!queue`, `!skipto <n>`, `!rm <n>`, `!move <from> <to>`, `!shuffle`, `!back`, `!clear`
 
 The dashboard's Music page does the same (see [Music](#music)).
 
