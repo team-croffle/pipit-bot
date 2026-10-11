@@ -3,7 +3,6 @@ import {
   MessageFlags,
   SeparatorBuilder,
   TextDisplayBuilder,
-  type MessageCreateOptions,
   type RepliableInteraction,
 } from 'discord.js';
 
@@ -43,11 +42,12 @@ export function noticeContainer(notice: Notice, footer?: string): ContainerBuild
   return container;
 }
 
-export function noticeMessage(notice: Notice, footer?: string): MessageCreateOptions {
+/** Usable both to send and to edit a message (the two option types differ in discord.js). */
+export function noticeMessage(notice: Notice, footer?: string) {
   return {
     components: [noticeContainer(notice, footer)],
-    flags: MessageFlags.IsComponentsV2,
-    allowedMentions: { parse: [] },
+    flags: MessageFlags.IsComponentsV2 as const,
+    allowedMentions: { parse: [] as never[] },
   };
 }
 
