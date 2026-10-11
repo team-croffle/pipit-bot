@@ -17,4 +17,6 @@ export const PLAYER_NODE_OPTIONS = {
   disableCompressor: true,
   disableReverb: true,
   disableSeeker: true,
+  // The history behind "previous" (history.ts); unbounded by default.
+  maxHistorySize: 20,
 } as const satisfies Omit<GuildNodeCreateOptions, 'metadata'>;

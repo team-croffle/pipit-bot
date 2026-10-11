@@ -1,6 +1,7 @@
 import type { Hono } from 'hono';
 
 import { getConfiguredGuild } from '../../lib/discord-guild.js';
+import { getRecentTracks, playPrevious } from '../../lib/music/history.js';
 import {
   clearQueue,
   getPlaybackState,
@@ -95,6 +96,15 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
 
   app.post('/api/music/playback/shuffle', dashboardViewer, (c) => {
     const result = shuffleQueue();
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.get('/api/music/playback/history', dashboardViewer, (c) =>
+    c.json({ tracks: getRecentTracks() }),
+  );
+
+  app.post('/api/music/playback/back', dashboardViewer, async (c) => {
+    const result = await playPrevious();
     return c.json(result, result.ok ? 200 : 400);
   });
 
