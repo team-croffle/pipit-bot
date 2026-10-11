@@ -1,13 +1,12 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { type Args, Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
+import { Command } from '@sapphire/framework';
+import { MessageFlags } from 'discord.js';
 
+import { replyNotice, type Notice } from '../lib/discord/notice.js';
+import { guildOnly } from '../lib/discord/slash.js';
 import { parseItemReference, remindReference } from '../lib/github/remind-reference.js';
 
-const USAGE = [
-  'Tell me which pull request or issue to remind about.',
-  'Examples: `!remind owner/repo #12` · `!remind repo #12` · `!remind https://github.com/owner/repo/issues/12`',
-].join('\n');
+const USAGE = 'Examples: `owner/repo #12` · `repo #12` · `https://github.com/owner/repo/issues/12`';
 
 const NOUN = { pull: 'pull request', issue: 'issue' } as const;
 
@@ -17,22 +16,45 @@ const NOUN = { pull: 'pull request', issue: 'issue' } as const;
  *
  * Pull requests and issues share one number space, so the number says which it is.
  * The reminder goes to the channel the repository's notifications go to — that is
- * where the team reads them — and this channel gets a one-line answer saying so, or
- * why nothing was sent. The verdict also lands in the dashboard's recent deliveries.
+ * where the team reads them — and the person who asked gets a reply only they see,
+ * saying so or why nothing was sent. The verdict also lands in the dashboard's recent
+ * deliveries.
  */
 @ApplyOptions<Command.Options>({
   description: 'Remind whoever a pull request or issue is waiting on',
-  runIn: ['GUILD_ANY'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message, args: Args): Promise<void> {
-    const text = await args.rest('string').catch(() => '');
-    const reference = parseItemReference(text);
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description)).addStringOption(
+        (option) =>
+          option
+            .setName('item')
+            .setDescription('owner/repo #12, repo #12, or a pull request or issue link')
+            .setRequired(true)
+            .setMaxLength(300),
+      ),
+    );
+  }
+
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    const reference = parseItemReference(interaction.options.getString('item', true));
     if (!reference) {
-      await message.reply(USAGE);
+      await replyNotice(interaction, {
+        ok: false,
+        message: 'Tell me which pull request or issue to remind about.',
+        detail: USAGE,
+      });
       return;
     }
 
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await replyNotice(interaction, await this.remind(reference));
+  }
+
+  private async remind(
+    reference: NonNullable<ReturnType<typeof parseItemReference>>,
+  ): Promise<Notice> {
     const result = await remindReference(reference);
     const noun = result.kind ? ` (${NOUN[result.kind]})` : '';
     const subject = `${result.repo}#${reference.number}${noun}`;
@@ -41,18 +63,20 @@ export class UserCommand extends Command {
       const where = result.channelId ? ` in <#${result.channelId}>` : '';
       // A target is a person, or a team standing behind its mapped role.
       const who = result.targets === 1 ? '1 person or team' : `${result.targets} people or teams`;
-      await message.reply(`Reminded ${who} about ${subject}${where}.`);
-      return;
+      return { ok: true, message: `Reminded ${who} about ${subject}${where}.` };
     }
 
     if (result.outcome === 'edited') {
-      await message.reply(
-        `Nothing to send for ${subject}; its announcement was brought up to date.`,
-      );
-      return;
+      return {
+        ok: true,
+        message: `Nothing to send for ${subject}; its announcement was brought up to date.`,
+      };
     }
 
-    const why = result.detail ? ` ${result.detail}` : '';
-    await message.reply(`No reminder was sent for ${subject}.${why}`);
+    return {
+      ok: false,
+      message: `No reminder was sent for ${subject}.`,
+      detail: result.detail,
+    };
   }
 }

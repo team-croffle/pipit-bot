@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { dataDir } from './constants.js';
 import { loadSettingsFile } from './settings-file.js';
 
-// WHY: Prefix, command channel, and RSS belong to bot config (C), not this store.
+// WHY: Command channel and RSS belong to bot config (C), not this store.
 export interface GuildEventSettings {
   logChannelId: string | null;
   joinMessages: string[];
