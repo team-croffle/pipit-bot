@@ -1,26 +1,26 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
 
+import { replyNotice } from '../../lib/discord/notice.js';
+import { guildOnly } from '../../lib/discord/slash.js';
 import { leaveVoiceChannel } from '../../lib/music/voice-connection.js';
 
 @ApplyOptions<Command.Options>({
-  description: 'Leaves the voice channel and stops music playback',
+  description: 'Leave the voice channel and stop playback',
   preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message): Promise<void> {
-    const result = this.doLeave(message.guildId);
-    if (message.channel.isSendable()) {
-      await message.channel.send(result);
-    }
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description)),
+    );
   }
 
-  private doLeave(guildId: string | null): string {
-    if (!guildId) {
-      return 'No guild ID provided';
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    if (!interaction.guildId) {
+      return;
     }
 
-    return leaveVoiceChannel(guildId).message;
+    await replyNotice(interaction, leaveVoiceChannel(interaction.guildId));
   }
 }

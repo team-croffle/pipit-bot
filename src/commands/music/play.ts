@@ -1,78 +1,45 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { type Args, Command } from '@sapphire/framework';
-import { useMainPlayer } from 'discord-player';
-import type { Message } from 'discord.js';
+import { Command } from '@sapphire/framework';
+import { MessageFlags } from 'discord.js';
 
-import { toLocalPlayQuery } from '../../lib/music/local-file-extractor.js';
-import { PLAYER_NODE_OPTIONS } from '../../lib/music/player-node-options.js';
-import { prepareTrack } from '../../lib/music/prepare-track.js';
-import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
+import { replyNotice } from '../../lib/discord/notice.js';
+import { guildOnly } from '../../lib/discord/slash.js';
+import { requestPlay } from '../../lib/music/request.js';
 
 @ApplyOptions<Command.Options>({
-  description: 'Plays music in your current voice channel',
-  aliases: ['p'],
+  description: 'Play a song title or a link in your voice channel',
   preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message, args: Args) {
-    const { member, guild } = message;
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description))
+        .addStringOption((option) =>
+          option
+            .setName('query')
+            .setDescription('A song title or a link')
+            .setRequired(true)
+            .setMaxLength(500),
+        )
+        .addBooleanOption((option) =>
+          option.setName('next').setDescription('Play it right after the current track'),
+        ),
+    );
+  }
 
-    if (!guild) {
-      return message.reply('This command can only be used in a server.');
-    }
-
-    if (!message.channel.isSendable()) {
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    if (!interaction.inCachedGuild()) {
       return;
     }
 
-    const voiceChannel = member?.voice.channel;
-    if (!voiceChannel) {
-      return message.reply('You need to be in a voice channel to use this command.');
-    }
-
-    const query = await args.rest('string').catch(() => null);
-
-    if (!query?.trim()) {
-      return message.reply('Provide something to play.\nExample: `!p <query>`');
-    }
-
-    const player = useMainPlayer();
-
-    try {
-      const feedbackMessage = await message.channel.send(`Preparing \`${query.trim()}\`...`);
-
-      await connectPlayerToChannel(voiceChannel);
-      const trackMeta = await prepareTrack(query);
-      const playQuery = toLocalPlayQuery(trackMeta.file);
-
-      const { track, queue } = await player.play(
-        voiceChannel as unknown as Parameters<typeof player.play>[0],
-        playQuery,
-        {
-          nodeOptions: {
-            ...PLAYER_NODE_OPTIONS,
-            metadata: message,
-          },
-        },
-      );
-
-      if (queue.isPlaying() && queue.tracks.size > 0) {
-        return feedbackMessage.edit(
-          `\`${track.title}\` has been added to the queue! (position: ${queue.tracks.size})`,
-        );
-      }
-
-      return feedbackMessage.edit(`\`${track.title}\` is now playing!`);
-    } catch (error) {
-      this.container.logger.error('Error playing music:', error);
-      const detail =
-        error instanceof Error
-          ? error.message
-          : typeof error === 'string'
-            ? error
-            : 'Unknown error';
-      const content = `Error occurred while trying to play music: ${detail}`.slice(0, 1900);
-      return message.channel.send(content);
-    }
+    // Preparing can take a while; the interaction must be answered within three seconds.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const notice = await requestPlay({
+      query: interaction.options.getString('query', true),
+      next: interaction.options.getBoolean('next') ?? false,
+      member: interaction.member,
+      channel: interaction.channel,
+    });
+    await replyNotice(interaction, notice);
   }
 }
