@@ -4,6 +4,7 @@ import type { StoreRegistryValue } from '@sapphire/pieces';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 
 import { refreshGuildInvites } from '../lib/invite-cache.js';
+import { startBanners } from '../lib/music/banner/manager.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -26,6 +27,13 @@ export class UserEvent extends Listener {
       await this.container.client.application?.emojis.fetch();
     } catch (error) {
       this.container.logger.warn('[emoji] could not load the application emoji:', error);
+    }
+
+    // After the guild cache is ready: the banners live in its music channels.
+    try {
+      await startBanners();
+    } catch (error) {
+      this.container.logger.warn('[music-banner] could not start:', error);
     }
   }
 
