@@ -40,7 +40,7 @@ export const navSections: NavSection[] = [
       { to: '/invites', label: '초대 로거', icon: UserPlus },
       { to: '/reaction-roles', label: '리액션 롤', icon: Smile },
       { to: '/calendar', label: '캘린더 연동', icon: CalendarDays, planned: 'v0.9' },
-      { to: '/polls', label: '투표', icon: ListChecks, planned: 'v1.1' },
+      { to: '/polls', label: '투표', icon: ListChecks, planned: 'v0.10' },
     ],
   },
   {

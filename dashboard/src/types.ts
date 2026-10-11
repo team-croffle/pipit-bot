@@ -271,7 +271,6 @@ export interface DiscordEmoji {
 }
 
 export interface BotRuntimeConfig {
-  prefix: string;
   musicChannelIds: string[];
 }
 

@@ -70,8 +70,7 @@
     error.value = '';
     saved.value = '';
     try {
-      // PUT /api/config is a patch — the command prefix (edited on the settings
-      // page) is left alone by sending only this field.
+      // PUT /api/config is a patch; this card owns its only field.
       const config = await putJson<BotRuntimeConfig>('/api/config', {
         musicChannelIds: channelIds.value,
       });
