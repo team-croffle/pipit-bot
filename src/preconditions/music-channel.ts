@@ -8,32 +8,37 @@ import type {
 
 import { getRuntimeConfig } from '../lib/runtime-config.js';
 
+/**
+ * Music commands work only in a configured music channel — or anywhere when none is
+ * configured. Shared with the remote-control buttons, which have no preconditions.
+ */
+export function isMusicChannel(channelId: string | null): boolean {
+  const channelIds = getRuntimeConfig().musicChannelIds;
+  return channelIds.length === 0 || (channelId !== null && channelIds.includes(channelId));
+}
+
+const REFUSAL = 'Music commands can only be used in a designated music channel.';
+
 @ApplyOptions<AllFlowsPrecondition.Options>({
   name: 'MusicChannel',
 })
 export class UserPrecondition extends AllFlowsPrecondition {
   public override messageRun(message: Message) {
-    const channelIds = getRuntimeConfig().musicChannelIds;
-    if (channelIds.length === 0) {
-      return this.ok();
-    }
-
-    if (channelIds.includes(message.channelId)) {
-      return this.ok();
-    }
-
-    return this.error({
-      identifier: 'MusicChannel',
-      message: 'Music commands can only be used in a designated music channel.',
-    });
+    return this.check(message.channelId);
   }
 
-  public override chatInputRun(_interaction: ChatInputCommandInteraction) {
-    return this.ok();
+  public override chatInputRun(interaction: ChatInputCommandInteraction) {
+    return this.check(interaction.channelId);
   }
 
-  public override contextMenuRun(_interaction: ContextMenuCommandInteraction) {
-    return this.ok();
+  public override contextMenuRun(interaction: ContextMenuCommandInteraction) {
+    return this.check(interaction.channelId);
+  }
+
+  private check(channelId: string | null) {
+    return isMusicChannel(channelId)
+      ? this.ok()
+      : this.error({ identifier: 'MusicChannel', message: REFUSAL });
   }
 }
 
