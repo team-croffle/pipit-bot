@@ -40,8 +40,9 @@ Exposed through the reverse proxy: the dashboard (`/`), its API (`/api/*`) and t
 ```
 src/
   index.ts            start-up: load settings files, start the HTTP server, log the client in
-  commands/           message commands (Sapphire) — music/, !remind, !help, …
-  listeners/          gateway events — member join/leave, invites, reactions, ready
+  commands/           slash commands (Sapphire) — music/, /remind, /help, …
+  listeners/          gateway events — member join/leave, invites, reactions, music-channel lines, ready
+  interaction-handlers/  the music banner's buttons and play dialog
   preconditions/      command guards (music channel only, …)
   api/                the embedded HTTP API (Hono)
     app.ts            builds the app: auth, /api/*, route modules, dashboard static files
@@ -56,13 +57,13 @@ src/
 dashboard/            the Vue SPA, built to dashboard/dist and served at /
 ```
 
-One rule holds the parts together: **commands and API routes are thin and call the same `lib/` functions.** `!skip` and
-the dashboard's skip button run `skipPlayback()`; `!remind` and the reminder card run the same reminder. Behaviour lives in
+One rule holds the parts together: **commands and API routes are thin and call the same `lib/` functions.** `/skip`, the
+banner's next button and the dashboard's skip button run `skipPlayback()`; `/remind` and the reminder card run the same reminder. Behaviour lives in
 `lib/`, once.
 
 Inside the process:
 
-- **Discord client** — a Sapphire client with message commands and gateway listeners, and a `discord-player` `Player`
+- **Discord client** — a Sapphire client with slash commands, button and dialog handlers, and gateway listeners, and a `discord-player` `Player`
   whose only extractor reads local files. Its own audio processing chain is off — the files are already in the output
   format — and the bot applies the volume itself as it streams them
   ([015](./decisions/015_v0.7.0_bot-side-volume.md)).
@@ -79,7 +80,7 @@ Inside the process:
 
 ![Music job states](./img/architecture/04-music-job-states.png)
 
-1. A user asks for a track — `!p <query>` in a music channel, or the dashboard's play box. The query is an **opaque
+1. A user asks for a track — `/play`, a line typed into a music channel, the banner's play dialog, or the dashboard's play box. The query is an **opaque
    string**; the bot does not parse it.
 2. The bot registers a **job** and sends it to the music worker (`POST /v1/jobs`).
 3. The worker prepares the audio and writes `{file}.pcm` to the shared volume, then calls back `ready` with the title,
@@ -103,7 +104,7 @@ never sees them.
    ([009](./decisions/009_v0.6.4_one-message-per-item.md)).
 5. Every delivery and its outcome goes to a short log the dashboard shows.
 
-Reminders go the other way: `!remind` reads the item from GitHub at that moment and calls whoever it is still waiting on
+Reminders go the other way: `/remind` reads the item from GitHub at that moment and calls whoever it is still waiting on
 ([012](./decisions/012_v0.6.6_reminders-read-github-on-demand.md)).
 
 ## The dashboard
