@@ -75,11 +75,11 @@ PR and issue activity is delivered by a **GitHub App**. Register one app, instal
 
 Routing lives in `data/github-notify.json`: a default channel plus per-repository overrides for the channel and which event types to report, a GitHub-login-to-Discord-user map used for mentions, and a GitHub-team-to-Discord-role map (`teams`). Unmapped logins appear as plain text. A repository with no rule of its own posts to the default channel unless `notifyUnlistedRepos` is switched off, in which case only the listed repositories report. The feature ships disabled (`enabled: false`).
 
-A review can be requested from a **team** as well as a person. The "팀 → 역할" card on the GitHub page maps a team (`org/slug`, where the org is the repository owner) to a Discord role, and from then on a review request for that team — from the webhook or from `!remind` — mentions the role (`<@&role>`). A team without a mapping is named but not mentioned, as before. For the ping to actually reach anyone the role must allow anyone to mention it ("Allow anyone to @mention this role"), or the bot must hold **Mention Everyone** in that channel; the card warns on each row where neither holds, and the delivery record says so when a role could not be mentioned. The mappings are stored as `teams` (`[{ githubTeam, discordRoleId }]`) in `data/github-notify.json`; a file written before this key existed loads as it did.
+A review can be requested from a **team** as well as a person. The "팀 → 역할" card on the GitHub page maps a team (`org/slug`, where the org is the repository owner) to a Discord role, and from then on a review request for that team — from the webhook or from `/remind` — mentions the role (`<@&role>`). A team without a mapping is named but not mentioned, as before. For the ping to actually reach anyone the role must allow anyone to mention it ("Allow anyone to @mention this role"), or the bot must hold **Mention Everyone** in that channel; the card warns on each row where neither holds, and the delivery record says so when a role could not be mentioned. The mappings are stored as `teams` (`[{ githubTeam, discordRoleId }]`) in `data/github-notify.json`; a file written before this key existed loads as it did.
 
 Each event sends an **embed** composed on the same page — a plain line, a title, a description, fields, a footer, a colour and an optional timestamp. Every part is a template: `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignee}`, `{assignees}`, `{reviewers}` and `{mentions}` are substituted, and `{name|when set|when empty}` picks between two wordings depending on whether the value exists. A part that renders empty is left out.
 
-A pull request or issue that has gone quiet can be **reminded about by hand** — `!remind owner/name #12` in Discord, or the "다시 알리기" card on the GitHub page. The card picks the repository from the installed ones and then the number from that repository's open pull requests and issues (`#12 · title`, marked PR, Issue or 초안); a closed item, or a repository whose list cannot be read, is entered by typing the number ("직접 입력…"), and without the App credentials every picker offers typed entry. The repository may be given by its name alone (`!remind pipit-bot #12`) when exactly one installed repository has that name, and a pull request or issue link works too. The bot reads the item through the App (this is where `GITHUB_APP_ID` and the private key become necessary) and learns from GitHub which of the two the number is. A pull request gets a `PR Reminder` mentioning everyone still asked to review plus the assignees; an issue gets an `Issue Reminder` mentioning its assignees; the author is never mentioned. Teams asked to review are mentioned through their mapped role (see above) and otherwise named without a mention; the reply counts both, as "Reminded N people or teams". Drafts and items with nobody waiting are not reminded about; for a merged or closed item nothing new is posted, but its announcement is brought up to date. The reason is answered in Discord and recorded in the recent deliveries. One reminder per item per five minutes. The `PR Reminder` and `Issue Reminder` event toggles are permission switches for this — on by default, and switching one off for a repository blocks that kind of reminder there.
+A pull request or issue that has gone quiet can be **reminded about by hand** — `/remind` in Discord, or the "다시 알리기" card on the GitHub page. The card picks the repository from the installed ones and then the number from that repository's open pull requests and issues (`#12 · title`, marked PR, Issue or 초안); a closed item, or a repository whose list cannot be read, is entered by typing the number ("직접 입력…"), and without the App credentials every picker offers typed entry. The repository may be given by its name alone (`pipit-bot #12`) when exactly one installed repository has that name, and a pull request or issue link works too. The bot reads the item through the App (this is where `GITHUB_APP_ID` and the private key become necessary) and learns from GitHub which of the two the number is. A pull request gets a `PR Reminder` mentioning everyone still asked to review plus the assignees; an issue gets an `Issue Reminder` mentioning its assignees; the author is never mentioned. Teams asked to review are mentioned through their mapped role (see above) and otherwise named without a mention; the reply counts both, as "Reminded N people or teams". Drafts and items with nobody waiting are not reminded about; for a merged or closed item nothing new is posted, but its announcement is brought up to date. The reason is answered in Discord and recorded in the recent deliveries. One reminder per item per five minutes. The `PR Reminder` and `Issue Reminder` event toggles are permission switches for this — on by default, and switching one off for a repository blocks that kind of reminder there.
 
 Which variables an event offers depends on what it can fill in — `{actor}` is the merger on a merge and the reviewer on a review, and `{reviewers}` (the outstanding request list) is not offered where GitHub has already emptied it. The editor lists the variables for the event being edited, and saving a template that names another one is rejected. Each event has its own default; an event you never edit follows it.
 
@@ -99,15 +99,25 @@ The bot checks before it sends: it must be able to post and react in the channel
 
 ## Music
 
-Everything the music commands do can be done from the dashboard's **Music** page as well:
+Everything the music commands do can be done from the dashboard's **Music** page, and much of it from the music channel's banner:
 
 - **Voice** — pick a voice channel and the bot joins it; pick another while it is connected and it moves there without stopping the current track. The picker shows how many people are in each room, because the player leaves an empty one after 30 seconds. **Leave** disconnects it
-- **Queue** — every queued track (up to 100 listed) with its own **up**, **down**, **skip to** and **remove** (folded into one menu on a phone), plus **shuffle**, which reorders the waiting tracks once. Rows are addressed by the player's track id, so a list that is a moment out of date never touches the wrong track. Skipping to a track drops the ones ahead of it, as `!skipto` does
+- **Queue** — every queued track (up to 100 listed) with its own **up**, **down**, **skip to** and **remove** (folded into one menu on a phone), plus **shuffle**, which reorders the waiting tracks once. Rows are addressed by the player's track id, so a list that is a moment out of date never touches the wrong track. Skipping to a track drops the ones ahead of it, as `/skip to` does
 - **Recent tracks** — what this session has played (the last 20), and **previous**, which goes back one track and puts the current one at the front of the queue. The history ends with the session
-- **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `!playnext`
-- **Volume** — low / mid / high, the same three levels as `!volume`, whenever the bot is in a voice channel — playing or not
+- **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `/play next`
+- **Volume** — low / mid / high, the same three levels as `/volume`, whenever the bot is in a voice channel — playing or not
 
-The dashboard and the commands share one queue, so either can pick up where the other left off.
+The dashboard, the banner and the commands share one queue, so any of them can pick up where another left off.
+
+### The music channel
+
+A configured music channel holds one **remote-control banner**, kept by the bot as the channel's last message:
+
+- **Idle** — "💿 Pipit Hub Music", how to request a track, and a **play** button that opens a dialog for a song title or a link
+- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, add a track, repeat, and volume down and up. What a button did is shown only to the person who pressed it, for five seconds
+- **Typing a song title or a link** into the channel plays it: the line is removed, and a short banner everyone can see says what happened and then removes itself. Removing the line needs the bot's **Manage Messages** permission in that channel; without it the request still runs and the line stays
+
+The banner is posted when the bot starts or a music channel is added, re-posted if it is deleted, and removed from a channel that stops being a music channel.
 
 ### Music jobs
 
@@ -156,19 +166,25 @@ Dev streams are stored in `../shared/`.
 
 ## Commands
 
-- `!remind owner/name #12` (or `!remind name #12`, `!remind <pull request or issue URL>`) — reminds whoever a pull request or issue is waiting on, in the repository's notification channel. See the reminder section above. Replaced `!pr` in v0.6.6-rc.2
-- `!help` — lists every command with its description
+All commands are **slash commands** (since v0.7.1) — type `/` in Discord to see them. There is no command prefix any more. Answers are shown only to the person who used the command.
+
+- `/remind item` — `owner/name #12`, `name #12`, or a pull request or issue link; reminds whoever it is waiting on, in the repository's notification channel. See the reminder section above
+- `/help` — lists the commands · `/ping` — checks the bot answers
 
 ### Music commands
 
-- `!p <query>` / `!play <query>` — opaque query forwarded to the music worker; `!pn <query>` / `!playnext <query>` puts it at the front of the queue
-- `!join`, `!leave` — join your voice channel, or leave
-- Playback: `!pause`, `!resume`, `!skip`, `!stop`, `!loop track|queue|off`, `!volume low|mid|high`
-- Queue: `!queue`, `!skipto <n>`, `!rm <n>`, `!move <from> <to>`, `!shuffle`, `!back`, `!clear`
+Usable in a music channel (or anywhere, when none is configured):
 
-The dashboard's Music page does the same (see [Music](#music)).
+- `/play query [next]` — the query goes to the music worker as-is; `next` puts the track at the front of the queue
+- `/join`, `/leave` — join your voice channel (or move there), or leave
+- Playback: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [level]`
+- Queue: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
 
-The bot does not validate or parse the query string.
+The dashboard's Music page and the music channel's banner do the same (see [Music](#music)). The bot does not validate or parse the query string.
+
+### Upgrading from `!` commands
+
+Slash commands need the bot invited with the **`applications.commands`** scope: in the Discord Developer Portal open the app → OAuth2 → URL Generator, tick `bot` and `applications.commands`, choose the bot's permissions, and open the URL to authorise it again for your server — the bot does not need to be removed first. For the music channel to stay clean, give the bot **Manage Messages** in that channel (Edit Channel → Permissions → the bot's role).
 
 ## License
 

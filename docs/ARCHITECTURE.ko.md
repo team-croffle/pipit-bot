@@ -40,8 +40,9 @@ Issue, 역할과 온보딩, 초대, 통화방에서 함께 듣는 음악까지. 
 ```
 src/
   index.ts            시작: 설정 파일 로드, HTTP 서버 시작, 클라이언트 로그인
-  commands/           메시지 명령(Sapphire) — music/, !remind, !help, …
-  listeners/          게이트웨이 이벤트 — 멤버 입장·퇴장, 초대, 반응, ready
+  commands/           슬래시 명령(Sapphire) — music/, /remind, /help, …
+  listeners/          게이트웨이 이벤트 — 멤버 입장·퇴장, 초대, 반응, 음악 채널 채팅, ready
+  interaction-handlers/  음악 배너의 버튼과 재생 입력 창
   preconditions/      명령 가드(음악 채널 전용 등)
   api/                내장 HTTP API(Hono)
     app.ts            앱 구성: 인증, /api/*, 라우트 모듈, 대시보드 정적 파일
@@ -56,13 +57,13 @@ src/
 dashboard/            Vue SPA — dashboard/dist로 빌드되어 / 에서 제공
 ```
 
-각 부분을 묶는 규칙은 하나입니다. **명령과 API 라우트는 얇게, 같은 `lib/` 함수를 부른다.** `!skip`과 대시보드의
-건너뛰기 버튼은 둘 다 `skipPlayback()`을 실행하고, `!remind`와 리마인더 카드는 같은 리마인더를 실행합니다. 동작은
+각 부분을 묶는 규칙은 하나입니다. **명령과 API 라우트는 얇게, 같은 `lib/` 함수를 부른다.** `/skip`, 배너의 다음
+버튼, 대시보드의 건너뛰기 버튼은 모두 `skipPlayback()`을 실행하고, `/remind`와 리마인더 카드는 같은 리마인더를 실행합니다. 동작은
 `lib/`에 한 번만 있습니다.
 
 프로세스 안에는:
 
-- **디스코드 클라이언트** — 메시지 명령과 게이트웨이 리스너를 가진 Sapphire 클라이언트, 그리고 로컬 파일만 읽는 추출기
+- **디스코드 클라이언트** — 슬래시 명령, 버튼·입력 창 핸들러, 게이트웨이 리스너를 가진 Sapphire 클라이언트, 그리고 로컬 파일만 읽는 추출기
   하나를 쓰는 `discord-player`의 `Player`. 파일이 이미 출력 형식이라 플레이어의 오디오 처리 단계는 꺼 두고, 볼륨은 봇이
   스트리밍하면서 직접 적용합니다 ([015](./decisions/015_v0.7.0_bot-side-volume.md)).
 - **HTTP API** — Node HTTP 서버 위의 Hono 앱. 클라이언트가 로그인하기 전에 시작합니다. 대시보드 라우트는 로그인한
@@ -77,7 +78,7 @@ dashboard/            Vue SPA — dashboard/dist로 빌드되어 / 에서 제공
 
 ![음악 작업 상태](./img/architecture/04-music-job-states.png)
 
-1. 사용자가 곡을 요청합니다 — 음악 채널에서 `!p <query>`, 또는 대시보드의 재생 입력. 쿼리는 **불투명한 문자열**이라
+1. 사용자가 곡을 요청합니다 — `/play`, 음악 채널에 친 한 줄, 배너의 재생 입력 창, 또는 대시보드의 재생 입력. 쿼리는 **불투명한 문자열**이라
    봇이 해석하지 않습니다.
 2. 봇이 **작업**을 등록하고 music worker에 보냅니다(`POST /v1/jobs`).
 3. worker가 오디오를 준비해 공유 볼륨에 `{file}.pcm`을 쓰고, 제목·길이·파일 이름과 함께 `ready`를 콜백합니다 — 또는
@@ -100,7 +101,7 @@ dashboard/            Vue SPA — dashboard/dist로 빌드되어 / 에서 제공
    ([009](./decisions/009_v0.6.4_one-message-per-item.md)).
 5. 모든 수신과 결과는 대시보드가 보여 주는 짧은 기록에 남습니다.
 
-리마인더는 반대 방향입니다. `!remind`는 그 순간 GitHub에서 항목을 읽어 아직 기다리고 있는 사람을 부릅니다
+리마인더는 반대 방향입니다. `/remind`는 그 순간 GitHub에서 항목을 읽어 아직 기다리고 있는 사람을 부릅니다
 ([012](./decisions/012_v0.6.6_reminders-read-github-on-demand.md)).
 
 ## 대시보드

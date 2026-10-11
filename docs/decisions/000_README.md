@@ -66,3 +66,4 @@ Each file has:
 | [014](./014_v0.7.0_music-controls-on-the-dashboard.md) | v0.7.0 | The dashboard controls music as fully as the commands |
 | [015](./015_v0.7.0_bot-side-volume.md) | v0.7.0 | The bot applies the volume itself |
 | [016](./016_v0.7.1_music-job-lifecycle.md) | v0.7.1 | Music jobs always end, and can be cancelled or retried |
+| [017](./017_v0.7.1_slash-commands-and-music-remote.md) | v0.7.1 | Slash commands only, and a remote control in the music channel |
