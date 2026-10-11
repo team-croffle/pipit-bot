@@ -284,6 +284,12 @@ export interface PlaybackCurrentTrack {
   positionLabel: string;
 }
 
+export interface HistoryTrack {
+  id: string;
+  title: string;
+  duration: string | null;
+}
+
 export interface PlaybackTrackItem {
   id: string;
   index: number;
@@ -309,6 +315,8 @@ export interface PlaybackState {
   volume: number;
   volumeLevel: PlaybackVolumeLevel;
   notice: { message: string; at: number } | null;
+  /** Something has played before the current track in this session. */
+  hasPrevious: boolean;
 }
 
 export type PlaybackVolumeLevel = 'low' | 'mid' | 'high';
