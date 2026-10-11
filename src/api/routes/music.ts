@@ -13,8 +13,10 @@ import {
 } from '../../lib/music/playback.js';
 import { PLAYER_NODE_OPTIONS } from '../../lib/music/player-node-options.js';
 import {
+  moveQueuedTrack,
   removeQueuedTrack,
   setVolumeLevel,
+  shuffleQueue,
   skipToQueuedTrack,
 } from '../../lib/music/queue-actions.js';
 import { joinVoiceChannel, leaveVoiceChannel } from '../../lib/music/voice-connection.js';
@@ -78,6 +80,21 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = skipToQueuedTrack({ id: body.trackId });
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/move', dashboardViewer, async (c) => {
+    const body = await c.req.json<{ trackId?: unknown; to?: unknown }>();
+    if (typeof body.trackId !== 'string' || !body.trackId || typeof body.to !== 'number') {
+      return c.json({ error: 'trackId and to are required' }, 400);
+    }
+
+    const result = moveQueuedTrack({ id: body.trackId }, body.to);
+    return c.json(result, result.ok ? 200 : 400);
+  });
+
+  app.post('/api/music/playback/shuffle', dashboardViewer, (c) => {
+    const result = shuffleQueue();
     return c.json(result, result.ok ? 200 : 400);
   });
 
