@@ -30,16 +30,19 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
 - Join, move and leave a voice channel, set the volume, act on every queued track and play a track next — from the
   dashboard as well as from Discord
 
-## In progress
-
-### v0.7.x — music management
+### v0.7.1 — music management and a remote in Discord
 
 - Music jobs that always end, can be cancelled or retried, and say why they failed
 - Reordering and shuffling the queue, recent tracks and going back
 - A remote-control banner in the music channel — an idle screen and a now-playing screen, buttons, results shown only to
   whoever pressed them; requests typed into the channel are handled and cleaned up
-- All commands move to slash commands
-- Next: an audit log of dashboard, music and reminder actions; playlists; playback options; switching features on and off
+- All commands are slash commands
+
+## In progress
+
+### v0.7.x — music management
+
+- An audit log of dashboard, music and reminder actions; playlists; playback options; switching features on and off
 
 ## Planned
 
