@@ -1,38 +1,38 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { type Args, Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
+import { Command } from '@sapphire/framework';
 
+import { replyNotice } from '../../lib/discord/notice.js';
+import { guildOnly } from '../../lib/discord/slash.js';
 import { moveQueuedTrack } from '../../lib/music/queue-actions.js';
 
 @ApplyOptions<Command.Options>({
-  description: 'Move a queued track: !move <from> <to> (1-based)',
-  aliases: ['mv'],
+  description: 'Move a queued track to another position',
   preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message, args: Args): Promise<void> {
-    const result = await this.doMove(message.guildId, args);
-
-    if (message.channel.isSendable()) {
-      await message.channel.send(result);
-    }
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description))
+        .addIntegerOption((option) =>
+          option
+            .setName('from')
+            .setDescription('Current position')
+            .setRequired(true)
+            .setMinValue(1),
+        )
+        .addIntegerOption((option) =>
+          option.setName('to').setDescription('New position').setRequired(true).setMinValue(1),
+        ),
+    );
   }
 
-  private async doMove(guildId: string | null, args: Args): Promise<string> {
-    if (!guildId) {
-      return 'No guild ID provided';
-    }
-
-    const from = await args.pick('integer').catch(() => null);
-    const to = await args.pick('integer').catch(() => null);
-    if (from === null || to === null) {
-      return 'Usage: `!move <from> <to>` — positions as shown by `!queue`.';
-    }
-
-    const result = moveQueuedTrack({ index: from }, to, guildId);
-    // The shared message names the track plainly; the channel gets it in bold.
-    return result.title
-      ? result.message.replace(result.title, `**${result.title}**`)
-      : result.message;
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    await replyNotice(
+      interaction,
+      moveQueuedTrack(
+        { index: interaction.options.getInteger('from', true) },
+        interaction.options.getInteger('to', true),
+      ),
+    );
   }
 }

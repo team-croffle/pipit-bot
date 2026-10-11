@@ -1,37 +1,34 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
-import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
+import { replyNotice } from '../../lib/discord/notice.js';
+import { guildOnly } from '../../lib/discord/slash.js';
+import { joinVoiceChannel } from '../../lib/music/voice-connection.js';
 
 @ApplyOptions<Command.Options>({
-  description: 'Joins the voice channel you are currently in',
+  description: 'Join your voice channel, or move there',
   preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message): Promise<void> {
-    const { member, guild } = message;
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description)),
+    );
+  }
 
-    if (!guild) {
-      await message.reply('This command can only be used in a server.');
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    if (!interaction.inCachedGuild()) {
       return;
     }
 
-    const voiceChannel = member?.voice.channel;
+    const voiceChannel = interaction.member.voice.channel;
     if (!voiceChannel) {
-      await message.reply('You need to be in a voice channel to use this command.');
+      await replyNotice(interaction, { ok: false, message: 'Join a voice channel first.' });
       return;
     }
 
-    try {
-      await connectPlayerToChannel(voiceChannel);
-
-      if (message.channel.isSendable()) {
-        await message.channel.send('Joined your voice channel successfully!');
-      }
-    } catch (error) {
-      this.container.logger.error('Error joining voice channel:', error);
-      await message.reply('Sorry, I could not join your voice channel.');
-    }
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await replyNotice(interaction, await joinVoiceChannel(voiceChannel));
   }
 }

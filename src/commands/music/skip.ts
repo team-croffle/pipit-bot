@@ -1,41 +1,30 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import { useQueue } from 'discord-player';
-import type { Message } from 'discord.js';
+
+import { replyNotice } from '../../lib/discord/notice.js';
+import { guildOnly } from '../../lib/discord/slash.js';
+import { skipPlayback } from '../../lib/music/playback.js';
+import { skipToQueuedTrack } from '../../lib/music/queue-actions.js';
 
 @ApplyOptions<Command.Options>({
-  description: 'Skip the currently playing track',
+  description: 'Skip the current track, or skip to a queued one',
   preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message): Promise<void> {
-    const result = this.doSkip(message.guildId);
-
-    if (message.channel.isSendable()) {
-      await message.channel.send(result);
-    }
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description)).addIntegerOption(
+        (option) =>
+          option
+            .setName('to')
+            .setDescription('Skip to this queue position; the tracks before it are dropped')
+            .setMinValue(1),
+      ),
+    );
   }
 
-  private doSkip(guildId: string | null): string {
-    if (!guildId) {
-      return 'No guild ID provided';
-    }
-
-    const queue = useQueue(guildId);
-    if (!queue) {
-      return 'No active music session found in this server.';
-    }
-
-    const currentTrack = queue.currentTrack;
-    if (!currentTrack) {
-      return 'No track is currently playing.';
-    }
-
-    const success = queue.node.skip();
-    if (success) {
-      return `Skipped: **${currentTrack.title}**`;
-    }
-
-    return 'Failed to skip the track.';
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    const to = interaction.options.getInteger('to');
+    await replyNotice(interaction, to === null ? skipPlayback() : skipToQueuedTrack({ index: to }));
   }
 }

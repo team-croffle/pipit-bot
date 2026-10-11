@@ -1,42 +1,44 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import { type Args, Command } from '@sapphire/framework';
-import type { Message } from 'discord.js';
+import { Command } from '@sapphire/framework';
 
+import { replyNotice } from '../../lib/discord/notice.js';
+import { guildOnly } from '../../lib/discord/slash.js';
 import { getVolumeLevel } from '../../lib/music/pcm-volume.js';
 import { setVolumeLevel } from '../../lib/music/queue-actions.js';
-import { isVolumeLevel, VOLUME_LEVELS } from '../../lib/music/volume-levels.js';
+import { VOLUME_LEVELS, type VolumeLevel } from '../../lib/music/volume-levels.js';
 
 @ApplyOptions<Command.Options>({
-  description: 'Set volume: low (30), mid (50), high (100)',
-  aliases: ['vol', '볼륨'],
+  description: 'Set the volume, or show it',
   preconditions: ['MusicChannel'],
 })
 export class UserCommand extends Command {
-  public override async messageRun(message: Message, args: Args): Promise<void> {
-    const result = await this.doVolume(message.guildId, args);
-
-    if (message.channel.isSendable()) {
-      await message.channel.send(result);
-    }
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      guildOnly(builder.setName(this.name).setDescription(this.description)).addStringOption(
+        (option) =>
+          option
+            .setName('level')
+            .setDescription('low, mid or high')
+            .addChoices(
+              { name: 'low', value: 'low' },
+              { name: 'mid', value: 'mid' },
+              { name: 'high', value: 'high' },
+            ),
+      ),
+    );
   }
 
-  private async doVolume(guildId: string | null, args: Args): Promise<string> {
-    if (!guildId) {
-      return 'No guild ID provided';
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    const level = interaction.options.getString('level') as VolumeLevel | null;
+    if (!level) {
+      const current = getVolumeLevel();
+      await replyNotice(interaction, {
+        ok: true,
+        message: `Volume: ${current} (${VOLUME_LEVELS[current]})`,
+      });
+      return;
     }
 
-    const input = await args.pick('string').catch(() => null);
-
-    if (!input) {
-      return `Current volume: **${getVolumeLevel()}** (${VOLUME_LEVELS[getVolumeLevel()]})\nUsage: \`!volume low\` / \`!volume mid\` / \`!volume high\``;
-    }
-
-    const level = input.toLowerCase();
-    if (!isVolumeLevel(level)) {
-      return `Invalid level. Use: \`!volume low\` / \`!volume mid\` / \`!volume high\``;
-    }
-
-    const result = setVolumeLevel(level, guildId);
-    return result.ok ? `Volume set to **${level}** (${VOLUME_LEVELS[level]}).` : result.message;
+    await replyNotice(interaction, setVolumeLevel(level));
   }
 }
