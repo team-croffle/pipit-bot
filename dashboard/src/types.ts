@@ -281,6 +281,7 @@ export interface PlaybackCurrentTrack {
   progress: number;
   durationLabel: string;
   positionLabel: string;
+  requester: { userId: string; name: string } | null;
 }
 
 export interface HistoryTrack {

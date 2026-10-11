@@ -37,7 +37,11 @@ export async function requestPlay(request: PlayRequest): Promise<Notice> {
     const prepared = await prepareTrack(query, { next: request.next });
 
     if (request.next) {
-      const inserted = await insertNextIfPlaying(voiceChannel.guild.id, prepared.file);
+      const inserted = await insertNextIfPlaying(
+        voiceChannel.guild.id,
+        prepared.file,
+        request.member.id,
+      );
       if (inserted) {
         return { ok: true, message: `${inserted.title} will play next.` };
       }
@@ -47,7 +51,10 @@ export async function requestPlay(request: PlayRequest): Promise<Notice> {
     const { track, queue } = await player.play(
       voiceChannel as unknown as Parameters<typeof player.play>[0],
       toLocalPlayQuery(prepared.file),
-      { nodeOptions: { ...PLAYER_NODE_OPTIONS, metadata: { channel: request.channel } } },
+      {
+        requestedBy: request.member.id,
+        nodeOptions: { ...PLAYER_NODE_OPTIONS, metadata: { channel: request.channel } },
+      },
     );
 
     return queue.isPlaying() && queue.tracks.size > 0

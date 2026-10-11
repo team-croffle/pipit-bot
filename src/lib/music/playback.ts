@@ -25,6 +25,8 @@ export interface PlaybackCurrentTrack {
   progress: number;
   durationLabel: string;
   positionLabel: string;
+  /** Who asked for it in Discord; null for a track added from the dashboard. */
+  requester: { userId: string; name: string } | null;
 }
 
 export type PlaybackRepeatMode = 'off' | 'track' | 'queue' | 'autoplay';
@@ -66,6 +68,18 @@ function repeatModeLabel(mode: number): PlaybackRepeatMode {
     default:
       return 'off';
   }
+}
+
+function requesterOf(
+  track: Track,
+  guild: NonNullable<ReturnType<typeof getConfiguredGuild>>,
+): PlaybackCurrentTrack['requester'] {
+  const user = track.requestedBy;
+  if (!user) {
+    return null;
+  }
+
+  return { userId: user.id, name: guild.members.cache.get(user.id)?.displayName ?? user.username };
 }
 
 export function formatTrackTitle(track: Track): string {
@@ -180,6 +194,7 @@ export function getPlaybackState(): PlaybackState {
           progress: timestamp.progress,
           durationLabel: timestamp.total.label,
           positionLabel: timestamp.current.label,
+          requester: requesterOf(current, guild),
         }
       : {
           title: formatTrackTitle(current),
@@ -188,6 +203,7 @@ export function getPlaybackState(): PlaybackState {
           progress: 0,
           durationLabel: current.duration ?? '—',
           positionLabel: '0:00',
+          requester: requesterOf(current, guild),
         },
     queue.tracks.store.slice(0, QUEUE_PREVIEW_LIMIT).map((track, index) => ({
       id: track.id,
