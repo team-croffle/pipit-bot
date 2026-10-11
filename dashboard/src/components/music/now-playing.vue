@@ -6,6 +6,7 @@
     Pause,
     Play,
     Repeat,
+    SkipBack,
     SkipForward,
     Square,
   } from 'lucide-vue-next';
@@ -228,6 +229,18 @@
           @click="cycleRepeat"
         >
           <Repeat />
+        </Button>
+        <Button
+          data-playback-back
+          variant="outline"
+          size="icon"
+          class="rounded-full"
+          :disabled="busy || !playback?.hasPrevious"
+          aria-label="이전 트랙"
+          title="이전 트랙 — 지금 곡은 대기열 맨 앞으로"
+          @click="emit('action', '/api/music/playback/back')"
+        >
+          <SkipBack />
         </Button>
         <Button
           v-if="playback?.paused"

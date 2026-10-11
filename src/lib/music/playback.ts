@@ -47,6 +47,7 @@ export interface PlaybackState {
   volumeLevel: VolumeLevel;
   /** Something the player did on its own that deserves a word, e.g. a skipped track. */
   notice: PlaybackNotice | null;
+  hasPrevious: boolean;
 }
 
 export interface PlaybackActionResult {
@@ -127,6 +128,7 @@ function buildState(
     volume: VOLUME_LEVELS[getVolumeLevel()],
     volumeLevel: getVolumeLevel(),
     notice: getRecentNotice(),
+    hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
   };
 }
 
