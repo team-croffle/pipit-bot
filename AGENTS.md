@@ -124,6 +124,7 @@ committed and its contents never move into committed docs. The workflow is defin
 
 | Command                                                | Does                                                                                                |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `/gen-roadmap <requirements> [→ vX.Y.Z]`               | Adds or changes `.ai/ROADMAP.md` entries from requirements; a version the user names wins           |
 | `/planning-next`                                       | Plans the next `.ai/ROADMAP.md` version: plan file + one work file per item                         |
 | `/planning-to <version>`                               | Plans every version up to the given one                                                             |
 | `/work [N]`                                            | Does the next pending work item; finishing an rc's last item continues into `/test` and the rc loop |

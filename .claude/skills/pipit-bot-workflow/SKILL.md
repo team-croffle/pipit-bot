@@ -1,6 +1,6 @@
 ---
 name: pipit-bot-workflow
-description: pipit-bot rules for the local `.ai/` planning workspace and the planning / work / test / release workflows. Referenced by /planning-next, /planning-to, /work, /work-to, /test, /release. Read it when asked about plan or work files, "next task", or release steps in this repository.
+description: pipit-bot rules for the local `.ai/` planning workspace and the planning / work / test / release workflows. Referenced by /gen-roadmap, /planning-next, /planning-to, /work, /work-to, /test, /release. Read it when asked about plan or work files, "next task", or release steps in this repository.
 ---
 
 # pipit-bot workflow
@@ -37,6 +37,30 @@ a person to test. Every work file states its target in `release:`. Never write `
   release/pipit-bot_v<version>_release.md  release note body (templates: release-notes.md)
   pr/<branch>.md
 ```
+
+## Roadmap workflow (`/gen-roadmap`)
+
+Turns the user's requirements into `.ai/ROADMAP.md` entries. It edits the roadmap only — no plan, work file, code or
+commit.
+
+1. **Read first**: `.ai/ROADMAP.md`, the released version (`package.json`, tags), which versions already have a plan in
+   `.ai/plan/` and their status, and prior decisions on the subject (`grep -l 'decisions:.*<keyword>' .ai/history/*`).
+2. **Split** the request into requirements — one behaviour each, written as a plan, not a checklist.
+3. **Place each requirement in a version.**
+   - **The user named a version → use it**, creating the `### vX.Y.Z` entry if it does not exist. If that version is
+     already released, or its plan is in progress or done, say so and ask instead of writing.
+   - Otherwise choose, and say why: the existing unplanned version whose theme it belongs to → a patch (`x.y.Z`) for a fix
+     or a small addition to the current line → a new minor (`x.Y.0`) for a new theme. Never put new work into a version
+     whose plan is in progress without asking.
+   - A requirement that duplicates or contradicts an existing entry changes that entry instead of adding a second one.
+     Moving or deleting entries the user did not mention is asked, not done.
+4. **Write** in the roadmap's style: the version heading, short bullets, an `(added YYYY-MM-DD)` / `(changed YYYY-MM-DD)`
+   mark on what changed, and the roadmap's updated date. `AGENTS.md` §2 applies — the music backend is "the music
+   worker".
+5. **Planned versions**: when a requirement lands in a version that already has a plan file, note under that version that
+   the plan needs updating — do not edit the plan here.
+6. **Report**: a table `requirement → version (new | changed | moved)`, the reason for each placement the user did not
+   choose, and open questions.
 
 ## Plan file — `.ai/plan/<version>_<goal>.md`
 
