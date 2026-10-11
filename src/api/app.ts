@@ -107,16 +107,12 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   app.get('/api/config', dashboardViewer, (c) => c.json(getRuntimeConfig()));
 
   app.put('/api/config', dashboardViewer, dashboardWrite, async (c) => {
-    const body = await c.req.json<{ prefix?: string; musicChannelIds?: string[] }>();
-    if (body.prefix !== undefined && !body.prefix.trim()) {
-      return c.json({ error: 'prefix must not be empty' }, 400);
-    }
-
+    const body = await c.req.json<{ musicChannelIds?: string[] }>();
     if (body.musicChannelIds !== undefined && !Array.isArray(body.musicChannelIds)) {
       return c.json({ error: 'musicChannelIds must be an array' }, 400);
     }
 
-    const updated = updateRuntimeConfig(body);
+    const updated = updateRuntimeConfig({ musicChannelIds: body.musicChannelIds });
     return c.json(updated);
   });
 

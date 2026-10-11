@@ -15,7 +15,6 @@ export const env = loadEnv();
 container.config = env;
 
 initRuntimeConfig(migrateRuntimeConfigFromStreamRoot(env.streamRoot), {
-  prefix: '!',
   musicChannelIds: [],
 });
 

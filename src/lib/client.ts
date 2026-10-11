@@ -1,23 +1,16 @@
 import { LogLevel, SapphireClient, container } from '@sapphire/framework';
-import type { SapphirePrefixHook } from '@sapphire/framework';
 import { Player } from 'discord-player';
 import { GatewayIntentBits, Partials } from 'discord.js';
 
 import type { EnvConfig } from './env.js';
 import { LocalFileExtractor } from './music/local-file-extractor.js';
 import { watchMissingFiles } from './music/missing-file.js';
-import { getRuntimeConfig } from './runtime-config.js';
 
 export class CustomClient extends SapphireClient {
   public readonly player: Player;
 
-  public override fetchPrefix: SapphirePrefixHook = () => {
-    return getRuntimeConfig().prefix;
-  };
-
   public constructor(private readonly config: EnvConfig) {
     super({
-      defaultPrefix: '!',
       caseInsensitiveCommands: true,
       logger: {
         level: config.nodeEnv === 'production' ? LogLevel.Info : LogLevel.Debug,
@@ -36,7 +29,8 @@ export class CustomClient extends SapphireClient {
         GatewayIntentBits.GuildExpressions,
       ],
       partials: [Partials.Message, Partials.Reaction, Partials.User, Partials.GuildMember],
-      loadMessageCommandListeners: true,
+      // Slash commands only (v0.7.1): no message commands, so no prefix.
+      loadMessageCommandListeners: false,
     });
 
     this.player = new Player(this as unknown as ConstructorParameters<typeof Player>[0], {

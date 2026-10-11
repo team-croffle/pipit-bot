@@ -2,17 +2,20 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export interface RuntimeConfig {
-  prefix: string;
   musicChannelIds: string[];
 }
 
 interface RuntimeConfigPatch {
-  prefix?: string;
   musicChannelIds?: string[];
 }
 
+/**
+ * What may be on disk: `commandChannelId` predates music channels, and `prefix` predates
+ * slash commands (v0.7.1) — read past, and dropped on the next write.
+ */
 interface StoredRuntimeConfig extends Partial<RuntimeConfig> {
   commandChannelId?: string;
+  prefix?: string;
 }
 
 let filePath: string | undefined;
@@ -55,7 +58,6 @@ export function initRuntimeConfig(path: string, defaults: RuntimeConfig): Runtim
   const stored = readFromDisk();
 
   cached = {
-    prefix: stored.prefix ?? defaults.prefix,
     musicChannelIds: normalizeMusicChannelIds(stored, defaults.musicChannelIds),
   };
 
@@ -77,7 +79,6 @@ export function getRuntimeConfig(): RuntimeConfig {
 
 export function updateRuntimeConfig(patch: RuntimeConfigPatch): RuntimeConfig {
   cached = {
-    prefix: patch.prefix?.trim() || cached.prefix,
     musicChannelIds:
       patch.musicChannelIds !== undefined
         ? patch.musicChannelIds.filter((id) => id.trim())
