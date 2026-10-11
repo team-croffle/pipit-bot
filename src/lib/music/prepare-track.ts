@@ -79,13 +79,18 @@ export async function submitMusicJob(
  * the inserted track, or null when nothing is playing — then there is no "next" to
  * jump ahead of, and the caller plays it the ordinary way instead.
  */
-export async function insertNextIfPlaying(guildId: string, file: string): Promise<Track | null> {
+export async function insertNextIfPlaying(
+  guildId: string,
+  file: string,
+  /** A user id — resolved by the player, which carries its own copy of discord.js types. */
+  requestedBy?: string,
+): Promise<Track | null> {
   const queue = useQueue(guildId);
   if (!queue?.currentTrack) {
     return null;
   }
 
-  const search = await useMainPlayer().search(toLocalPlayQuery(file));
+  const search = await useMainPlayer().search(toLocalPlayQuery(file), { requestedBy });
   const track = search.tracks[0];
   if (!track) {
     throw new Error('No tracks were found for that query.');
