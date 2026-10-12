@@ -19,6 +19,8 @@ export interface PlayRequest {
   member: GuildMember;
   /** Where the session's own notices go (a skipped track, for instance). */
   channel: GuildTextBasedChannel | null;
+  /** Shown as the request on the dashboard when the query is not the person's own words. */
+  label?: string;
 }
 
 export async function requestPlay(request: PlayRequest): Promise<Notice> {
@@ -34,7 +36,7 @@ export async function requestPlay(request: PlayRequest): Promise<Notice> {
 
   try {
     await connectPlayerToChannel(voiceChannel);
-    const prepared = await prepareTrack(query, { next: request.next });
+    const prepared = await prepareTrack(query, { next: request.next, label: request.label });
 
     if (request.next) {
       const inserted = await insertNextIfPlaying(

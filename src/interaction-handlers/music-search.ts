@@ -81,6 +81,7 @@ export class MusicSearchPlay extends InteractionHandler {
 
     const notice = await requestPlay({
       query: found.candidate.query,
+      label: found.candidate.title,
       next: id?.part === SEARCH_ID.next,
       member: interaction.member,
       channel: interaction.channel,

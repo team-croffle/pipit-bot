@@ -28,6 +28,7 @@ const RULES: ActionRule[] = [
   { method: 'POST', pattern: /^\/api\/music\/playback\/([a-z]+)$/, action: 'music.$1' },
   { method: 'POST', pattern: /^\/api\/music\/voice\/(join|leave)$/, action: 'music.$1' },
   { method: 'POST', pattern: /^\/api\/music\/jobs$/, action: 'music.enqueue' },
+  { method: 'POST', pattern: /^\/api\/music\/search$/, action: 'music.search' },
   {
     method: 'POST',
     pattern: /^\/api\/music\/jobs\/([^/]+)\/(cancel|retry)$/,

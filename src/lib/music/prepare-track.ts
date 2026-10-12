@@ -140,12 +140,16 @@ export function schedulePlayWhenReady(jobId: string, options: { next?: boolean }
 
 export async function prepareTrack(
   query: string,
-  options: { next?: boolean } = {},
+  options: { next?: boolean; label?: string } = {},
 ): Promise<TrackMeta> {
   const jobId = randomUUID();
   let job: JobRecord;
   try {
-    await submitMusicJob(jobId, query, { origin: 'command', next: options.next });
+    await submitMusicJob(jobId, query, {
+      origin: 'command',
+      next: options.next,
+      label: options.label,
+    });
     job = await waitForJob(jobId);
   } catch (error) {
     // The command answers with what the failure means, not only the worker's words.
@@ -180,6 +184,7 @@ export async function retryMusicJob(original: JobRecord): Promise<JobRecord> {
     origin: 'dashboard',
     next: original.next,
     retryOf: original.jobId,
+    label: original.label,
   });
   schedulePlayWhenReady(retryId, { next: original.next });
   return job;
