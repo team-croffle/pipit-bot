@@ -6,6 +6,8 @@ import {
   type RepliableInteraction,
 } from 'discord.js';
 
+import { auditInteraction } from '../audit/discord.js';
+
 /**
  * A short result banner — what an action did, in one line, with an optional detail and
  * footer. Interactions get it as a reply only the person who acted can see; a message
@@ -64,6 +66,7 @@ export async function replyNotice(
   notice: Notice,
   options: { seconds?: number } = {},
 ): Promise<void> {
+  auditInteraction(interaction, notice);
   const footer = options.seconds ? disappearsIn(options.seconds) : undefined;
   const components = [noticeContainer(notice, footer)];
 

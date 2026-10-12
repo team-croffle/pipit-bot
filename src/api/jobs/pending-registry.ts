@@ -1,3 +1,5 @@
+import { audit } from '../../lib/audit/log.js';
+
 export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';
 
 /** Where a job was asked for — a retry always plays through the dashboard path. */
@@ -107,6 +109,18 @@ function recordLate(record: JobRecord, late: Omit<NonNullable<JobRecord['lateRes
 
 function settle(record: JobRecord, settleWaiter: (waiter: PendingWaiter) => void): void {
   record.updatedAt = now();
+  // One line per finished job: how it ended and where it came from — never the query
+  // or the track. A cancel is recorded by whoever cancelled it.
+  if (record.status === 'ready' || record.status === 'failed') {
+    void audit({
+      category: 'music',
+      action: `music.${record.status}`,
+      target: record.jobId,
+      outcome: record.status === 'ready' ? 'ok' : 'failed',
+      detail: [record.origin, record.code].filter(Boolean).join(' · ') || undefined,
+    });
+  }
+
   const waiter = waiters.get(record.jobId);
   if (waiter) {
     clearTimeout(waiter.timeout);
