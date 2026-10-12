@@ -30,21 +30,26 @@ export function actorOf(user: User, member?: GuildMember | null): AuditActor {
   return { id: user.id, name: member?.displayName ?? user.globalName ?? user.username };
 }
 
+/** A search control's id carries the search id and an index; the action is the control. */
+function controlId(customId: string): string {
+  return customId.startsWith('search:') ? customId.split(':').slice(0, 2).join(':') : customId;
+}
+
 function actionOf(interaction: RepliableInteraction): string {
   if (interaction.isChatInputCommand()) {
     return `/${interaction.commandName}`;
   }
 
   if (interaction.isButton()) {
-    return `button:${interaction.customId}`;
+    return `button:${controlId(interaction.customId)}`;
   }
 
   if (interaction.isModalSubmit()) {
-    return `modal:${interaction.customId}`;
+    return `modal:${controlId(interaction.customId)}`;
   }
 
   if (interaction.isAnySelectMenu()) {
-    return `select:${interaction.customId}`;
+    return `select:${controlId(interaction.customId)}`;
   }
 
   return 'interaction';
@@ -55,7 +60,7 @@ function isMusic(action: string): boolean {
     return MUSIC_COMMANDS.has(action.slice(1));
   }
 
-  return /^(button|modal|select):music:/.test(action);
+  return /^(button|modal|select):(music|search):/.test(action);
 }
 
 /**
