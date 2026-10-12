@@ -27,7 +27,7 @@
   const readOnly = !me.canWriteSettings;
 
   /**
-   * Per-feature on/off is a v0.7.5 item, but the list is worth showing now: it is how
+   * Per-feature on/off is a v0.7.6 item, but the list is worth showing now: it is how
    * the operator will read at a glance what the bot is doing, and each row already
    * points at the page that governs it today.
    */
@@ -76,7 +76,7 @@
             기능 단위로 켜고 끕니다. 지금은 각 기능 페이지에서 개별로 관리합니다.
           </CardDescription>
           <CardAction>
-            <Badge variant="secondary">v0.7.5 예정</Badge>
+            <Badge variant="secondary">v0.7.6 예정</Badge>
           </CardAction>
         </CardHeader>
         <CardContent class="flex flex-col">
