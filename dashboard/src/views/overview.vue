@@ -71,7 +71,7 @@
     { label: 'GitHub PR 리마인더', on: github.value?.enabled ?? false, to: '/github' },
     { label: '초대 로거', on: true, to: '/invites' },
     { label: '리액션 롤', on: true, to: '/reaction-roles' },
-    { label: '감사 로깅', on: false, to: '/logs', planned: 'v0.7.2' },
+    { label: '감사 로깅', on: true, to: '/logs' },
     { label: '음악 결산', on: false, to: '/settlement', planned: 'v0.8.1' },
   ]);
 

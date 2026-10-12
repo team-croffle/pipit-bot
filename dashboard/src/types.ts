@@ -325,3 +325,21 @@ export interface PlaybackActionResult {
   ok: boolean;
   message: string;
 }
+
+export type AuditCategory = 'dashboard' | 'music' | 'command' | 'github' | 'member';
+
+/** One line of the audit log. Music lines say only that someone used a feature. */
+export interface AuditEntry {
+  at: string;
+  category: AuditCategory;
+  action: string;
+  actor?: { id?: string; name: string };
+  target?: string;
+  outcome: 'ok' | 'failed' | 'skipped';
+  detail?: string;
+}
+
+export interface AuditPage {
+  entries: AuditEntry[];
+  next: string | null;
+}

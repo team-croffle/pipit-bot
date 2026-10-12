@@ -1,20 +1,61 @@
 <script setup lang="ts">
-  import { ScrollText } from 'lucide-vue-next';
+  import { RefreshCw } from 'lucide-vue-next';
+  import { onMounted } from 'vue';
 
-  import PlannedView from '@/components/common/planned-view.vue';
+  import PageHeader from '@/components/common/page-header.vue';
+  import StateBlock from '@/components/common/state-block.vue';
+  import AuditFilters from '@/components/logs/audit-filters.vue';
+  import AuditList from '@/components/logs/audit-list.vue';
+  import { Button } from '@/components/ui/button';
+  import { Card, CardContent } from '@/components/ui/card';
+  import { useAuditLog } from '@/composables/use-audit-log';
+
+  const { categories, period, search, entries, next, loading, loadingMore, error, load, loadMore } =
+    useAuditLog();
+
+  onMounted(load);
 </script>
 
 <template>
-  <PlannedView
-    title="로깅"
-    description="대시보드 조작·음악 재생·알림 발송에 대한 감사 로그"
-    version="v0.7.2"
-    :icon="ScrollText"
-    :points="[
-      '대시보드 조작, 음악 기능, GitHub 알림, 초대·역할 이벤트 기록',
-      '카테고리와 기간으로 필터링',
-      '음악 기록은 곡 제목만 남기고 요청 원문은 저장하지 않습니다',
-      '초기에는 파일로 저장하고 v0.8.0에서 DB로 옮깁니다',
-    ]"
-  />
+  <div class="flex flex-col gap-5">
+    <PageHeader
+      title="로깅"
+      description="대시보드·디스코드에서 한 조작, GitHub 알림, 멤버 입장·퇴장 기록. 음악은 누가 어떤 기능을 썼는지만 남깁니다 · 90일 보관"
+    >
+      <template #actions>
+        <Button variant="outline" size="sm" :disabled="loading" data-audit-refresh @click="load">
+          <RefreshCw :class="loading ? 'animate-spin' : ''" />
+          새로고침
+        </Button>
+      </template>
+    </PageHeader>
+
+    <Card>
+      <CardContent class="flex flex-col gap-4">
+        <AuditFilters
+          v-model:categories="categories"
+          v-model:period="period"
+          v-model:search="search"
+        />
+        <StateBlock
+          :loading="loading"
+          :error="error"
+          :empty="entries.length === 0"
+          empty-text="이 조건에 맞는 기록이 없습니다."
+        >
+          <AuditList :entries="entries" />
+          <Button
+            v-if="next"
+            variant="outline"
+            class="self-center"
+            :disabled="loadingMore"
+            data-audit-more
+            @click="loadMore"
+          >
+            {{ loadingMore ? '불러오는 중…' : '더 보기' }}
+          </Button>
+        </StateBlock>
+      </CardContent>
+    </Card>
+  </div>
 </template>
