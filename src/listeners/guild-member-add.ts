@@ -8,7 +8,7 @@ import {
   pickRandomMessage,
 } from '../lib/guild-event-settings.js';
 import { consumeUsedInvite } from '../lib/invite-cache.js';
-import { recordMemberJoin } from '../lib/member-events.js';
+import { onMemberJoin } from '../lib/member-events.js';
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberAdd })
 export class UserEvent extends Listener {
@@ -19,7 +19,7 @@ export class UserEvent extends Listener {
 
     const settings = getGuildEventSettings();
     const invite = await consumeUsedInvite(member.guild);
-    recordMemberJoin(member, invite);
+    await onMemberJoin(member, invite);
     const inviter =
       invite?.inviterId === null || invite?.inviterId === undefined
         ? 'Unknown'

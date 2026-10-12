@@ -6,7 +6,13 @@ import { loadSettingsFile } from './settings-file.js';
 
 // WHY: Command channel and RSS belong to bot config (C), not this store.
 export interface GuildEventSettings {
+  /** Where the welcome and farewell messages go. */
   logChannelId: string | null;
+  /**
+   * Where a one-line record of each arrival and departure goes — the facts only
+   * (who, which invite, how long they stayed), apart from the welcome messages.
+   */
+  recordChannelId: string | null;
   joinMessages: string[];
   leaveMessages: string[];
   joinRoleIds: string[];
@@ -19,6 +25,7 @@ const snowflake = /^\d{17,20}$/;
 function emptySettings(): GuildEventSettings {
   return {
     logChannelId: null,
+    recordChannelId: null,
     joinMessages: [],
     leaveMessages: [],
     joinRoleIds: [],
@@ -49,6 +56,19 @@ function asStringList(value: unknown, maxItems: number, maxLength: number): stri
   return items;
 }
 
+/** A channel id, or null for empty — a file written before the key existed reads as null. */
+function optionalSnowflake(value: unknown, name: string): string | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (!isSnowflake(value)) {
+    throw new Error(`${name} must be a snowflake or null`);
+  }
+
+  return value;
+}
+
 export function parseGuildEventSettings(raw: unknown): GuildEventSettings {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Settings must be an object');
@@ -65,6 +85,7 @@ export function parseGuildEventSettings(raw: unknown): GuildEventSettings {
     throw new Error('logChannelId must be a snowflake or null');
   }
 
+  const recordChannelId = optionalSnowflake(body.recordChannelId, 'recordChannelId');
   const joinRoleIds = asStringList(body.joinRoleIds ?? [], 20, 20);
   if (!joinRoleIds.every(isSnowflake)) {
     throw new Error('joinRoleIds must be role snowflakes');
@@ -75,6 +96,7 @@ export function parseGuildEventSettings(raw: unknown): GuildEventSettings {
       logChannelId === null || logChannelId === undefined || logChannelId === ''
         ? null
         : logChannelId,
+    recordChannelId,
     joinMessages: asStringList(body.joinMessages ?? [], 20, 2000),
     leaveMessages: asStringList(body.leaveMessages ?? [], 20, 2000),
     joinRoleIds,

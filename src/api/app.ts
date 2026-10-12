@@ -34,6 +34,7 @@ import { mountAuditRoutes } from './routes/audit.js';
 import { mountAuthRoutes } from './routes/auth.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
+import { mountInviteRoutes } from './routes/invites.js';
 import { mountMusicJobRoutes } from './routes/music-jobs.js';
 import { mountMusicRoutes } from './routes/music.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
@@ -193,6 +194,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   mountMusicRoutes(app);
   mountMusicJobRoutes(app);
   mountReactionRoleRoutes(app);
+  mountInviteRoutes(app);
 
   app.get('*', async (c) => {
     const pathname = new URL(c.req.url).pathname;
