@@ -10,7 +10,8 @@
 
 - **Pull request and issue reminders** — a GitHub App reports opened, updated, reviewed, merged and closed items to the channel you choose, mentions the right people, and keeps the announcement current as assignees and reviewers change
 - **Reaction roles** — the bot publishes a panel message and hands out roles as members react to it
-- **Invite logger** — join and leave messages, invite tracking, roles on join
+- **Invite logger** — join and leave messages, arrivals counted per invite, a record channel, roles on join
+- **Audit log** — who did what from the dashboard and in Discord, GitHub deliveries and member arrivals, kept for 90 days
 - **Music** — shared playback for the voice channel, backed by a pluggable music worker
 - **Dashboard** — every setting above, light and dark, behind your own OIDC login
 
@@ -55,7 +56,7 @@ Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik 
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 ## GitHub notifications
 
@@ -88,6 +89,23 @@ Mentions belong on the plain line: Discord raises no notification for a mention 
 The message that announced a pull request or issue is remembered in `data/github-messages.json` (capped; oldest entries drop first). When somebody is assigned or asked to review later — or unassigned, or the title changes — that message is re-rendered with the current title, assignees and reviewers and edited in place, so it does not go stale. Reopening a pull request or issue announces it again, and that message takes over as the one being kept current. Assigning yourself only edits — no new message, nobody pinged. Assigning or requesting someone else edits and also sends that event's own message, because Discord does not notify people for a mention that appears through an edit. An item announced before the bot started tracking, or whose message was deleted, is simply not edited; recent deliveries show `edited` for an update that posted nothing new.
 
 In the Discord Developer Portal enable **Server Members Intent**. The bot needs `Manage Roles`, `Send Messages`, `Add Reactions`, `View Channel`, `Read Message History`, and `Manage Guild` (invite uses). The bot role must sit above roles it assigns.
+
+## Invites
+
+The invites page sets two channels. The **welcome channel** gets the join and leave messages you write (`{user}`, `{username}`, `{inviter}`, `{invite}`; one is picked at random). The **record channel**, optional and separate, gets one line per arrival and departure with the facts only — who, which invite and who made it, how many days a leaving member stayed — and notifies nobody.
+
+Arrivals are counted per invite code in `data/invite-stats.json`, so the count outlives the invite itself. The "초대 코드별 유입" card lists each invite with its maker, the arrivals the bot counted, Discord's own use count, the last arrival and whether it has expired or gone. Listing the server's invites needs **Manage Guild**; without it the card shows the bot's counts only.
+
+## Audit log
+
+The bot records who did what and whether it worked:
+
+- changes made from the dashboard (settings, music controls, reaction-role panels, reminders, …) — never the request body
+- slash commands, remote-control buttons and the play dialog in Discord, and requests typed into a music channel; commands that only show something (`/queue`, `/help`) are skipped
+- how each music job ended (its origin, and the failure code when it failed)
+- GitHub deliveries (sent, edited, skipped or failed, with the reason) and members joining (invite code, inviter) or leaving
+
+**For music it records only who used which feature** — never the track, never what was asked for. Entries are appended to one file per day, `data/audit/YYYY-MM-DD.jsonl` (UTC), and files older than **90 days** are removed. Entries hold Discord user ids and display names and dashboard user names; keep that in mind for whoever can read `data/`. The dashboard's **로깅** page lists them by category, period and text.
 
 ## Reaction roles
 
