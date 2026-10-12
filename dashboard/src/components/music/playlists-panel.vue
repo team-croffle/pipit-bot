@@ -13,7 +13,7 @@
         서버 멤버가 만든 재생목록을 저장하고 한 번에 재생합니다.
       </p>
       <div class="flex items-center gap-2">
-        <Badge variant="secondary">v0.7.3 예정</Badge>
+        <Badge variant="secondary">v0.7.4 예정</Badge>
         <Button variant="outline" size="sm" disabled>
           <Plus />
           새 재생목록
@@ -29,7 +29,7 @@
         <div class="min-w-0">
           <p class="font-medium">아직 구현되지 않은 기능입니다.</p>
           <p class="text-muted-foreground mt-1 text-sm">
-            재생목록 저장·재생은 로드맵 v0.7.3에 계획되어 있습니다. 지금은 대기열만 사용할 수
+            재생목록 저장·재생은 로드맵 v0.7.4에 계획되어 있습니다. 지금은 대기열만 사용할 수
             있습니다.
           </p>
         </div>

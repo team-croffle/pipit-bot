@@ -10,19 +10,19 @@
       key: 'mono',
       label: '모노 스트리밍',
       help: '이어폰을 한쪽만 낄 때를 위해 좌우 채널을 합쳐 내보냅니다.',
-      version: 'v0.7.4',
+      version: 'v0.7.5',
     },
     {
       key: 'autoplay',
       label: '자동 재생',
       help: '대기열이 비어도 이어질 트랙을 자동으로 채웁니다.',
-      version: 'v0.7.4',
+      version: 'v0.7.5',
     },
     {
       key: 'repeat-default',
       label: '반복 재생 기본값',
       help: '새 세션이 시작될 때 적용할 반복 모드입니다.',
-      version: 'v0.7.5',
+      version: 'v0.7.6',
     },
   ];
 </script>
