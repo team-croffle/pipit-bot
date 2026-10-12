@@ -6,6 +6,7 @@ import { CustomClient } from './lib/client.js';
 import { loadTrackedMessages } from './lib/github/message-tracker.js';
 import { loadGithubNotifySettings } from './lib/github/settings.js';
 import { loadGuildEventSettings } from './lib/guild-event-settings.js';
+import { loadInviteStats } from './lib/invite-stats.js';
 import { loadReactionRoleSettings } from './lib/reaction-roles/settings.js';
 import { env } from './lib/setup.js';
 
@@ -17,6 +18,7 @@ const main = async () => {
     await loadGithubNotifySettings();
     await loadTrackedMessages();
     await loadReactionRoleSettings();
+    await loadInviteStats();
     startAuditRetention();
     startApiServer(env, {
       info(message: string) {
