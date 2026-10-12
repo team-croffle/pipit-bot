@@ -94,7 +94,7 @@ In the Discord Developer Portal enable **Server Members Intent**. The bot needs 
 
 The invites page sets two channels. The **welcome channel** gets the join and leave messages you write (`{user}`, `{username}`, `{inviter}`, `{invite}`; one is picked at random). The **record channel**, optional and separate, gets one line per arrival and departure with the facts only — who, which invite and who made it, how many days a leaving member stayed — and notifies nobody.
 
-Arrivals are counted per invite code in `data/invite-stats.json`, so the count outlives the invite itself. The "초대 코드별 유입" card lists each invite with its maker, the arrivals the bot counted, Discord's own use count, the last arrival and whether it has expired or gone. Listing the server's invites needs **Manage Guild**; without it the card shows the bot's counts only.
+Arrivals are counted per invite code in `data/invite-stats.json`, so the count outlives the invite itself. The "초대 코드별 유입" card lists each invite with its maker, the arrivals the bot counted, Discord's own use count, the last arrival and whether it has expired or gone. Tracing an arrival to its invite needs **Manage Guild**: without it Discord may still list the invites but leaves out their use counts, so no arrival can be traced and nothing is counted — the card warns when that is the case.
 
 ## Audit log
 

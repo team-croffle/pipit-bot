@@ -363,5 +363,7 @@ export interface InvitesResponse {
   invites: InviteRow[];
   /** False when the bot lacks Manage Server and can only show its own counts. */
   canListInvites: boolean;
+  /** False when Discord withholds use counts (no Manage Server) — arrivals cannot be traced. */
+  hasUseCounts: boolean;
   loadError: string | null;
 }
