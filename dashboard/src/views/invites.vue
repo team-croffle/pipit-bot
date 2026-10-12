@@ -6,6 +6,7 @@
   import ChannelSelect from '@/components/common/channel-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
+  import InviteStatsCard from '@/components/invites/invite-stats-card.vue';
   import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +61,7 @@
   async function onSave(): Promise<void> {
     await save({
       logChannelId: settings.value.logChannelId || null,
+      recordChannelId: settings.value.recordChannelId || null,
       joinMessages: joinMessages.value.map((item) => item.trim()).filter(Boolean),
       leaveMessages: leaveMessages.value.map((item) => item.trim()).filter(Boolean),
       joinRoleIds: settings.value.joinRoleIds,
@@ -73,7 +75,10 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="초대 로거" description="입장·퇴장 안내와 가입 시 자동 역할 부여" />
+    <PageHeader
+      title="초대 로거"
+      description="초대 코드별 유입, 입장·퇴장 안내와 기록, 가입 시 자동 역할 부여"
+    />
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
       읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
@@ -96,20 +101,39 @@
           <AlertDescription>{{ saved }}</AlertDescription>
         </Alert>
 
+        <InviteStatsCard />
+
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">로그 채널</CardTitle>
-            <CardDescription>입장·퇴장 안내가 이 채널에 기록됩니다.</CardDescription>
+            <CardTitle class="text-base">채널</CardTitle>
+            <CardDescription>
+              안내 채널에는 아래의 입장·퇴장 메시지가, 기록 채널에는 누가 어떤 초대로 들어왔고
+              얼마나 머물렀는지만 담은 한 줄이 남습니다(알림 없음).
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChannelSelect
-              id="log-channel"
-              v-model="settings.logChannelId"
-              :channels="channels"
-              placeholder="지정 안 함"
-              :empty-value="null"
-              :disabled="readOnly"
-            />
+          <CardContent class="grid gap-4 sm:grid-cols-2">
+            <div class="flex min-w-0 flex-col gap-2">
+              <Label for="log-channel">안내 채널</Label>
+              <ChannelSelect
+                id="log-channel"
+                v-model="settings.logChannelId"
+                :channels="channels"
+                placeholder="지정 안 함"
+                :empty-value="null"
+                :disabled="readOnly"
+              />
+            </div>
+            <div class="flex min-w-0 flex-col gap-2" data-record-channel>
+              <Label for="record-channel">기록 채널</Label>
+              <ChannelSelect
+                id="record-channel"
+                v-model="settings.recordChannelId"
+                :channels="channels"
+                placeholder="지정 안 함"
+                :empty-value="null"
+                :disabled="readOnly"
+              />
+            </div>
           </CardContent>
         </Card>
 

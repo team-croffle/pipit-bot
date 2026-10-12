@@ -6,6 +6,7 @@ import type { GuildEventSettings } from '@/types';
 export function emptyGuildEventSettings(): GuildEventSettings {
   return {
     logChannelId: null,
+    recordChannelId: null,
     joinMessages: [],
     leaveMessages: [],
     joinRoleIds: [],

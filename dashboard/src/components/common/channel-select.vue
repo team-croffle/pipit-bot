@@ -79,6 +79,7 @@
           :key="channel.id"
           :value="channel.id"
           :disabled="!channel.canPost"
+          :data-channel-option="channel.id"
         >
           #{{ channel.name }}{{ channel.canPost ? '' : ' — 봇이 글을 쓸 수 없음' }}
         </SelectItem>

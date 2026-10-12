@@ -39,6 +39,8 @@ export interface JobsResponse {
 
 export interface GuildEventSettings {
   logChannelId: string | null;
+  /** One fact-only line per arrival and departure, apart from the welcome messages. */
+  recordChannelId: string | null;
   joinMessages: string[];
   leaveMessages: string[];
   joinRoleIds: string[];
@@ -342,4 +344,24 @@ export interface AuditEntry {
 export interface AuditPage {
   entries: AuditEntry[];
   next: string | null;
+}
+
+/** One invite: what Discord still knows about it, and the arrivals the bot has counted. */
+export interface InviteRow {
+  code: string;
+  inviterId: string | null;
+  inviterName: string | null;
+  joins: number;
+  lastJoinAt: string | null;
+  uses: number | null;
+  maxUses: number | null;
+  expiresAt: string | null;
+  active: boolean;
+}
+
+export interface InvitesResponse {
+  invites: InviteRow[];
+  /** False when the bot lacks Manage Server and can only show its own counts. */
+  canListInvites: boolean;
+  loadError: string | null;
 }
