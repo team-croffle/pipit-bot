@@ -40,7 +40,8 @@ async function liveInvites(guild: Guild): Promise<LiveInvite[] | null> {
       expiresAt: invite.expiresAt?.toISOString() ?? null,
     }));
   } catch {
-    // Listing invites needs Manage Server; without it only the bot's own counts remain.
+    // Listing invites needs Manage Server (or View Audit Log); without either only the
+    // bot's own counts remain.
     return null;
   }
 }
@@ -92,9 +93,13 @@ export function mountInviteRoutes(app: Hono<{ Variables: ApiVariables }>): void 
     const invites = [...rows.values()].toSorted(
       (a, b) => b.joins - a.joins || (b.uses ?? 0) - (a.uses ?? 0),
     );
+    // WHY: the list can be read with View Audit Log alone, but Discord then leaves out
+    // the use counts — and without them nobody can tell which invite a member used.
+    const hasUseCounts = live === null ? false : live.every((invite) => invite.uses !== null);
     return c.json({
       invites,
       canListInvites: live !== null,
+      hasUseCounts,
       loadError: getInviteStatsLoadError(),
     });
   });

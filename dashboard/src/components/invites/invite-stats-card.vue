@@ -18,6 +18,7 @@
 
   const invites = ref<InviteRow[]>([]);
   const canListInvites = ref(true);
+  const hasUseCounts = ref(true);
   const loadError = ref('');
   const error = ref('');
   const loading = ref(true);
@@ -45,6 +46,7 @@
       const body = await fetchJson<InvitesResponse>('/api/invites');
       invites.value = body.invites;
       canListInvites.value = body.canListInvites;
+      hasUseCounts.value = body.hasUseCounts;
       loadError.value = body.loadError ?? '';
     } catch (cause) {
       if (!(cause instanceof Error && cause.message.startsWith('Redirecting to login'))) {
@@ -65,10 +67,11 @@
       </CardDescription>
     </CardHeader>
     <CardContent class="flex flex-col gap-3">
-      <Alert v-if="!loading && !canListInvites" data-invite-warning>
+      <Alert v-if="!loading && (!canListInvites || !hasUseCounts)" data-invite-warning>
         <AlertDescription>
-          봇에게 서버 관리 권한이 없어 지금 있는 초대 목록을 볼 수 없습니다. 봇이 센 유입 수만 보여
-          줍니다.
+          봇에게 <b>서버 관리</b> 권한이 없어 초대의 사용 횟수를 볼 수 없습니다. 이 상태로는 새
+          멤버가 어떤 초대로 들어왔는지 알 수 없어 유입이 세어지지 않습니다. 봇 역할에 서버 관리
+          권한을 주세요.
         </AlertDescription>
       </Alert>
       <p v-if="loadError" class="text-destructive text-sm" role="alert">{{ loadError }}</p>
