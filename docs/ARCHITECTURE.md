@@ -46,10 +46,12 @@ src/
   preconditions/      command guards (music channel only, …)
   api/                the embedded HTTP API (Hono)
     app.ts            builds the app: auth, /api/*, route modules, dashboard static files
-    routes/           auth, github-notify, github-webhook, music, music-jobs, reaction-roles
+    audit-middleware.ts  records every change made from the dashboard
+    routes/           audit, auth, github-notify, github-webhook, invites, music, music-jobs, reaction-roles
     auth/             OIDC session, viewer / writer guards, internal-token guard
     jobs/             the music job registry
   lib/                everything the commands and the API share
+    audit/            the audit log: append, query, retention, the Discord recorder
     music/            playback state and actions, voice connection, job submission, local-file extractor, volume
     github/           webhook normalisation, dispatch, templates, message tracking, App client, reminders
     reaction-roles/   panels and their settings
@@ -71,8 +73,13 @@ Inside the process:
   signed-in session; changing settings also requires an admin group. Worker callbacks require the internal token.
 - **In memory** — the music job registry, the player's queue and history, short-lived caches of GitHub lists. All of it
   is rebuilt or forgotten on restart.
-- **On disk** — settings and tracked GitHub messages under `data/`, each loaded at start-up and written whole when it
-  changes.
+- **On disk** — settings, tracked GitHub messages and invite counts under `data/`, each loaded at start-up and written
+  whole when it changes; the audit log, appended a line at a time to one file per day under `data/audit/`.
+
+The **audit log** is written from four places, so no feature has to remember to: a middleware after every dashboard
+change, `replyNotice` (which answers every slash command, button and dialog), `recordDelivery` for GitHub, and the member
+listeners. Music lines say only that someone used a feature — never the track or what was asked for
+([018](./decisions/018_v0.7.2_audit-log.md)).
 
 ## Playing music
 
@@ -124,6 +131,5 @@ signs in through the bot's OIDC client ([004](./decisions/004_v0.5.0_dashboard-s
 
 ## Where it is going
 
-The [roadmap](./ROADMAP.md) has the direction. Two changes will touch this picture: a database (v0.8) replaces the JSON
-files for data that grows, starting with tracked GitHub messages, and an audit log records dashboard, music and reminder
-actions.
+The [roadmap](./ROADMAP.md) has the direction. The next change to this picture is a database (v0.8): it replaces the JSON
+files for data that grows — tracked GitHub messages first — and takes over the audit log's day files.

@@ -46,10 +46,12 @@ src/
   preconditions/      명령 가드(음악 채널 전용 등)
   api/                내장 HTTP API(Hono)
     app.ts            앱 구성: 인증, /api/*, 라우트 모듈, 대시보드 정적 파일
-    routes/           auth, github-notify, github-webhook, music, music-jobs, reaction-roles
+    audit-middleware.ts  대시보드에서 바꾼 것을 모두 기록
+    routes/           audit, auth, github-notify, github-webhook, invites, music, music-jobs, reaction-roles
     auth/             OIDC 세션, 조회·쓰기 가드, 내부 토큰 가드
     jobs/             음악 작업 레지스트리
   lib/                명령과 API가 함께 쓰는 모든 것
+    audit/            감사 로그: 기록, 조회, 보관, 디스코드 기록기
     music/            재생 상태·동작, 음성 연결, 작업 제출, 로컬 파일 추출기, 볼륨
     github/           웹훅 정규화, 발송, 템플릿, 메시지 추적, App 클라이언트, 리마인더
     reaction-roles/   패널과 설정
@@ -70,7 +72,12 @@ dashboard/            Vue SPA — dashboard/dist로 빌드되어 / 에서 제공
   세션이 필요하고, 설정을 바꾸려면 관리자 그룹이어야 합니다. worker 콜백은 내부 토큰이 필요합니다.
 - **메모리** — 음악 작업 레지스트리, 플레이어의 대기열과 기록, GitHub 목록의 짧은 캐시. 재시작하면 다시 만들어지거나
   사라집니다.
-- **디스크** — `data/` 아래의 설정과 추적 중인 GitHub 메시지. 시작할 때 읽고, 바뀔 때 파일 전체를 씁니다.
+- **디스크** — `data/` 아래의 설정, 추적 중인 GitHub 메시지, 초대 통계. 시작할 때 읽고, 바뀔 때 파일 전체를 씁니다.
+  감사 로그는 `data/audit/`의 하루 파일에 한 줄씩 덧붙입니다.
+
+**감사 로그**는 네 곳에서 씁니다 — 기능마다 기록을 챙길 필요가 없도록: 대시보드 변경 뒤의 미들웨어, 모든 슬래시 명령·버튼·입력 창에
+답하는 `replyNotice`, GitHub의 `recordDelivery`, 멤버 리스너. 음악은 누가 어떤 기능을 썼는지만 남기고, 곡이나 요청한 내용은 남기지
+않습니다([018](./decisions/018_v0.7.2_audit-log.md)).
 
 ## 음악 재생
 
@@ -121,5 +128,5 @@ OIDC 클라이언트로 로그인하고([004](./decisions/004_v0.5.0_dashboard-s
 
 ## 앞으로
 
-방향은 [로드맵](./ROADMAP.ko.md)에 있습니다. 이 그림을 바꿀 변화는 두 가지입니다: 데이터베이스(v0.8)가 늘어나는 데이터의
-JSON 파일을 대체하고 — 추적 중인 GitHub 메시지부터 — 감사 로그가 대시보드·음악·리마인더 조작을 기록합니다.
+방향은 [로드맵](./ROADMAP.ko.md)에 있습니다. 이 그림을 바꿀 다음 변화는 데이터베이스(v0.8)입니다: 늘어나는 데이터의
+JSON 파일을 대체하고 — 추적 중인 GitHub 메시지부터 — 감사 로그의 하루 파일도 넘겨받습니다.

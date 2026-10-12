@@ -67,3 +67,4 @@ Each file has:
 | [015](./015_v0.7.0_bot-side-volume.md) | v0.7.0 | The bot applies the volume itself |
 | [016](./016_v0.7.1_music-job-lifecycle.md) | v0.7.1 | Music jobs always end, and can be cancelled or retried |
 | [017](./017_v0.7.1_slash-commands-and-music-remote.md) | v0.7.1 | Slash commands only, and a remote control in the music channel |
+| [018](./018_v0.7.2_audit-log.md) | v0.7.2 | An audit log in day files, recorded at the edges |
