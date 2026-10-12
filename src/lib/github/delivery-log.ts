@@ -7,9 +7,11 @@
  * and nothing happens"), and the answer lived in a server log the operator may not
  * have. This puts the answer next to the settings that caused it.
  *
- * In memory and capped: it is a diagnostic aid, not an audit log. Persisted logging
- * is its own roadmap item.
+ * In memory and capped: it is a diagnostic aid for the GitHub page. Every record is
+ * also written to the audit log, which keeps them for longer.
  */
+
+import { audit } from '../audit/log.js';
 
 /** `edited` — nothing new was posted, but the message that opened the item was updated. */
 export type DeliveryOutcome = 'sent' | 'edited' | 'failed' | 'skipped';
@@ -35,6 +37,13 @@ export function recordDelivery(
 ): DeliveryRecord {
   const record: DeliveryRecord = { at: new Date().toISOString(), repo, event, outcome, detail };
   records.unshift(record);
+  void audit({
+    category: 'github',
+    action: event,
+    target: repo,
+    outcome: outcome === 'sent' || outcome === 'edited' ? 'ok' : outcome,
+    detail: outcome === 'edited' ? ['edited', detail].filter(Boolean).join(' · ') : detail,
+  });
   if (records.length > MAX_RECORDS) {
     records.length = MAX_RECORDS;
   }
