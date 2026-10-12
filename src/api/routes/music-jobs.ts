@@ -7,6 +7,7 @@ import {
   schedulePlayWhenReady,
   submitMusicJob,
 } from '../../lib/music/prepare-track.js';
+import { getCandidate, PICK_PROBLEM_MESSAGE } from '../../lib/music/search-results.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import { internalAuth } from '../auth/internal.js';
 import type { ApiVariables } from '../context.js';
@@ -14,14 +15,16 @@ import {
   cancelJob,
   getJob,
   listJobs,
+  publicJob,
   resolveFailed,
   resolveReady,
   type TrackMeta,
 } from '../jobs/pending-registry.js';
+import { dashboardOwner } from './music-search.js';
 
 /** The music jobs: the dashboard's list and actions, and the worker's callbacks. */
 export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): void {
-  app.get('/api/music/jobs', dashboardViewer, (c) => c.json({ jobs: listJobs() }));
+  app.get('/api/music/jobs', dashboardViewer, (c) => c.json({ jobs: listJobs().map(publicJob) }));
 
   app.get('/api/music/jobs/:jobId', dashboardViewer, (c) => {
     const job = getJob(c.req.param('jobId'));
@@ -29,13 +32,34 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
       return c.json({ error: 'Job not found' }, 404);
     }
 
-    return c.json(job);
+    return c.json(publicJob(job));
   });
 
   app.post('/api/music/jobs', dashboardViewer, async (c) => {
-    const body = await c.req.json<{ jobId?: string; query?: string; next?: unknown }>();
-    if (!body.jobId || !body.query?.trim()) {
-      return c.json({ error: 'jobId and query are required' }, 400);
+    const body = await c.req.json<{
+      jobId?: string;
+      query?: string;
+      searchId?: string;
+      index?: unknown;
+      next?: unknown;
+    }>();
+    if (!body.jobId || (!body.query?.trim() && !body.searchId)) {
+      return c.json({ error: 'jobId and either query or searchId are required' }, 400);
+    }
+
+    // A picked search result: the worker's value is looked up here and never sent back.
+    let query = body.query?.trim() ?? '';
+    let label: string | undefined;
+    if (body.searchId) {
+      const found = getCandidate(body.searchId, Number(body.index ?? -1), dashboardOwner(c));
+      if ('problem' in found) {
+        return c.json(
+          { error: PICK_PROBLEM_MESSAGE[found.problem] },
+          found.problem === 'not-yours' ? 403 : 410,
+        );
+      }
+      query = found.candidate.query;
+      label = found.candidate.title;
     }
 
     if (body.next !== undefined && typeof body.next !== 'boolean') {
@@ -47,12 +71,13 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
     }
 
     try {
-      const job = await submitMusicJob(body.jobId, body.query.trim(), {
+      const job = await submitMusicJob(body.jobId, query, {
         origin: 'dashboard',
         next: body.next,
+        label,
       });
       schedulePlayWhenReady(body.jobId, { next: body.next });
-      return c.json(job, 201);
+      return c.json(publicJob(job), 201);
     } catch (error) {
       // submitMusicJob has already failed the job (code unavailable).
       const message = error instanceof Error ? error.message : 'Failed to enqueue job';
@@ -70,7 +95,7 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
       return c.json({ error: 'Only a job that is still being prepared can be cancelled.' }, 409);
     }
 
-    return c.json(job);
+    return c.json(publicJob(job));
   });
 
   app.post('/api/music/jobs/:jobId/retry', dashboardViewer, async (c) => {
@@ -88,7 +113,7 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
     }
 
     try {
-      return c.json(await retryMusicJob(original), 201);
+      return c.json(publicJob(await retryMusicJob(original)), 201);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to enqueue job';
       return c.json({ error: message }, 503);

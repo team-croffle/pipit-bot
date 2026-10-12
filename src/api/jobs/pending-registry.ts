@@ -30,6 +30,11 @@ export interface JobRecord {
   /** The job this one retries, and the job that retried this one. */
   retryOf?: string;
   retriedAs?: string;
+  /**
+   * What to show as the request when the query is not the person's own words — a
+   * picked search result, whose query is the music worker's value and stays out of sight.
+   */
+  label?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -38,6 +43,13 @@ export interface JobOptions {
   origin?: JobOrigin;
   next?: boolean;
   retryOf?: string;
+  label?: string;
+}
+
+/** A job as the dashboard sees it: a labelled job shows its label in place of the query. */
+export function publicJob(record: JobRecord): Omit<JobRecord, 'label'> {
+  const { label, ...rest } = record;
+  return label ? { ...rest, query: label } : rest;
 }
 
 interface PendingWaiter {
