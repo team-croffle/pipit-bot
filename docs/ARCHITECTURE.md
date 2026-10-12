@@ -94,6 +94,11 @@ listeners. Music lines say only that someone used a feature — never the track 
    duration and file name — or `failed` with an error and, optionally, a code.
 4. The bot plays the local file in its voice channel: at the end of the queue, or at the front for "play next".
 
+**Search** is a step before step 1: `/search`, the banner's search button or the dashboard's search dialog ask the worker
+for up to five results (`POST /v1/search`). The results are kept on the bot for whoever searched; Discord and the browser
+see only titles, lengths and an index, and a pick sends the worker's own value back as the job's query
+([019](./decisions/019_v0.7.3_track-search.md)).
+
 A job always ends — ready, failed, timed out or cancelled — and the dashboard lists recent jobs with their outcome
 ([016](./decisions/016_v0.7.1_music-job-lifecycle.md)). The queue, voice connection and volume are the bot's; the worker
 never sees them.
