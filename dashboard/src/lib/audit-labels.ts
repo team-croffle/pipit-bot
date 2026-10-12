@@ -34,6 +34,7 @@ const ACTION_LABEL: Record<string, string> = {
   'music.enqueue': '곡 추가',
   'music.cancel': '작업 취소',
   'music.retry': '작업 다시 시도',
+  'music.search': '곡 검색',
   'music.request': '채널에 곡 요청',
   'music.ready': '곡 준비 완료',
   'music.failed': '곡 준비 실패',
@@ -57,6 +58,11 @@ const REMOTE_LABEL: Record<string, string> = {
   'music:vol-down': '볼륨 내리기',
   'music:vol-up': '볼륨 올리기',
   'music:play-modal': '재생 창에서 요청',
+  'music:search': '검색 창',
+  'music:search-modal': '검색 창에서 검색',
+  'search:pick': '검색 결과 고르기',
+  'search:play': '검색 결과 재생',
+  'search:next': '검색 결과 다음에 재생',
 };
 
 /** A person-readable name for an action; unknown actions are shown as recorded. */
