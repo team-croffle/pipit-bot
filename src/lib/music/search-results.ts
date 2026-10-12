@@ -77,3 +77,13 @@ export function getCandidate(
   const candidate = search.results[index];
   return candidate ? { candidate } : { problem: 'missing' };
 }
+
+/** All results of a search, for redrawing the picker; undefined when gone or not the owner's. */
+export function getResults(
+  searchId: string,
+  owner: string,
+  now = Date.now(),
+): SearchCandidate[] | undefined {
+  const search = searches.get(searchId);
+  return search && search.owner === owner && search.expiresAt > now ? search.results : undefined;
+}
