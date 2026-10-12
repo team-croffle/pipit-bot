@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 
 import { startApiServer } from './api/server.js';
+import { startAuditRetention } from './lib/audit/retention.js';
 import { CustomClient } from './lib/client.js';
 import { loadTrackedMessages } from './lib/github/message-tracker.js';
 import { loadGithubNotifySettings } from './lib/github/settings.js';
@@ -16,6 +17,7 @@ const main = async () => {
     await loadGithubNotifySettings();
     await loadTrackedMessages();
     await loadReactionRoleSettings();
+    startAuditRetention();
     startApiServer(env, {
       info(message: string) {
         container.logger.info(message);
