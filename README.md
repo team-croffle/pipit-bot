@@ -123,6 +123,7 @@ Everything the music commands do can be done from the dashboard's **Music** page
 - **Queue** — every queued track (up to 100 listed) with its own **up**, **down**, **skip to** and **remove** (folded into one menu on a phone), plus **shuffle**, which reorders the waiting tracks once. Rows are addressed by the player's track id, so a list that is a moment out of date never touches the wrong track. Skipping to a track drops the ones ahead of it, as `/skip to` does
 - **Recent tracks** — what this session has played (the last 20), and **previous**, which goes back one track and puts the current one at the front of the queue. The history ends with the session
 - **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `/play next`
+- **Search** — opens a dialog that lists up to five results from the music worker; each can be **added** or played **next**, several in a row. Searching works before the bot joins a voice channel; adding waits until it has
 - **Volume** — low / mid / high, the same three levels as `/volume`, whenever the bot is in a voice channel — playing or not
 
 The dashboard, the banner and the commands share one queue, so any of them can pick up where another left off.
@@ -131,9 +132,11 @@ The dashboard, the banner and the commands share one queue, so any of them can p
 
 A configured music channel holds one **remote-control banner**, kept by the bot as the channel's last message:
 
-- **Idle** — "💿 Pipit Hub Music", how to request a track, and a **play** button that opens a dialog for a song title or a link
-- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, add a track, repeat, and volume down and up. What a button did is shown only to the person who pressed it, for five seconds
+- **Idle** — "💿 Pipit Hub Music", how to request a track, a **play** button that opens a dialog for a song title or a link, and a **search** button
+- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, add a track, search, repeat, and volume down and up. What a button did is shown only to the person who pressed it, for five seconds
 - **Typing a song title or a link** into the channel plays it: the line is removed, and a short banner everyone can see says what happened and then removes itself. Removing the line needs the bot's **Manage Messages** permission in that channel; without it the request still runs and the line stays
+
+**Search** — `/search` or the banner's search button — lists up to five results only to the person who searched; they pick one and play it now or next. Results stay pickable for ten minutes, and only by whoever searched. Search needs a music worker that offers it (see [docs/music-backend.md](./docs/music-backend.md)); with one that does not, the bot says so and everything else works.
 
 The banner is posted when the bot starts or a music channel is added, re-posted if it is deleted, and removed from a channel that stops being a music channel.
 
@@ -194,6 +197,7 @@ All commands are **slash commands** (since v0.7.1) — type `/` in Discord to se
 Usable in a music channel (or anywhere, when none is configured):
 
 - `/play query [next]` — the query goes to the music worker as-is; `next` puts the track at the front of the queue
+- `/search query` — up to five results, shown only to you; pick one and play it now or next
 - `/join`, `/leave` — join your voice channel (or move there), or leave
 - Playback: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [level]`
 - Queue: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
