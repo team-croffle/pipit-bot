@@ -4,7 +4,7 @@ pipit-bot does **not** download or resolve music sources. A separate **music wor
 
 ## Flow
 
-1. User: `!p <opaque query>` — the bot passes the remainder string unchanged to the worker.
+1. User: `/play <opaque query>` (or a line typed into a music channel) — the bot passes the string unchanged to the worker.
 2. pipit-bot registers a job and enqueues `POST /v1/jobs` on the music worker.
 3. The worker writes `{fileKey}.pcm` under `STREAM_ROOT` and callbacks pipit-api:
    - `POST /internal/music/jobs/:jobId/ready`
@@ -47,6 +47,21 @@ Body: { "error": "...", "code": "not-found" }
 The bot adds two codes of its own: `unavailable` when `POST /v1/jobs` itself fails, and `timeout` when no callback arrives in time. A code the bot does not know is kept and shown with the `error` text. A callback for a job the bot has already ended (timed out or cancelled) is accepted with `200` and only recorded.
 
 Cancelling is the bot's own affair: the contract has no cancel request, so a worker may finish a file the bot no longer wants.
+
+## Search (optional)
+
+A worker may also offer search, for the bot's track picker (`/search`, the remote's search button, the dashboard's search dialog):
+
+```
+POST /v1/search
+  { "query": "<opaque string>", "limit": 5 }        limit 1–5, default 5
+  → 200 { "results": [ { "title": "...", "durationSec": 213, "query": "<opaque>" } ] }
+```
+
+- At most five results. Nothing found is `200` with an empty list, not an error.
+- `results[].query` is opaque to the bot: it is never shown or recorded, only sent back unchanged as the `query` of `POST /v1/jobs` when someone picks that result.
+- Failures answer `400` (the worker will not search for that), `503` (something it depends on is unreachable) or `500`, with `{ "error", "code" }` as in the failure table above. Answer within about ten seconds — a person is waiting in a dialog.
+- A worker without search answers `404`; the bot then says search is not available, and everything else works as before.
 
 ## Volume
 
