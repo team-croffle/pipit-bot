@@ -367,3 +367,16 @@ export interface InvitesResponse {
   hasUseCounts: boolean;
   loadError: string | null;
 }
+
+/** One search result on the dashboard: a title and a length, picked by its index. */
+export interface MusicSearchResult {
+  index: number;
+  title: string;
+  durationSec?: number;
+}
+
+export interface MusicSearchResponse {
+  /** Null when nothing matched. */
+  searchId: string | null;
+  results: MusicSearchResult[];
+}

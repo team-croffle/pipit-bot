@@ -12,6 +12,7 @@
   } from 'lucide-vue-next';
   import { computed, ref } from 'vue';
 
+  import SearchDialog from '@/components/music/search-dialog.vue';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent } from '@/components/ui/card';
@@ -73,6 +74,7 @@
     action: [path: string];
     repeat: [mode: PlaybackRepeatMode];
     enqueue: [query: string, next: boolean];
+    searched: [];
   }>();
 
   const query = ref('');
@@ -162,6 +164,7 @@
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <SearchDialog :can-enqueue="Boolean(playback?.canEnqueue)" @added="emit('searched')" />
       </form>
 
       <!-- One reserved line for all three notices: they used to be separate paragraphs

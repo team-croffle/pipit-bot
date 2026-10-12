@@ -16,7 +16,8 @@
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
 
-  const { playback, loading, error, message, busy, run, setRepeat, enqueue, start } = usePlayback();
+  const { playback, loading, error, message, busy, run, setRepeat, enqueue, start, refresh } =
+    usePlayback();
 
   onMounted(start);
 </script>
@@ -43,6 +44,7 @@
               @action="run"
               @repeat="setRepeat"
               @enqueue="enqueue"
+              @searched="refresh"
             />
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <QueueCard :playback="playback" :busy="busy" @action="run" @repeat="setRepeat" />
