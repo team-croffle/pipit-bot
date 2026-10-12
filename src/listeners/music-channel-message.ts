@@ -2,6 +2,8 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Events, Listener } from '@sapphire/framework';
 import { escapeMarkdown, type Message } from 'discord.js';
 
+import { actorOf } from '../lib/audit/discord.js';
+import { audit } from '../lib/audit/log.js';
 import { disappearsIn, noticeMessage, type Notice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { requestPlay } from '../lib/music/request.js';
@@ -56,6 +58,13 @@ export class UserEvent extends Listener<typeof Events.MessageCreate> {
       .catch(() => null);
 
     const notice = await this.handle(content, message);
+    // Who asked, and whether it worked — not what was asked for.
+    void audit({
+      category: 'music',
+      action: 'music.request',
+      actor: actorOf(message.author, message.member),
+      outcome: notice.ok ? 'ok' : 'failed',
+    });
     await answer
       ?.edit(
         noticeMessage({ ...notice, detail: `-# ${name}님의 요청` }, disappearsIn(ANSWER_SECONDS)),
