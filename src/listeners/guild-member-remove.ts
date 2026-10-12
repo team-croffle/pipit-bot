@@ -7,6 +7,7 @@ import {
   getGuildEventSettings,
   pickRandomMessage,
 } from '../lib/guild-event-settings.js';
+import { recordMemberLeave } from '../lib/member-events.js';
 
 @ApplyOptions<Listener.Options>({ event: Events.GuildMemberRemove })
 export class UserEvent extends Listener {
@@ -15,6 +16,7 @@ export class UserEvent extends Listener {
       return;
     }
 
+    recordMemberLeave(member);
     const settings = getGuildEventSettings();
     const template = pickRandomMessage(settings.leaveMessages);
     if (!template || !settings.logChannelId) {
