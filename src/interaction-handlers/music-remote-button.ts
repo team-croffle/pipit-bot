@@ -28,6 +28,7 @@ import { isMusicChannel } from '../preconditions/music-channel.js';
 
 export const PLAY_MODAL = 'music:play-modal';
 export const PLAY_MODAL_QUERY = 'query';
+export const SEARCH_MODAL = 'music:search-modal';
 
 /** Seconds a button's result stays before it removes itself (the reference design). */
 const RESULT_SECONDS = 5;
@@ -57,6 +58,23 @@ function playModal(): ModalBuilder {
     );
 }
 
+function searchModal(): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(SEARCH_MODAL)
+    .setTitle('곡 검색')
+    .addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId(PLAY_MODAL_QUERY)
+          .setLabel('찾을 곡')
+          .setPlaceholder('곡 제목, 가수 이름 등')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(200),
+      ),
+    );
+}
+
 /**
  * The music channel banner's buttons. Each runs the same function the slash command
  * does, answers only the person who pressed it, and redraws the banner at once.
@@ -81,6 +99,11 @@ export class MusicRemoteButton extends InteractionHandler {
     if (interaction.customId === REMOTE.play) {
       // A modal has to be the first answer — no defer before it.
       await interaction.showModal(playModal());
+      return;
+    }
+
+    if (interaction.customId === REMOTE.search) {
+      await interaction.showModal(searchModal());
       return;
     }
 
