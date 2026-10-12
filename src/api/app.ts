@@ -26,9 +26,11 @@ import {
 } from '../lib/guild-event-settings.js';
 import { syncBanners } from '../lib/music/banner/manager.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
+import { auditDashboard } from './audit-middleware.js';
 import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
 import { SESSION_COOKIE } from './auth/session.js';
 import type { ApiVariables } from './context.js';
+import { mountAuditRoutes } from './routes/audit.js';
 import { mountAuthRoutes } from './routes/auth.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
@@ -91,6 +93,8 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     c.set('config', config);
     await next();
   });
+
+  app.use('/api/*', auditDashboard);
 
   app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
@@ -183,6 +187,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json({ members: await listGuildMembers(guild) });
   });
 
+  mountAuditRoutes(app);
   mountGithubNotifyRoutes(app, config);
   mountGithubWebhookRoutes(app);
   mountMusicRoutes(app);
