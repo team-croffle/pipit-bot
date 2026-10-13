@@ -3,6 +3,7 @@ import type { Context, Hono } from 'hono';
 import { canEnqueuePlayback } from '../../lib/music/playback.js';
 import { publicPlaylist } from '../../lib/music/playlists/access.js';
 import { playPlaylist } from '../../lib/music/playlists/feeder.js';
+import { importAsNew, importInto } from '../../lib/music/playlists/importer.js';
 import { resolveItems, type ItemSource } from '../../lib/music/playlists/sources.js';
 import {
   addItems,
@@ -75,6 +76,50 @@ export function mountPlaylistRoutes(app: Hono<{ Variables: ApiVariables }>): voi
     });
     return c.json({ playlists, loadError: getPlaylistsLoadError() });
   });
+
+  // Importing: one request the music worker expands into several tracks.
+  app.post('/api/playlists/import', dashboardViewer, (c) =>
+    guarded(c, async () => {
+      const viewer = dashboardPlaylistViewer(c);
+      const body = await c.req.json<{ query?: unknown; name?: unknown; scope?: unknown }>();
+      const result = await importAsNew(
+        {
+          query: typeof body.query === 'string' ? body.query : '',
+          name: typeof body.name === 'string' ? body.name : undefined,
+          scope: body.scope === 'personal' ? 'personal' : 'shared',
+        },
+        viewer,
+      );
+      return c.json(
+        {
+          ...publicPlaylist(result.playlist, viewer),
+          added: result.added,
+          skipped: result.skipped,
+        },
+        201,
+      );
+    }),
+  );
+
+  app.post('/api/playlists/:id/import', dashboardViewer, (c) =>
+    guarded(c, async () => {
+      const viewer = dashboardPlaylistViewer(c);
+      const body = await c.req.json<{ query?: unknown }>();
+      const result = await importInto(
+        c.req.param('id'),
+        typeof body.query === 'string' ? body.query : '',
+        viewer,
+      );
+      return c.json(
+        {
+          ...publicPlaylist(result.playlist, viewer),
+          added: result.added,
+          skipped: result.skipped,
+        },
+        201,
+      );
+    }),
+  );
 
   app.get('/api/playlists/:id', dashboardViewer, (c) =>
     guarded(c, () => {

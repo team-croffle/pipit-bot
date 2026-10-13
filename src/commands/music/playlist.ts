@@ -1,37 +1,15 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  MessageFlags,
-  type AutocompleteInteraction,
-} from 'discord.js';
+import { MessageFlags, type AutocompleteInteraction } from 'discord.js';
 
-import { noticeContainer, replyNotice, type Notice } from '../../lib/discord/notice.js';
+import { replyNotice } from '../../lib/discord/notice.js';
 import { guildOnly } from '../../lib/discord/slash.js';
-import { requestBannerRefresh } from '../../lib/music/banner/manager.js';
-import { canEnqueuePlayback } from '../../lib/music/playback.js';
+import { discordViewer, playlistChoices } from '../../lib/music/playlists/discord.js';
+import { PlaylistError } from '../../lib/music/playlists/store.js';
 import {
-  discordViewer,
-  listForDiscord,
-  playlistChoices,
-  playlistFromOption,
-  showPlaylist,
-} from '../../lib/music/playlists/discord.js';
-import { playPlaylist } from '../../lib/music/playlists/feeder.js';
-import { resolveItems, type ItemSource } from '../../lib/music/playlists/sources.js';
-import {
-  addItems,
-  createPlaylist,
-  moveItem,
-  PlaylistError,
-  removeItem,
-  renamePlaylist,
-} from '../../lib/music/playlists/store.js';
-import { connectPlayerToChannel } from '../../lib/music/voice-connection.js';
-
-export const PLAYLIST_DELETE = 'playlist:delete';
+  confirmPlaylistDelete,
+  runPlaylistSubcommand,
+} from '../../lib/music/playlists/subcommands.js';
 
 /** Typed by shape: the command framework carries its own copy of the builders package. */
 interface StringOption {
@@ -131,6 +109,23 @@ export class UserCommand extends Command {
         )
         .addSubcommand((s) =>
           s
+            .setName('import')
+            .setDescription('Import tracks from a link the music worker can expand')
+            .addStringOption((o) =>
+              o.setName('link').setDescription('The link').setRequired(true).setMaxLength(500),
+            )
+            .addStringOption((o) =>
+              o
+                .setName('into')
+                .setDescription('An existing playlist (default: a new one)')
+                .setAutocomplete(true),
+            )
+            .addBooleanOption((o) =>
+              o.setName('personal').setDescription('A new playlist only for you'),
+            ),
+        )
+        .addSubcommand((s) =>
+          s
             .setName('play')
             .setDescription('Play a playlist after the queue')
             .addStringOption(nameOption)
@@ -153,16 +148,16 @@ export class UserCommand extends Command {
     }
 
     const sub = interaction.options.getSubcommand();
-    if (sub === 'play') {
+    if (sub === 'play' || sub === 'import') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     }
 
     try {
       if (sub === 'delete') {
-        await this.confirmDelete(interaction);
+        await confirmPlaylistDelete(interaction);
         return;
       }
-      await replyNotice(interaction, await this.run(interaction, sub));
+      await replyNotice(interaction, await runPlaylistSubcommand(interaction, sub));
     } catch (error) {
       if (error instanceof PlaylistError) {
         await replyNotice(interaction, { ok: false, message: error.message });
@@ -170,122 +165,5 @@ export class UserCommand extends Command {
       }
       throw error;
     }
-  }
-
-  private async run(
-    interaction: Command.ChatInputCommandInteraction<'cached'>,
-    sub: string,
-  ): Promise<Notice> {
-    const viewer = discordViewer(interaction.user, interaction.member);
-    const options = interaction.options;
-    const target = () => playlistFromOption(options.getString('name', true), viewer);
-
-    switch (sub) {
-      case 'list':
-        return listForDiscord(viewer);
-      case 'show':
-        return showPlaylist(target());
-      case 'create': {
-        const personal = options.getBoolean('personal') ?? false;
-        const made = await createPlaylist(
-          { name: options.getString('name', true), scope: personal ? 'personal' : 'shared' },
-          viewer,
-        );
-        return {
-          ok: true,
-          message: `Made ${personal ? 'your personal' : 'the shared'} playlist "${made.name}".`,
-        };
-      }
-      case 'rename': {
-        const playlist = target();
-        const renamed = await renamePlaylist(playlist.id, options.getString('to', true), viewer);
-        return { ok: true, message: `Renamed to "${renamed.name}".` };
-      }
-      case 'add': {
-        const playlist = target();
-        const what = options.getString('what', true);
-        const source: ItemSource =
-          what === 'current'
-            ? { from: 'current' }
-            : what === 'queue'
-              ? { from: 'queue', ref: 'all' }
-              : { from: 'typed', query: options.getString('text') ?? '' };
-        const result = await addItems(playlist.id, resolveItems(source), viewer);
-        const skipped = result.skipped > 0 ? ` ${result.skipped} did not fit.` : '';
-        return {
-          ok: true,
-          message: `Saved ${result.added} track${result.added === 1 ? '' : 's'} to "${playlist.name}".${skipped}`,
-        };
-      }
-      case 'remove': {
-        const playlist = target();
-        const item = playlist.items[options.getInteger('position', true) - 1];
-        if (!item) {
-          return {
-            ok: false,
-            message: `"${playlist.name}" has no track ${options.getInteger('position', true)}.`,
-          };
-        }
-        await removeItem(playlist.id, item.id, viewer);
-        return { ok: true, message: `Removed ${item.title} from "${playlist.name}".` };
-      }
-      case 'move': {
-        const playlist = target();
-        const item = playlist.items[options.getInteger('from', true) - 1];
-        if (!item) {
-          return {
-            ok: false,
-            message: `"${playlist.name}" has no track ${options.getInteger('from', true)}.`,
-          };
-        }
-        await moveItem(playlist.id, item.id, options.getInteger('to', true) - 1, viewer);
-        return { ok: true, message: `Moved ${item.title} to ${options.getInteger('to', true)}.` };
-      }
-      case 'play': {
-        const playlist = target();
-        if (!canEnqueuePlayback()) {
-          const voice = interaction.member.voice.channel;
-          if (!voice) {
-            return { ok: false, message: 'Join a voice channel first.' };
-          }
-          await connectPlayerToChannel(voice);
-        }
-        const notice = playPlaylist(playlist, {
-          shuffle: options.getBoolean('shuffle') ?? false,
-          requestedBy: interaction.user.id,
-        });
-        requestBannerRefresh();
-        return notice;
-      }
-      default:
-        return { ok: false, message: 'Unknown subcommand.' };
-    }
-  }
-
-  /** Deleting asks first: a private message with a delete button, for 30 seconds. */
-  private async confirmDelete(interaction: Command.ChatInputCommandInteraction<'cached'>) {
-    const playlist = playlistFromOption(
-      interaction.options.getString('name', true),
-      discordViewer(interaction.user, interaction.member),
-    );
-    const button = new ButtonBuilder()
-      .setCustomId(`${PLAYLIST_DELETE}:${playlist.id}`)
-      .setStyle(ButtonStyle.Danger)
-      .setLabel(`"${playlist.name}" 지우기`.slice(0, 80));
-    await interaction.reply({
-      components: [
-        noticeContainer(
-          {
-            ok: false,
-            message: `Delete "${playlist.name}" and its ${playlist.items.length} tracks?`,
-            detail: '-# This cannot be undone.',
-          },
-          '30초 안에 누르세요',
-        ),
-        new ActionRowBuilder<ButtonBuilder>().addComponents(button),
-      ],
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-    });
-    setTimeout(() => void interaction.deleteReply().catch(() => undefined), 30_000).unref();
   }
 }

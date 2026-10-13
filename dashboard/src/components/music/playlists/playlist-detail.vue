@@ -1,5 +1,15 @@
 <script setup lang="ts">
-  import { ArrowDown, ArrowUp, Pencil, Play, Plus, Shuffle, Trash2, X } from 'lucide-vue-next';
+  import {
+    ArrowDown,
+    ArrowUp,
+    Download,
+    Pencil,
+    Play,
+    Plus,
+    Shuffle,
+    Trash2,
+    X,
+  } from 'lucide-vue-next';
   import { ref } from 'vue';
 
   import { Badge } from '@/components/ui/badge';
@@ -18,12 +28,18 @@
 
   import PlaylistNameDialog from './playlist-name-dialog.vue';
 
-  const props = defineProps<{ playlist: PlaylistDetail; busy: boolean; canPlay: boolean }>();
+  const props = defineProps<{
+    playlist: PlaylistDetail;
+    busy: boolean;
+    canPlay: boolean;
+    canImport: boolean;
+  }>();
   const emit = defineEmits<{
     play: [shuffle: boolean];
     rename: [name: string];
     remove: [];
     addTyped: [query: string];
+    importLink: [query: string];
     removeItem: [itemId: string];
     moveItem: [itemId: string, to: number];
   }>();
@@ -31,6 +47,15 @@
   const renaming = ref(false);
   const confirming = ref(false);
   const typed = ref('');
+  const link = ref('');
+
+  function importLink(): void {
+    const query = link.value.trim();
+    if (query) {
+      emit('importLink', query);
+      link.value = '';
+    }
+  }
 
   function addTyped(): void {
     const query = typed.value.trim();
@@ -128,6 +153,21 @@
       >
         <Plus />
         담기
+      </Button>
+    </form>
+
+    <form v-if="canImport" class="flex gap-2" @submit.prevent="importLink">
+      <Input
+        v-model="link"
+        maxlength="500"
+        placeholder="링크에서 가져오기 — 여러 곡을 한꺼번에 담습니다"
+        aria-label="가져올 링크"
+        class="min-w-0 flex-1"
+        data-playlist-import-link
+      />
+      <Button type="submit" variant="outline" :disabled="busy || !link.trim()" data-playlist-import>
+        <Download />
+        가져오기
       </Button>
     </form>
 

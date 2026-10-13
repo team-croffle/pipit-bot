@@ -2,10 +2,10 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
 import type { ButtonInteraction } from 'discord.js';
 
-import { PLAYLIST_DELETE } from '../commands/music/playlist.js';
 import { replyNotice } from '../lib/discord/notice.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { deletePlaylist, PlaylistError } from '../lib/music/playlists/store.js';
+import { PLAYLIST_DELETE } from '../lib/music/playlists/subcommands.js';
 
 /** The delete button `/playlist delete` offers. */
 @ApplyOptions<InteractionHandler.Options>({
