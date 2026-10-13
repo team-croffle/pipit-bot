@@ -5,6 +5,7 @@ import { replyNotice } from '../discord/notice.js';
 import { searchMusic, SearchFailure } from './search-client.js';
 import { saveSearch } from './search-results.js';
 import { noResultsNotice, searchResultsMessage } from './search-view.js';
+import { hasCapability } from './worker-capabilities.js';
 
 /**
  * Runs a search for `/search` or the remote's search dialog and answers with the private
@@ -14,6 +15,14 @@ export async function answerSearch(
   interaction: ChatInputCommandInteraction | ModalSubmitInteraction,
   query: string,
 ): Promise<void> {
+  if (!hasCapability('search')) {
+    await replyNotice(interaction, {
+      ok: false,
+      message: 'The music worker does not offer search.',
+    });
+    return;
+  }
+
   const text = query.trim();
   if (!text) {
     await replyNotice(interaction, {

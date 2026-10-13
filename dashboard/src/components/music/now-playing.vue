@@ -172,7 +172,11 @@
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <SearchDialog :can-enqueue="Boolean(playback?.canEnqueue)" @added="emit('searched')" />
+        <SearchDialog
+          v-if="!playback?.capabilities || playback.capabilities.includes('search')"
+          :can-enqueue="Boolean(playback?.canEnqueue)"
+          @added="emit('searched')"
+        />
       </form>
 
       <!-- One reserved line for all three notices: they used to be separate paragraphs

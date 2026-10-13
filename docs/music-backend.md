@@ -17,8 +17,10 @@ POST /v1/jobs
   { "jobId": "<uuid>", "query": "<opaque string>" }
   → 202 { "jobId", "status": "accepted" }
 
-GET /v1/health → 200
+GET /v1/health → 200 { "status": "ok", "capabilities": ["search", "expand"] }
 ```
+
+`capabilities` is optional: it names the optional features below that the worker offers (`search`, `expand`), and the bot shows only those controls. A worker that leaves it out is treated as "may offer anything" — every control shows, and one the worker lacks answers that it is not available.
 
 After preparing audio on the shared volume:
 
