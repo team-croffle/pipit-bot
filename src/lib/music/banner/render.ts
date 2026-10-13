@@ -24,6 +24,7 @@ import type { PlaybackState } from '../playback.js';
 export const REMOTE = {
   play: 'music:play',
   search: 'music:search',
+  playlists: 'music:playlists',
   pause: 'music:pause',
   resume: 'music:resume',
   skip: 'music:skip',
@@ -81,6 +82,7 @@ function idle(container: ContainerBuilder): void {
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(REMOTE.play, '재생', '▶️', ButtonStyle.Primary),
         button(REMOTE.search, '검색', '🔍'),
+        button(REMOTE.playlists, '재생목록', '📁'),
       ),
     );
 }
@@ -116,6 +118,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
         button(REMOTE.skip, '다음', '⏭️'),
         button(REMOTE.stop, '정지', '⏹️', ButtonStyle.Danger),
         button(REMOTE.queue, '대기열', '📜'),
+        button(REMOTE.playlists, '재생목록', '📁'),
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(REMOTE.play, '곡 추가', '➕'),
@@ -149,7 +152,7 @@ export function renderBanner(state: PlaybackState) {
 export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
-    layout: 2,
+    layout: 3,
     active: state.active,
     paused: state.paused,
     title: state.current?.title ?? null,

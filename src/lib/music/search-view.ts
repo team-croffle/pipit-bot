@@ -22,6 +22,7 @@ export const SEARCH_ID = {
   pick: 'search:pick',
   play: 'search:play',
   next: 'search:next',
+  save: 'search:save',
 } as const;
 
 const ACCENT = 0xe9a23b;
@@ -76,6 +77,11 @@ export function searchResultsMessage(searchId: string, results: SearchCandidate[
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⏭️')
       .setLabel('다음에 재생'),
+    new ButtonBuilder()
+      .setCustomId(`${SEARCH_ID.save}:${searchId}:${picked}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📁')
+      .setLabel('재생목록에 담기'),
   ];
 
   return {
