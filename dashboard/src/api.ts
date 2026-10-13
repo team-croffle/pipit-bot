@@ -75,3 +75,29 @@ export async function postJson<T>(path: string, body?: unknown): Promise<T> {
 export function logout(): void {
   window.location.assign('/api/auth/logout');
 }
+
+async function sendJson<T>(method: 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    credentials: 'include',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (response.status === 401) {
+    window.location.assign('/api/auth/login');
+    throw new Error('Redirecting to login…');
+  }
+  if (!response.ok) {
+    throw new Error(await failureMessage(response));
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export function patchJson<T>(path: string, body: unknown): Promise<T> {
+  return sendJson<T>('PATCH', path, body);
+}
+
+export function deleteJson<T>(path: string): Promise<T> {
+  return sendJson<T>('DELETE', path);
+}
