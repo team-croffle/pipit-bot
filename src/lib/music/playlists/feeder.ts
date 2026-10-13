@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { container } from '@sapphire/framework';
 import type { Player } from 'discord-player';
 
-import { waitForJob } from '../../../api/jobs/pending-registry.js';
+import { waitForJob, type TrackMeta } from '../../../api/jobs/pending-registry.js';
 import type { Notice } from '../../discord/notice.js';
 import { raisePlaybackNotice } from '../missing-file.js';
 import { getGuildQueue } from '../playback.js';
@@ -33,6 +33,12 @@ interface Feed {
   /** Files this feed put in the queue that have not started yet. */
   files: Set<string>;
   requestedBy?: string;
+  /** Order numbers: the next to hand out, and the next to put in the queue. */
+  nextSeq: number;
+  flushSeq: number;
+  /** Finished preparations waiting for their turn — the queue keeps playlist order. */
+  finished: Map<number, { item: PlaylistItem; track: TrackMeta } | 'failed'>;
+  flushing: boolean;
 }
 
 let feed: Feed | null = null;
@@ -78,30 +84,65 @@ function finishIfDone(current: Feed): void {
   }
 }
 
-async function prepareOne(current: Feed, item: PlaylistItem): Promise<void> {
+/**
+ * Puts finished preparations into the queue in playlist order. Preparations finish in
+ * any order (a long track takes longer), so a later one waits for those before it.
+ */
+async function flush(current: Feed): Promise<void> {
+  if (current.flushing) {
+    return;
+  }
+
+  current.flushing = true;
+  try {
+    while (isCurrentFeed(current.generation) && current.finished.has(current.flushSeq)) {
+      const done = current.finished.get(current.flushSeq)!;
+      current.finished.delete(current.flushSeq);
+      current.flushSeq += 1;
+      try {
+        if (done === 'failed') {
+          current.failed += 1;
+          continue;
+        }
+
+        rememberTrackMeta(done.track);
+        current.files.add(done.track.file);
+        await playPreparedTrack(done.track, false, current.requestedBy);
+        if (done.item.typed) {
+          void retitleTypedItem(
+            current.playlist.id,
+            done.item.id,
+            done.track.title,
+            done.track.durationSec,
+          );
+        }
+      } catch (error) {
+        current.failed += 1;
+        container.logger?.warn(
+          `[playlist] a track of ${current.playlist.id} could not be queued:`,
+          error,
+        );
+      } finally {
+        current.inFlight -= 1;
+      }
+    }
+  } finally {
+    current.flushing = false;
+  }
+  pump(current);
+}
+
+async function prepareOne(current: Feed, item: PlaylistItem, seq: number): Promise<void> {
   const jobId = randomUUID();
   try {
     await submitMusicJob(jobId, item.query, { origin: 'dashboard', label: item.title });
     const job = await waitForJob(jobId);
-    if (!isCurrentFeed(current.generation) || !job.track) {
-      return;
-    }
-
-    rememberTrackMeta(job.track);
-    current.files.add(job.track.file);
-    await playPreparedTrack(job.track, false, current.requestedBy);
-    if (item.typed) {
-      void retitleTypedItem(current.playlist.id, item.id, job.track.title, job.track.durationSec);
-    }
+    current.finished.set(seq, job.track ? { item, track: job.track } : 'failed');
   } catch (error) {
-    if (isCurrentFeed(current.generation)) {
-      current.failed += 1;
-      container.logger?.warn(`[playlist] a track of ${current.playlist.id} was skipped:`, error);
-    }
-  } finally {
-    current.inFlight -= 1;
-    pump(current);
+    current.finished.set(seq, 'failed');
+    container.logger?.warn(`[playlist] a track of ${current.playlist.id} was skipped:`, error);
   }
+  await flush(current);
 }
 
 /** Asks for more tracks while fewer than AHEAD are prepared-but-not-started. */
@@ -113,7 +154,8 @@ function pump(current: Feed): void {
   while (current.pending.length > 0 && current.inFlight + waitingInQueue(current) < AHEAD) {
     const item = current.pending.shift()!;
     current.inFlight += 1;
-    void prepareOne(current, item);
+    void prepareOne(current, item, current.nextSeq);
+    current.nextSeq += 1;
   }
 
   publish(current);
@@ -153,13 +195,18 @@ export function playPlaylist(
     failed: 0,
     files: new Set(),
     requestedBy: options.requestedBy,
+    nextSeq: 0,
+    flushSeq: 0,
+    finished: new Map(),
+    flushing: false,
   };
   feed = current;
+  const total = items.length;
   pump(current);
 
   return {
     ok: true,
-    message: `Playing "${playlist.name}"${options.shuffle ? ' shuffled' : ''} — ${items.length} track${items.length === 1 ? '' : 's'}.`,
+    message: `Playing "${playlist.name}"${options.shuffle ? ' shuffled' : ''} — ${total} track${total === 1 ? '' : 's'}.`,
   };
 }
 
