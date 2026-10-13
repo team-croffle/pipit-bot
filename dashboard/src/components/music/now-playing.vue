@@ -12,6 +12,7 @@
   } from 'lucide-vue-next';
   import { computed, ref } from 'vue';
 
+  import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
   import SearchDialog from '@/components/music/search-dialog.vue';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@
     DropdownMenuTrigger,
   } from '@/components/ui/dropdown-menu';
   import { Input } from '@/components/ui/input';
+  import { playlistFeedback } from '@/composables/use-playlist-saver';
   import type { PlaybackRepeatMode, PlaybackState, PlaybackStatus } from '@/types';
 
   const props = defineProps<{
@@ -59,6 +61,12 @@
     // news the last action's own reply is not.
     if (props.playback?.notice) {
       return props.playback.notice.message;
+    }
+
+    // A save to a playlist is the newest thing the person did, for a few seconds.
+    const saved = playlistFeedback.value;
+    if (saved && Date.now() - saved.at < 8000) {
+      return saved.message;
     }
 
     if (props.message) {
@@ -190,9 +198,15 @@
              them. Two branches of different heights made the card resize on every
              track change and on every poll that arrived mid-transition. -->
         <div class="min-w-0 flex-1">
-          <p class="truncate font-semibold" :class="current ? '' : 'text-muted-foreground'">
-            {{ current?.title ?? '재생 중인 트랙이 없습니다' }}
-          </p>
+          <div class="flex min-w-0 items-center gap-1">
+            <p
+              class="min-w-0 truncate font-semibold"
+              :class="current ? '' : 'text-muted-foreground'"
+            >
+              {{ current?.title ?? '재생 중인 트랙이 없습니다' }}
+            </p>
+            <AddToPlaylist v-if="current" :source="{ from: 'current' }" size="xs" />
+          </div>
           <p class="text-muted-foreground mt-0.5 truncate text-xs">{{ subtitle }}</p>
           <div
             class="bg-muted mt-3 h-1.5 overflow-hidden rounded-full"

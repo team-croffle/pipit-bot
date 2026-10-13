@@ -4,6 +4,7 @@
 
   import { postJson } from '@/api';
   import StateBlock from '@/components/common/state-block.vue';
+  import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
   import { Button } from '@/components/ui/button';
   import {
     Dialog,
@@ -14,6 +15,7 @@
     DialogTrigger,
   } from '@/components/ui/dialog';
   import { Input } from '@/components/ui/input';
+  import { playlistFeedback } from '@/composables/use-playlist-saver';
   import type { MusicSearchResponse, MusicSearchResult } from '@/types';
 
   const props = defineProps<{ canEnqueue: boolean }>();
@@ -134,6 +136,14 @@
         검색은 할 수 있지만, 추가하려면 보이스 카드에서 봇을 통화방에 참여시키세요.
       </p>
       <p v-if="addError" class="text-destructive text-sm" role="alert">{{ addError }}</p>
+      <p
+        v-if="playlistFeedback && Date.now() - playlistFeedback.at < 8000"
+        class="text-sm"
+        :class="playlistFeedback.ok ? 'text-muted-foreground' : 'text-destructive'"
+        data-search-playlist-feedback
+      >
+        {{ playlistFeedback.message }}
+      </p>
 
       <StateBlock
         v-if="searched"
@@ -184,6 +194,12 @@
                 다음에 재생
               </Button>
             </div>
+            <AddToPlaylist
+              v-if="searchId"
+              :source="{ from: 'search', searchId, index: result.index }"
+              size="sm"
+              class="shrink-0"
+            />
           </li>
         </ul>
       </StateBlock>
