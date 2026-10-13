@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ListMusic, Plus } from 'lucide-vue-next';
-  import { onMounted, ref } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
+  import { RouterLink } from 'vue-router';
 
   import StateBlock from '@/components/common/state-block.vue';
   import { Badge } from '@/components/ui/badge';
@@ -8,12 +9,12 @@
   import { Card, CardContent } from '@/components/ui/card';
   import { usePlaylists } from '@/composables/use-playlists';
   import { formatSeconds } from '@/lib/playlists';
-  import type { PlaybackState } from '@/types';
+  import type { PlaybackState, PlaylistScope } from '@/types';
 
   import PlaylistDetail from './playlists/playlist-detail.vue';
   import PlaylistNameDialog from './playlists/playlist-name-dialog.vue';
 
-  const props = defineProps<{ playback: PlaybackState | null }>();
+  const props = defineProps<{ playback: PlaybackState | null; discordLinked: boolean }>();
 
   const {
     playlists,
@@ -37,8 +38,17 @@
 
   onMounted(load);
 
-  async function onCreate(name: string): Promise<void> {
-    if (await create(name, 'shared')) {
+  const groups = computed(() => [
+    { key: 'shared', title: '공용', items: playlists.value.filter((p) => p.scope === 'shared') },
+    {
+      key: 'personal',
+      title: '내 재생목록',
+      items: playlists.value.filter((p) => p.scope === 'personal'),
+    },
+  ]);
+
+  async function onCreate(name: string, scope: PlaylistScope): Promise<void> {
+    if (await create(name, scope)) {
       creating.value = false;
     }
   }
@@ -99,28 +109,43 @@
       </Card>
 
       <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-        <ul class="flex list-none flex-col gap-2 p-0" data-playlist-list>
-          <li v-for="playlist in playlists" :key="playlist.id">
-            <button
-              type="button"
-              class="border-border hover:bg-muted/50 flex w-full min-w-0 flex-col gap-0.5 rounded-lg border px-3 py-2 text-left"
-              :class="selected?.id === playlist.id ? 'bg-muted border-primary/40' : ''"
-              :aria-current="selected?.id === playlist.id ? 'true' : undefined"
-              data-playlist-entry
-              @click="open(playlist.id)"
+        <div class="flex min-w-0 flex-col gap-3" data-playlist-list>
+          <section v-for="group in groups" :key="group.key" class="flex flex-col gap-2">
+            <h3 class="text-muted-foreground text-xs font-medium">{{ group.title }}</h3>
+            <p
+              v-if="group.key === 'personal' && !discordLinked"
+              class="text-muted-foreground text-xs"
+              data-playlist-link-hint
             >
-              <span class="flex min-w-0 items-center gap-2">
-                <span class="truncate font-medium">{{ playlist.name }}</span>
-                <Badge v-if="playlist.scope === 'personal'" variant="outline" class="shrink-0">
-                  개인
-                </Badge>
-              </span>
-              <span class="text-muted-foreground tnum text-xs">
-                {{ playlist.itemCount }}곡 · {{ formatSeconds(playlist.totalSec) }}
-              </span>
-            </button>
-          </li>
-        </ul>
+              개인 재생목록을 쓰려면
+              <RouterLink to="/github" class="underline">GitHub 페이지</RouterLink>의 계정 연결에 내
+              GitHub ↔ 디스코드를 추가하세요.
+            </p>
+            <p v-else-if="group.items.length === 0" class="text-muted-foreground text-xs">없음</p>
+            <ul v-else class="flex list-none flex-col gap-2 p-0">
+              <li v-for="playlist in group.items" :key="playlist.id">
+                <button
+                  type="button"
+                  class="border-border hover:bg-muted/50 flex w-full min-w-0 flex-col gap-0.5 rounded-lg border px-3 py-2 text-left"
+                  :class="selected?.id === playlist.id ? 'bg-muted border-primary/40' : ''"
+                  :aria-current="selected?.id === playlist.id ? 'true' : undefined"
+                  data-playlist-entry
+                  @click="open(playlist.id)"
+                >
+                  <span class="flex min-w-0 items-center gap-2">
+                    <span class="truncate font-medium">{{ playlist.name }}</span>
+                    <Badge v-if="playlist.scope === 'personal'" variant="outline" class="shrink-0">
+                      개인
+                    </Badge>
+                  </span>
+                  <span class="text-muted-foreground tnum text-xs">
+                    {{ playlist.itemCount }}곡 · {{ formatSeconds(playlist.totalSec) }}
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </section>
+        </div>
 
         <Card>
           <CardContent>
@@ -145,7 +170,12 @@
     <PlaylistNameDialog
       v-model:open="creating"
       title="새 재생목록"
-      description="서버 모두가 보고 고칠 수 있는 공용 재생목록을 만듭니다."
+      :description="
+        discordLinked
+          ? '공용은 서버 모두가 보고 고치고, 개인은 나만 봅니다.'
+          : '서버 모두가 보고 고칠 수 있는 공용 재생목록을 만듭니다.'
+      "
+      :scope-choice="discordLinked"
       :busy="busy"
       @submit="onCreate"
     />

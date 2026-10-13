@@ -3,6 +3,8 @@ export interface DashboardIdentity {
   groups: string[];
   canWriteSettings: boolean;
   canControlPlayback: boolean;
+  /** The linked Discord account (GitHub page → accounts), for personal playlists. */
+  discordUserId?: string | null;
 }
 
 export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';

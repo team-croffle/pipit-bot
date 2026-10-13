@@ -56,7 +56,7 @@
       </TabsContent>
 
       <TabsContent value="playlists">
-        <PlaylistsPanel :playback="playback" />
+        <PlaylistsPanel :playback="playback" :discord-linked="Boolean(me.discordUserId)" />
       </TabsContent>
 
       <TabsContent value="options" class="flex flex-col gap-4">

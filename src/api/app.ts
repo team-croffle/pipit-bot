@@ -40,6 +40,7 @@ import { mountMusicSearchRoutes } from './routes/music-search.js';
 import { mountMusicRoutes } from './routes/music.js';
 import { mountPlaylistRoutes } from './routes/playlists.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
+import { discordIdOf } from './viewer.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
 
@@ -109,7 +110,8 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    return c.json(identity);
+    // The Discord account behind this user, when the GitHub page links it (personal playlists).
+    return c.json({ ...identity, discordUserId: discordIdOf(identity) ?? null });
   });
 
   app.get('/api/config', dashboardViewer, (c) => c.json(getRuntimeConfig()));
