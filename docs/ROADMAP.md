@@ -38,11 +38,30 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
   whoever pressed them; requests typed into the channel are handled and cleaned up
 - All commands are slash commands
 
+### v0.7.2 — an audit log and invite tracking
+
+- What was done from the dashboard and in Discord, GitHub deliveries, and members joining or leaving, recorded and shown
+  on the dashboard; for music, only who used which feature
+- Arrivals counted per invite, and a record channel with the facts of each arrival and departure
+
+### v0.7.3 — track search
+
+- Search from a Discord command, the music channel's remote or the dashboard, and pick one of up to five results to play
+  now or next
+
+### v0.7.4 — playlists
+
+- Shared playlists anyone can edit, and personal ones — saved from the current track, the queue, recent tracks, search
+  results or a typed request, and played in order or shuffled
+- From `/playlist` and the remote in Discord as well as the dashboard; importing several tracks from one link when the
+  music worker supports it
+- A music worker can state its optional features, and the bot shows only those controls
+
 ## In progress
 
 ### v0.7.x — music management
 
-- An audit log of dashboard, music and reminder actions; playlists; playback options; switching features on and off
+- Playback options; switching features on and off
 
 ## Planned
 
