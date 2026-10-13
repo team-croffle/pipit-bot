@@ -69,3 +69,4 @@ Each file has:
 | [017](./017_v0.7.1_slash-commands-and-music-remote.md) | v0.7.1 | Slash commands only, and a remote control in the music channel |
 | [018](./018_v0.7.2_audit-log.md) | v0.7.2 | An audit log in day files, recorded at the edges |
 | [019](./019_v0.7.3_track-search.md) | v0.7.3 | Search has its own way in, and the bot keeps the results |
+| [020](./020_v0.7.4_playlists.md) | v0.7.4 | Playlists: shared or personal, fed into the queue two at a time |
