@@ -56,7 +56,7 @@ DASHBOARD_SESSION_SECRET=
 
 `OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다: 제공자가 내려주는 `groups` 클레임과 대소문자 구분 없이 전체 일치로 비교합니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 제공자에 연결할 수 없으면 `/api/auth/login`과 콜백은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다.
 
-봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
 
 ## GitHub 알림
 
@@ -140,6 +140,16 @@ PR이나 이슈를 알린 메시지는 `data/github-messages.json`에 기억됩�
 
 배너는 봇이 시작하거나 음악 채널이 추가될 때 게시되고, 지워지면 다시 게시되며, 음악 채널에서 빠진 채널에서는 사라집니다.
 
+### 재생목록
+
+재생목록은 음악 페이지의 **재생목록** 탭과 `/playlist`에 있습니다:
+
+- **공용** 재생목록은 서버 모두가 보고 누구나 고칠 수 있고, **개인** 재생목록은 주인만 보고 고칩니다. 대시보드에서 개인 재생목록을 쓰려면 GitHub 페이지의 계정 연결에 내 GitHub ↔ 디스코드가 있어야 합니다(대시보드 로그인 = GitHub)
+- **곡 담기** — 곡 제목이나 링크를 입력하거나, 지금 곡·대기열 곡·대기열 전체·최근 재생·검색 결과 옆의 "재생목록에 담기"(대시보드와 디스코드 검색 결과), 또는 music worker가 여러 곡으로 풀 수 있는 **링크에서 가져오기**(worker가 지원할 때만 보임, [docs/music-backend.md](./docs/music-backend.md))
+- **재생** — 차례로 또는 섞어서, 지금 대기열 뒤에. 봇은 music worker에 두 곡씩 요청하고 재생목록 순서를 지킵니다. 준비하지 못한 곡은 건너뛰고 셉니다. 정지·비우기·나가기·다른 재생목록 재생은 지금 재생목록을 멈춥니다
+- 음악 채널 리모컨에 **재생목록** 버튼 — 고르고 재생 또는 섞어서 재생
+- 상한: 재생목록 200개, 재생목록마다 300곡. 재생목록은 곡의 요청 값까지 `data/playlists.json`에 보관하고, 화면과 답에는 제목만 보입니다
+
 ### 음악 작업
 
 요청 하나하나는 music worker가 준비한 뒤에야 재생되는 **작업**입니다. **음악 작업** 카드가 상태와 함께 보여 줍니다:
@@ -193,6 +203,7 @@ docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
 
 - `/play query [next]` — 쿼리를 그대로 music worker로 전달. `next`는 대기열 맨 앞에 넣음
 - `/search query` — 결과 최대 5개를 나에게만 보여 줌. 골라서 바로 재생하거나 다음 곡으로
+- `/playlist` — `list`, `show`, `create [personal]`, `rename`, `delete`, `add`(지금 곡·대기열 전체·제목이나 링크), `remove`, `move`, `import link [into]`, `play [shuffle]`. 재생목록 이름은 자동완성
 - `/join`, `/leave` — 내가 있는 통화방에 참여(또는 이동), 또는 나가기
 - 재생: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [level]`
 - 대기열: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`

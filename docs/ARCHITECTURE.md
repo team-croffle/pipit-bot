@@ -103,6 +103,12 @@ A job always ends — ready, failed, timed out or cancelled — and the dashboar
 ([016](./decisions/016_v0.7.1_music-job-lifecycle.md)). The queue, voice connection and volume are the bot's; the worker
 never sees them.
 
+**Playlists** ([020](./decisions/020_v0.7.4_playlists.md)) are kept in `data/playlists.json` with the request behind each
+track — learnt when a job is ready, per prepared file — and shown by title only. Playing one is not a burst of jobs: a
+feeder keeps two tracks prepared-but-not-started and asks for the next as the queue moves, putting tracks in playlist
+order even when they finish preparing out of turn. Importing asks the worker to expand one request (`POST /v1/expand`);
+the worker's optional `capabilities` decide which of search and import the bot shows.
+
 ## GitHub notifications
 
 ![GitHub notifications: the webhook path and the remind path](./img/architecture/05-github-flow.png)

@@ -99,6 +99,11 @@ dashboard/            Vue SPA — dashboard/dist로 빌드되어 / 에서 제공
 작업은 언제나 끝납니다 — 준비됨, 실패, 시간 초과, 취소 중 하나로. 대시보드는 최근 작업과 결과를 보여 줍니다
 ([016](./decisions/016_v0.7.1_music-job-lifecycle.md)). 대기열, 음성 연결, 볼륨은 봇의 것이고 worker는 보지 않습니다.
 
+**재생목록**([020](./decisions/020_v0.7.4_playlists.md))은 곡마다 요청 값을 담아 `data/playlists.json`에 보관하고 — 준비된 파일마다
+작업이 ready일 때 기억한 값 — 제목만 보여 줍니다. 재생은 작업을 한꺼번에 쏟지 않습니다: 피더가 준비됐지만 아직 시작하지 않은 곡을
+두 개로 유지하며 대기열이 움직일 때 다음 곡을 요청하고, 준비가 먼저 끝난 곡도 재생목록 순서대로 넣습니다. 가져오기는 worker에 요청
+하나를 풀어 달라고 하고(`POST /v1/expand`), 검색과 가져오기 중 무엇을 보여 줄지는 worker의 선택 항목 `capabilities`가 정합니다.
+
 ## GitHub 알림
 
 ![GitHub 알림: 웹훅 경로와 리마인드 경로](./img/architecture/05-github-flow.png)

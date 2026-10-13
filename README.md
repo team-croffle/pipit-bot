@@ -56,7 +56,7 @@ Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik 
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 ## GitHub notifications
 
@@ -140,6 +140,16 @@ A configured music channel holds one **remote-control banner**, kept by the bot 
 
 The banner is posted when the bot starts or a music channel is added, re-posted if it is deleted, and removed from a channel that stops being a music channel.
 
+### Playlists
+
+Playlists live on the Music page's **playlists** tab and behind `/playlist`:
+
+- **Shared** playlists are seen by the whole server and anyone can edit them; **personal** ones are seen and edited only by their owner. On the dashboard, personal playlists need your GitHub ↔ Discord link on the GitHub page (the dashboard signs in with GitHub)
+- **Saving tracks** — type a song title or a link; or use "재생목록에 담기" next to the current track, a queued track, the whole queue, recent tracks and search results (on the dashboard and on Discord's search results); or **import from a link** the music worker can expand into several tracks (shown only when the worker offers it, see [docs/music-backend.md](./docs/music-backend.md))
+- **Playing** — in order or shuffled, after what is already queued. The bot asks the music worker for two tracks at a time and keeps the playlist's order; tracks that cannot be prepared are skipped and counted. Stopping, clearing, leaving or playing another playlist ends it
+- The music channel's remote has a **playlist** button: choose one, then play or shuffle
+- Limits: 200 playlists of up to 300 tracks. Playlists are kept in `data/playlists.json`, including the requests behind their tracks; pages and answers show titles only
+
 ### Music jobs
 
 Each request is a **job** the music worker prepares before the bot can play it. The **Music jobs** card lists them with their state:
@@ -198,6 +208,7 @@ Usable in a music channel (or anywhere, when none is configured):
 
 - `/play query [next]` — the query goes to the music worker as-is; `next` puts the track at the front of the queue
 - `/search query` — up to five results, shown only to you; pick one and play it now or next
+- `/playlist` — `list`, `show`, `create [personal]`, `rename`, `delete`, `add` (the current track, the whole queue, or a title or link), `remove`, `move`, `import link [into]`, `play [shuffle]`; playlist names autocomplete
 - `/join`, `/leave` — join your voice channel (or move there), or leave
 - Playback: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [level]`
 - Queue: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`

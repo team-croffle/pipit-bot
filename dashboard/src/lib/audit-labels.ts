@@ -35,6 +35,14 @@ const ACTION_LABEL: Record<string, string> = {
   'music.cancel': '작업 취소',
   'music.retry': '작업 다시 시도',
   'music.search': '곡 검색',
+  'playlist.create': '재생목록 만들기',
+  'playlist.rename': '재생목록 이름 바꾸기',
+  'playlist.delete': '재생목록 지우기',
+  'playlist.add': '재생목록에 담기',
+  'playlist.remove': '재생목록에서 빼기',
+  'playlist.move': '재생목록 순서 바꾸기',
+  'playlist.play': '재생목록 재생',
+  'playlist.import': '재생목록 가져오기',
   'music.request': '채널에 곡 요청',
   'music.ready': '곡 준비 완료',
   'music.failed': '곡 준비 실패',
@@ -63,6 +71,13 @@ const REMOTE_LABEL: Record<string, string> = {
   'search:pick': '검색 결과 고르기',
   'search:play': '검색 결과 재생',
   'search:next': '검색 결과 다음에 재생',
+  'search:save': '검색 결과 재생목록에 담기',
+  'music:playlists': '재생목록 창',
+  'playlist:pick': '재생목록 고르기',
+  'playlist:play': '재생목록 재생',
+  'playlist:shuffle': '재생목록 섞어서 재생',
+  'playlist:save': '재생목록에 담기',
+  'playlist:delete': '재생목록 지우기',
 };
 
 /** A person-readable name for an action; unknown actions are shown as recorded. */
