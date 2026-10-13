@@ -29,6 +29,44 @@ const RULES: ActionRule[] = [
   { method: 'POST', pattern: /^\/api\/music\/voice\/(join|leave)$/, action: 'music.$1' },
   { method: 'POST', pattern: /^\/api\/music\/jobs$/, action: 'music.enqueue' },
   { method: 'POST', pattern: /^\/api\/music\/search$/, action: 'music.search' },
+  { method: 'POST', pattern: /^\/api\/playlists$/, action: 'playlist.create' },
+  { method: 'PATCH', pattern: /^\/api\/playlists\/([^/]+)$/, action: 'playlist.rename', target: 1 },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/playlists\/([^/]+)$/,
+    action: 'playlist.delete',
+    target: 1,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/playlists\/([^/]+)\/items$/,
+    action: 'playlist.add',
+    target: 1,
+  },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/playlists\/([^/]+)\/items\/[^/]+$/,
+    action: 'playlist.remove',
+    target: 1,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/playlists\/([^/]+)\/items\/[^/]+\/move$/,
+    action: 'playlist.move',
+    target: 1,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/playlists\/([^/]+)\/play$/,
+    action: 'playlist.play',
+    target: 1,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/playlists\/([^/]+)\/import$/,
+    action: 'playlist.import',
+    target: 1,
+  },
   {
     method: 'POST',
     pattern: /^\/api\/music\/jobs\/([^/]+)\/(cancel|retry)$/,
@@ -83,7 +121,9 @@ export const auditDashboard = createMiddleware<{
   }
 
   const { action, target } = describe(method, path);
-  const category: AuditCategory = path.startsWith('/api/music/') ? 'music' : 'dashboard';
+  // Playlists are music: like the rest, recorded without names or tracks.
+  const category: AuditCategory =
+    path.startsWith('/api/music/') || path.startsWith('/api/playlists') ? 'music' : 'dashboard';
   const ok = c.res.status < 400;
   let detail: string | undefined;
   if (!ok) {
