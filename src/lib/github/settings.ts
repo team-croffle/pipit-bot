@@ -366,11 +366,6 @@ export function getGithubNotifySettings(): GithubNotifySettings {
   return cache ?? emptySettings();
 }
 
-/** Replaces the settings in memory without touching the file — for local checks only. */
-export function setGithubNotifySettingsForChecks(settings: Partial<GithubNotifySettings>): void {
-  cache = { ...emptySettings(), ...settings };
-}
-
 /** Whether the repository has a rule of its own in the per-repository table. */
 export function isRepoListed(settings: GithubNotifySettings, repo: string): boolean {
   const name = repo.toLowerCase();
