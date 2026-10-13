@@ -1,4 +1,5 @@
 import { audit } from '../../lib/audit/log.js';
+import { rememberSource } from '../../lib/music/track-source.js';
 
 export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';
 
@@ -151,6 +152,14 @@ export function resolveReady(jobId: string, track: TrackMeta): JobRecord {
   record.status = 'ready';
   record.track = track;
   record.error = undefined;
+  // Every way of asking for a track ends here, so this is where a file learns its request.
+  if (record.query) {
+    rememberSource(track.file, {
+      query: record.query,
+      title: track.title,
+      durationSec: track.durationSec,
+    });
+  }
   settle(record, (waiter) => waiter.resolve(record));
   return record;
 }
