@@ -65,6 +65,22 @@ POST /v1/search
 - Failures answer `400` (the worker will not search for that), `503` (something it depends on is unreachable) or `500`, with `{ "error", "code" }` as in the failure table above. Answer within about ten seconds — a person is waiting in a dialog.
 - A worker without search answers `404`; the bot then says search is not available, and everything else works as before.
 
+## Expand (optional)
+
+A worker may also expand one request into several tracks, for importing into a playlist ("링크에서 가져오기" on the dashboard, `/playlist import`):
+
+```
+POST /v1/expand
+  { "query": "<opaque string>" }
+  → 200 { "title": "...", "items": [ { "title": "...", "durationSec": 213, "query": "<opaque>" } ] }
+```
+
+- At most 300 items; `title` is optional and names the new playlist when the person gives none.
+- The bot does not decide what kind of request it is sending: a request the worker cannot expand answers `200` with an empty `items`, and the bot says there was nothing to import.
+- `items[].query` is opaque, exactly like search results: kept in the playlist on the bot's side, never shown or recorded, and sent back unchanged as a job query when the track plays.
+- Failures answer like search (`400`, `503`, `500` with `{ "error", "code" }`). Answer within about thirty seconds.
+- A worker without it answers `404`, or leaves `expand` out of its `capabilities`; the bot then hides importing.
+
 ## Volume
 
 | Environment | Path |

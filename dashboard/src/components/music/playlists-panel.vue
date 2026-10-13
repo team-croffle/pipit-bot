@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ListMusic, Plus } from 'lucide-vue-next';
+  import { Download, ListMusic, Plus } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
   import { RouterLink } from 'vue-router';
 
@@ -12,6 +12,7 @@
   import type { PlaybackState, PlaylistScope } from '@/types';
 
   import PlaylistDetail from './playlists/playlist-detail.vue';
+  import PlaylistImportDialog from './playlists/playlist-import-dialog.vue';
   import PlaylistNameDialog from './playlists/playlist-name-dialog.vue';
 
   const props = defineProps<{ playback: PlaybackState | null; discordLinked: boolean }>();
@@ -32,9 +33,21 @@
     removeItem,
     moveItem,
     play,
+    importLink,
   } = usePlaylists();
 
+  const canImport = computed(
+    () => !props.playback?.capabilities || props.playback.capabilities.includes('expand'),
+  );
+
   const creating = ref(false);
+  const importing = ref(false);
+
+  async function onImport(query: string, name: string, scope: PlaylistScope): Promise<void> {
+    if (await importLink(query, { name: name || undefined, scope })) {
+      importing.value = false;
+    }
+  }
 
   onMounted(load);
 
@@ -60,16 +73,29 @@
       <p class="text-muted-foreground text-sm">
         재생목록을 저장하고 한 번에 재생합니다. 공용 재생목록은 누구나 고칠 수 있습니다.
       </p>
-      <Button
-        variant="outline"
-        size="sm"
-        :disabled="busy"
-        data-playlist-new
-        @click="creating = true"
-      >
-        <Plus />
-        새 재생목록
-      </Button>
+      <div class="flex flex-wrap gap-2">
+        <Button
+          v-if="canImport"
+          variant="outline"
+          size="sm"
+          :disabled="busy"
+          data-playlist-import-new
+          @click="importing = true"
+        >
+          <Download />
+          링크에서 가져오기
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="busy"
+          data-playlist-new
+          @click="creating = true"
+        >
+          <Plus />
+          새 재생목록
+        </Button>
+      </div>
     </div>
 
     <p
@@ -157,7 +183,9 @@
               @play="(shuffle) => play(selected!.id, shuffle)"
               @rename="(name) => rename(selected!.id, name)"
               @remove="remove(selected!.id)"
+              :can-import="canImport"
               @add-typed="(query) => addItem(selected!.id, { from: 'typed', query })"
+              @import-link="(query) => importLink(query, { into: selected!.id })"
               @remove-item="(itemId) => removeItem(selected!.id, itemId)"
               @move-item="(itemId, to) => moveItem(selected!.id, itemId, to)"
             />
@@ -178,6 +206,12 @@
       :scope-choice="discordLinked"
       :busy="busy"
       @submit="onCreate"
+    />
+    <PlaylistImportDialog
+      v-model:open="importing"
+      :busy="busy"
+      :scope-choice="discordLinked"
+      @submit="onImport"
     />
   </div>
 </template>

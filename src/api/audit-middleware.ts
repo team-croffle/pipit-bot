@@ -30,6 +30,7 @@ const RULES: ActionRule[] = [
   { method: 'POST', pattern: /^\/api\/music\/jobs$/, action: 'music.enqueue' },
   { method: 'POST', pattern: /^\/api\/music\/search$/, action: 'music.search' },
   { method: 'POST', pattern: /^\/api\/playlists$/, action: 'playlist.create' },
+  { method: 'POST', pattern: /^\/api\/playlists\/import$/, action: 'playlist.import' },
   { method: 'PATCH', pattern: /^\/api\/playlists\/([^/]+)$/, action: 'playlist.rename', target: 1 },
   {
     method: 'DELETE',

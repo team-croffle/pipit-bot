@@ -154,6 +154,35 @@ export function usePlaylists() {
     }
   }
 
+  /** Imports what the music worker expands a link into — into this playlist, or a new one. */
+  async function importLink(
+    query: string,
+    target: { into: string } | { name?: string; scope: PlaylistScope },
+  ): Promise<boolean> {
+    const result = await act(
+      () =>
+        'into' in target
+          ? postJson<PlaylistDetail & { added: number; skipped: number }>(
+              `${path(target.into)}/import`,
+              { query },
+            )
+          : postJson<PlaylistDetail & { added: number; skipped: number }>('/api/playlists/import', {
+              query,
+              ...target,
+            }),
+      '가져왔습니다.',
+      '가져오지 못했습니다.',
+    );
+    if (result) {
+      message.value =
+        result.skipped > 0
+          ? `"${result.name}"에 ${result.added}곡을 가져왔습니다. ${result.skipped}곡은 가득 차 빠졌습니다.`
+          : `"${result.name}"에 ${result.added}곡을 가져왔습니다.`;
+      selected.value = result;
+    }
+    return result !== null;
+  }
+
   async function play(id: string, shuffle: boolean): Promise<void> {
     await act(
       () => postJson<PlaybackActionResult>(`${path(id)}/play`, { shuffle }),
@@ -180,5 +209,6 @@ export function usePlaylists() {
     removeItem,
     moveItem,
     play,
+    importLink,
   };
 }
