@@ -12,15 +12,22 @@ import type { DashboardIdentity } from './auth/dashboard.js';
  * links GitHub logins to Discord users for mentions. Without a link, the person simply
  * has no Discord identity on the dashboard.
  */
+let accounts = () => getGithubNotifySettings().accounts;
+
+/** Replaces the account links read here — for local checks only. */
+export function setAccountLinksForChecks(
+  links: { githubLogin: string; discordUserId: string }[],
+): void {
+  accounts = () => links;
+}
+
 export function discordIdOf(identity: DashboardIdentity | undefined | null): string | undefined {
   const user = identity?.user?.toLowerCase();
   if (!user) {
     return undefined;
   }
 
-  return getGithubNotifySettings().accounts.find(
-    (account) => account.githubLogin.toLowerCase() === user,
-  )?.discordUserId;
+  return accounts().find((account) => account.githubLogin.toLowerCase() === user)?.discordUserId;
 }
 
 /** The dashboard user as a playlist viewer. */
