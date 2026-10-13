@@ -6,6 +6,7 @@
   import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
   import type { PlaybackRepeatMode, PlaybackState } from '@/types';
 
+  import AddToPlaylist from './playlists/add-to-playlist.vue';
   import QueueRow from './queue-row.vue';
   import RecentTracks from './recent-tracks.vue';
 
@@ -27,7 +28,13 @@
   <Card>
     <CardHeader>
       <CardTitle class="text-base">대기열</CardTitle>
-      <CardAction>
+      <CardAction class="flex items-center gap-2">
+        <AddToPlaylist
+          v-if="playback?.tracks.length"
+          :source="{ from: 'queue', ref: 'all' }"
+          label="전체 담기"
+          :disabled="busy"
+        />
         <Badge variant="outline" class="tnum">
           {{ playback?.pendingCount ?? 0 }}곡
           <template v-if="playback?.durationFormatted">

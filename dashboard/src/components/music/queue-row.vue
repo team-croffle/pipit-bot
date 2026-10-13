@@ -2,6 +2,7 @@
   import { ArrowDown, ArrowUp, Ellipsis, SkipForward, X } from 'lucide-vue-next';
   import { computed } from 'vue';
 
+  import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
   import { Button } from '@/components/ui/button';
   import {
     DropdownMenu,
@@ -60,6 +61,7 @@
       {{ track.duration }}
     </span>
 
+    <AddToPlaylist :source="{ from: 'queue', ref: track.id }" :disabled="busy" size="xs" />
     <div class="hidden shrink-0 items-center sm:flex">
       <Button
         data-row-action="up"

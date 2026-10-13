@@ -3,6 +3,7 @@
   import { computed, ref, watch } from 'vue';
 
   import { fetchJson } from '@/api';
+  import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
   import { Button } from '@/components/ui/button';
   import type { HistoryTrack, PlaybackState } from '@/types';
 
@@ -82,6 +83,7 @@
         >
           <span class="min-w-0 flex-1 truncate">{{ track.title }}</span>
           <span v-if="track.duration" class="tnum shrink-0 text-xs">{{ track.duration }}</span>
+          <AddToPlaylist :source="{ from: 'recent', ref: track.id }" size="xs" />
         </li>
       </ol>
     </template>
