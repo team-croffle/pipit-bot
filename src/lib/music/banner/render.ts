@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 
 import type { PlaybackState } from '../playback.js';
+import { hasCapability } from '../worker-capabilities.js';
 
 /**
  * The music channel's remote control: one message per music channel, drawn from the
@@ -81,7 +82,7 @@ function idle(container: ContainerBuilder): void {
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(REMOTE.play, '재생', '▶️', ButtonStyle.Primary),
-        button(REMOTE.search, '검색', '🔍'),
+        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍')] : []),
         button(REMOTE.playlists, '재생목록', '📁'),
       ),
     );
@@ -122,7 +123,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(REMOTE.play, '곡 추가', '➕'),
-        button(REMOTE.search, '검색', '🔍'),
+        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍')] : []),
         button(REMOTE.loop, '반복', '🔁'),
         button(REMOTE.volumeDown, '볼륨', '🔉').setDisabled(state.volumeLevel === 'low'),
         button(REMOTE.volumeUp, '볼륨', '🔊').setDisabled(state.volumeLevel === 'high'),
@@ -153,6 +154,7 @@ export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
     layout: 3,
+    search: hasCapability('search'),
     active: state.active,
     paused: state.paused,
     title: state.current?.title ?? null,

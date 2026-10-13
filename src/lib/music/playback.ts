@@ -6,6 +6,7 @@ import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolumeLevel } from './pcm-volume.js';
 import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
+import { workerCapabilities, type WorkerCapability } from './worker-capabilities.js';
 
 // WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
 // queue that long is already past what anyone scrolls through.
@@ -53,6 +54,8 @@ export interface PlaybackState {
   hasPrevious: boolean;
   /** The playlist being fed into the queue, if any. */
   playlist: FeedStatus | null;
+  /** The music worker's optional features, or null when it does not say. */
+  capabilities: WorkerCapability[] | null;
 }
 
 export interface PlaybackActionResult {
@@ -147,6 +150,7 @@ function buildState(
     notice: getRecentNotice(),
     hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
     playlist: getFeedStatus(),
+    capabilities: workerCapabilities(),
   };
 }
 

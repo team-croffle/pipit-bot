@@ -8,6 +8,7 @@ import { loadGithubNotifySettings } from './lib/github/settings.js';
 import { loadGuildEventSettings } from './lib/guild-event-settings.js';
 import { loadInviteStats } from './lib/invite-stats.js';
 import { loadPlaylists } from './lib/music/playlists/store.js';
+import { startCapabilityWatch } from './lib/music/worker-capabilities.js';
 import { loadReactionRoleSettings } from './lib/reaction-roles/settings.js';
 import { env } from './lib/setup.js';
 
@@ -21,6 +22,7 @@ const main = async () => {
     await loadReactionRoleSettings();
     await loadInviteStats();
     await loadPlaylists();
+    startCapabilityWatch();
     startAuditRetention();
     startApiServer(env, {
       info(message: string) {
