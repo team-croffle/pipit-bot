@@ -4,6 +4,7 @@ import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolumeLevel } from './pcm-volume.js';
+import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
 // WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
@@ -50,6 +51,8 @@ export interface PlaybackState {
   /** Something the player did on its own that deserves a word, e.g. a skipped track. */
   notice: PlaybackNotice | null;
   hasPrevious: boolean;
+  /** The playlist being fed into the queue, if any. */
+  playlist: FeedStatus | null;
 }
 
 export interface PlaybackActionResult {
@@ -143,6 +146,7 @@ function buildState(
     volumeLevel: getVolumeLevel(),
     notice: getRecentNotice(),
     hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
+    playlist: getFeedStatus(),
   };
 }
 
@@ -284,6 +288,7 @@ export function stopPlayback(): PlaybackActionResult {
     return { ok: false, message: 'No active music session found.' };
   }
 
+  stopFeed();
   if (queue.node.stop()) {
     return { ok: true, message: 'Stopped playback and cleared the queue.' };
   }
@@ -302,6 +307,7 @@ export function clearQueue(): PlaybackActionResult {
     return { ok: false, message: 'The queue is empty.' };
   }
 
+  stopFeed();
   queue.tracks.clear();
   return { ok: true, message: 'Queue cleared.' };
 }

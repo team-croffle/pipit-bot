@@ -30,6 +30,11 @@ export function getRecentNotice(): PlaybackNotice | null {
   return lastNotice && Date.now() - lastNotice.at < NOTICE_TTL_MS ? lastNotice : null;
 }
 
+/** Raises a notice for the dashboard's status line (a playlist that could not finish, …). */
+export function raisePlaybackNotice(message: string): void {
+  lastNotice = { message, at: Date.now() };
+}
+
 function isFileGone(track: Track): boolean {
   const path = localTrackPath(track.url);
   return path !== null && !existsSync(path);

@@ -4,6 +4,7 @@ import type { Guild, VoiceBasedChannel } from 'discord.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import type { PlaybackActionResult } from './playback.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
+import { stopFeed } from './playlists/feed-state.js';
 
 /** discord-player uses the bot user id as the voice connection group; !join used "default". */
 export function destroyLegacyVoiceConnection(guildId: string): void {
@@ -86,6 +87,7 @@ export function leaveVoiceChannel(guildId: string): PlaybackActionResult {
     return { ok: false, message: 'No active music session found in this server.' };
   }
 
+  stopFeed();
   if (queue) {
     queue.delete();
   } else {

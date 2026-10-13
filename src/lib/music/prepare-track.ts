@@ -26,7 +26,7 @@ const trackMetaByFile = new Map<string, TrackMeta>();
 // otherwise stay for the life of the process. Far more than any queue holds.
 const TRACK_META_KEEP = 200;
 
-function rememberTrackMeta(track: TrackMeta): void {
+export function rememberTrackMeta(track: TrackMeta): void {
   trackMetaByFile.delete(track.file);
   trackMetaByFile.set(track.file, track);
   while (trackMetaByFile.size > TRACK_META_KEEP) {
@@ -100,18 +100,24 @@ export async function insertNextIfPlaying(
   return track;
 }
 
-async function playPreparedTrack(track: TrackMeta, next: boolean): Promise<void> {
+/** Plays a prepared file in the bot's voice channel: at the end, or next when asked. */
+export async function playPreparedTrack(
+  track: TrackMeta,
+  next: boolean,
+  requestedBy?: string,
+): Promise<void> {
   const { guild, voiceChannel } = await ensureBotVoiceChannel();
 
   // Checked when the file is ready, not when it was asked for: the track that was
   // playing then may have ended while the worker prepared this one.
-  if (next && (await insertNextIfPlaying(guild.id, track.file))) {
+  if (next && (await insertNextIfPlaying(guild.id, track.file, requestedBy))) {
     return;
   }
 
   const player = useMainPlayer();
   const playQuery = toLocalPlayQuery(track.file);
   await player.play(voiceChannel as unknown as Parameters<typeof player.play>[0], playQuery, {
+    requestedBy,
     nodeOptions: PLAYER_NODE_OPTIONS,
   });
 }
