@@ -28,8 +28,8 @@
 
     <Tabs default-value="control" class="gap-5">
       <TabsList>
-        <TabsTrigger value="control">재생 제어</TabsTrigger>
-        <TabsTrigger value="playlists">재생목록</TabsTrigger>
+        <TabsTrigger value="control" data-tab="control">재생 제어</TabsTrigger>
+        <TabsTrigger value="playlists" data-tab="playlists">재생목록</TabsTrigger>
         <TabsTrigger value="options">재생 옵션</TabsTrigger>
       </TabsList>
 
@@ -56,7 +56,7 @@
       </TabsContent>
 
       <TabsContent value="playlists">
-        <PlaylistsPanel />
+        <PlaylistsPanel :playback="playback" />
       </TabsContent>
 
       <TabsContent value="options" class="flex flex-col gap-4">

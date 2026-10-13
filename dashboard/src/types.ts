@@ -319,6 +319,16 @@ export interface PlaybackState {
   notice: { message: string; at: number } | null;
   /** Something has played before the current track in this session. */
   hasPrevious: boolean;
+  /** The playlist being fed into the queue, if any. */
+  playlist?: PlaylistFeed | null;
+}
+
+export interface PlaylistFeed {
+  playlistId: string;
+  name: string;
+  total: number;
+  remaining: number;
+  failed: number;
 }
 
 export type PlaybackVolumeLevel = 'low' | 'mid' | 'high';
@@ -380,3 +390,5 @@ export interface MusicSearchResponse {
   searchId: string | null;
   results: MusicSearchResult[];
 }
+
+export * from './playlist-types';
