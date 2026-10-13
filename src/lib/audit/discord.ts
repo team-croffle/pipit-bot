@@ -7,6 +7,7 @@ import type { AuditActor } from './types.js';
 /** Slash commands that belong to music — recorded as `music`, with no detail. */
 const MUSIC_COMMANDS = new Set([
   'play',
+  'playlist',
   'search',
   'join',
   'leave',
@@ -32,7 +33,9 @@ export function actorOf(user: User, member?: GuildMember | null): AuditActor {
 
 /** A search control's id carries the search id and an index; the action is the control. */
 function controlId(customId: string): string {
-  return customId.startsWith('search:') ? customId.split(':').slice(0, 2).join(':') : customId;
+  return /^(search|playlist):/.test(customId)
+    ? customId.split(':').slice(0, 2).join(':')
+    : customId;
 }
 
 function actionOf(interaction: RepliableInteraction): string {
@@ -60,7 +63,7 @@ function isMusic(action: string): boolean {
     return MUSIC_COMMANDS.has(action.slice(1));
   }
 
-  return /^(button|modal|select):(music|search):/.test(action);
+  return /^(button|modal|select):(music|search|playlist):/.test(action);
 }
 
 /**

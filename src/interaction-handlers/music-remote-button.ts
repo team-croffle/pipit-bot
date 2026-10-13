@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import {
   ActionRowBuilder,
   type ButtonInteraction,
+  MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -21,6 +22,8 @@ import {
   stopPlayback,
   type LoopMode,
 } from '../lib/music/playback.js';
+import { discordViewer } from '../lib/music/playlists/discord.js';
+import { NO_PLAYLISTS, playPlaylistMessage } from '../lib/music/playlists/pickers.js';
 import { setVolumeLevel } from '../lib/music/queue-actions.js';
 import { queueText } from '../lib/music/queue-view.js';
 import type { VolumeLevel } from '../lib/music/volume-levels.js';
@@ -104,6 +107,18 @@ export class MusicRemoteButton extends InteractionHandler {
 
     if (interaction.customId === REMOTE.search) {
       await interaction.showModal(searchModal());
+      return;
+    }
+
+    if (interaction.customId === REMOTE.playlists) {
+      const picker = playPlaylistMessage(
+        discordViewer(interaction.user, interaction.inCachedGuild() ? interaction.member : null),
+      );
+      if (picker) {
+        await interaction.reply({ ...picker, flags: picker.flags | MessageFlags.Ephemeral });
+      } else {
+        await replyNotice(interaction, { ok: false, message: NO_PLAYLISTS });
+      }
       return;
     }
 

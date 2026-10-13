@@ -1,9 +1,11 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { ButtonInteraction, StringSelectMenuInteraction } from 'discord.js';
+import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
+import { discordViewer } from '../lib/music/playlists/discord.js';
+import { NO_PLAYLISTS, saveToPlaylistMessage } from '../lib/music/playlists/pickers.js';
 import { requestPlay } from '../lib/music/request.js';
 import { getCandidate, getResults, PICK_PROBLEM_MESSAGE } from '../lib/music/search-results.js';
 import { SEARCH_ID, searchResultsMessage } from '../lib/music/search-view.js';
@@ -50,7 +52,8 @@ export class MusicSearchPick extends InteractionHandler {
 export class MusicSearchPlay extends InteractionHandler {
   public override parse(interaction: ButtonInteraction) {
     return interaction.customId.startsWith(`${SEARCH_ID.play}:`) ||
-      interaction.customId.startsWith(`${SEARCH_ID.next}:`)
+      interaction.customId.startsWith(`${SEARCH_ID.next}:`) ||
+      interaction.customId.startsWith(`${SEARCH_ID.save}:`)
       ? this.some()
       : this.none();
   }
@@ -69,6 +72,21 @@ export class MusicSearchPlay extends InteractionHandler {
     }
 
     const id = parse(interaction.customId);
+    if (id?.part === SEARCH_ID.save) {
+      // A second private message to choose the playlist; the results stay for more picks.
+      const picker = saveToPlaylistMessage(
+        discordViewer(interaction.user, interaction.member),
+        id.searchId,
+        id.index,
+      );
+      if (picker) {
+        await interaction.reply({ ...picker, flags: picker.flags | MessageFlags.Ephemeral });
+      } else {
+        await replyNotice(interaction, { ok: false, message: NO_PLAYLISTS });
+      }
+      return;
+    }
+
     const found = id ? getCandidate(id.searchId, id.index, interaction.user.id) : null;
     // Replacing the results message with the outcome; preparing can take a while.
     await interaction.deferUpdate();
