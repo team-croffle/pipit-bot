@@ -38,6 +38,7 @@ import { mountInviteRoutes } from './routes/invites.js';
 import { mountMusicJobRoutes } from './routes/music-jobs.js';
 import { mountMusicSearchRoutes } from './routes/music-search.js';
 import { mountMusicRoutes } from './routes/music.js';
+import { mountPlaylistRoutes } from './routes/playlists.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
@@ -195,6 +196,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   mountMusicRoutes(app);
   mountMusicJobRoutes(app);
   mountMusicSearchRoutes(app);
+  mountPlaylistRoutes(app);
   mountReactionRoleRoutes(app);
   mountInviteRoutes(app);
 
