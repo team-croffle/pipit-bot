@@ -15,10 +15,15 @@ import { getEnv } from '../env.js';
 export type WorkerCapability = 'search' | 'expand';
 
 const REFRESH_MS = 5 * 60 * 1000;
+/** At start the worker may still be coming up next to the bot: ask again soon, a few times. */
+const START_RETRY_MS = 10_000;
+const START_RETRIES = 6;
 
 let known: Set<string> | null = null;
+let lastLogged: string | undefined;
 
-async function readCapabilities(): Promise<void> {
+/** Reads the health answer; false when the worker could not be reached. */
+async function readCapabilities(): Promise<boolean> {
   try {
     const response = await fetch(`${getEnv().musicWorkerUrl}/v1/health`, {
       signal: AbortSignal.timeout(5000),
@@ -28,8 +33,23 @@ async function readCapabilities(): Promise<void> {
     known = Array.isArray(list)
       ? new Set(list.filter((item): item is string => typeof item === 'string'))
       : null;
+    return true;
   } catch {
     // Unreachable just now: keep what was known.
+    return false;
+  }
+}
+
+/** Logs what is known — only when it changed, so the five-minute reads stay quiet. */
+function report(reached: boolean, retrying = false): void {
+  const line = !reached
+    ? `unreachable${retrying ? ', retrying' : ''}`
+    : known === null
+      ? 'not stated'
+      : [...known].join(', ') || 'none';
+  if (line !== lastLogged) {
+    lastLogged = line;
+    container.logger?.info(`[music] worker capabilities: ${line}`);
   }
 }
 
@@ -45,14 +65,19 @@ export function workerCapabilities(): WorkerCapability[] | null {
     : ([...known].filter((item) => item === 'search' || item === 'expand') as WorkerCapability[]);
 }
 
-/** Reads now and every five minutes. */
+/** Reads now (again every ten seconds for a minute while unreachable), then every five minutes. */
 export function startCapabilityWatch(): void {
-  void readCapabilities().then(() => {
-    container.logger?.info(
-      `[music] worker capabilities: ${known === null ? 'not stated' : [...known].join(', ') || 'none'}`,
-    );
-  });
-  setInterval(() => void readCapabilities(), REFRESH_MS).unref();
+  const first = async (attempt: number): Promise<void> => {
+    const reached = await readCapabilities();
+    const retrying = !reached && attempt < START_RETRIES;
+    report(reached, retrying);
+    if (retrying) {
+      setTimeout(() => void first(attempt + 1), START_RETRY_MS).unref();
+    }
+  };
+
+  void first(1);
+  setInterval(() => void readCapabilities().then((reached) => report(reached)), REFRESH_MS).unref();
 }
 
 /** Sets the list directly — for local checks only. */
