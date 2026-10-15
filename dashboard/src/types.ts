@@ -326,7 +326,7 @@ export interface PlaybackState {
   /** The playlist being fed into the queue, if any. */
   playlist?: PlaylistFeed | null;
   /** The music worker's optional features; null or absent when it does not say. */
-  capabilities?: ('search' | 'expand')[] | null;
+  capabilities?: ('search' | 'expand' | 'related')[] | null;
 }
 
 export interface PlaylistFeed {

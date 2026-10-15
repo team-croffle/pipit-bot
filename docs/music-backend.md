@@ -17,10 +17,10 @@ POST /v1/jobs
   { "jobId": "<uuid>", "query": "<opaque string>" }
   → 202 { "jobId", "status": "accepted" }
 
-GET /v1/health → 200 { "status": "ok", "capabilities": ["search", "expand"] }
+GET /v1/health → 200 { "status": "ok", "capabilities": ["search", "expand", "related"] }
 ```
 
-`capabilities` is optional: it names the optional features below that the worker offers (`search`, `expand`), and the bot shows only those controls. A worker that leaves it out is treated as "may offer anything" — every control shows, and one the worker lacks answers that it is not available.
+`capabilities` is optional: it names the optional features below that the worker offers (`search`, `expand`, `related`), and the bot shows only those controls. A worker that leaves it out is treated as "may offer anything" — every control shows, and one the worker lacks answers that it is not available.
 
 After preparing audio on the shared volume:
 
@@ -80,6 +80,22 @@ POST /v1/expand
 - `items[].query` is opaque, exactly like search results: kept in the playlist on the bot's side, never shown or recorded, and sent back unchanged as a job query when the track plays.
 - Failures answer like search (`400`, `503`, `500` with `{ "error", "code" }`). Answer within about thirty seconds.
 - A worker without it answers `404`, or leaves `expand` out of its `capabilities`; the bot then hides importing.
+
+## Related (optional)
+
+A worker may also suggest what to play next, for autoplay — when autoplay is on and the last queued track starts, the bot asks for a track to follow it:
+
+```
+POST /v1/related
+  { "seeds": ["<opaque>", …], "exclude": ["<opaque>", …], "limit": 5 }
+  → 200 { "items": [ { "title": "...", "durationSec": 213, "query": "<opaque>" } ] }
+```
+
+- `seeds` are the requests behind the most recent tracks, newest first (1–5). `exclude` are the requests behind tracks played recently (up to 50), which the worker should not offer again. `limit` is 1–5, default 5.
+- **Choosing what fits is the worker's call** — the bot sends the requests untouched and plays the first item that prepares. Nothing to suggest is `200` with an empty `items`, and autoplay simply stops there.
+- `items[].query` is opaque, like search results: never shown or recorded, sent back unchanged as a job query.
+- Failures answer like search (`400`, `503`, `500` with `{ "error", "code" }`). Answer within about ten seconds.
+- A worker without it answers `404`, or leaves `related` out of its `capabilities`; the bot then hides autoplay.
 
 ## Volume
 
