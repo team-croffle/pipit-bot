@@ -23,30 +23,44 @@ export function setPcmVolumeLevel(level: VolumeLevel): void {
 }
 
 const BYTES_PER_SAMPLE = 2;
+/** The prepared files are interleaved stereo: left sample, right sample. */
+const BYTES_PER_FRAME = 2 * BYTES_PER_SAMPLE;
 
 /**
- * Scales signed 16-bit little-endian samples by the current level. The gain is read
- * per chunk, so a change applies to whatever has not been read yet — a fraction of a
- * second behind on a playing track. Gains never exceed 1, so nothing clips.
+ * Scales signed 16-bit little-endian stereo samples by the current level and, with mono
+ * on, puts the average of left and right into both ears — so one earphone hears
+ * everything. Both are read per chunk, so a change applies to whatever has not been read
+ * yet — a fraction of a second behind on a playing track. Gains never exceed 1 and an
+ * average never exceeds its parts, so nothing clips.
  */
 export class PcmVolume extends Transform {
   #carry: Buffer | null = null;
 
   public override _transform(chunk: Buffer, _encoding: BufferEncoding, done: TransformCallback) {
     const data = this.#carry ? Buffer.concat([this.#carry, chunk]) : chunk;
-    // A chunk can end halfway through a sample; keep that byte for the next one.
-    const usable = data.length - (data.length % BYTES_PER_SAMPLE);
+    // A chunk can end halfway through a frame; keep those bytes for the next one.
+    const usable = data.length - (data.length % BYTES_PER_FRAME);
     this.#carry = usable < data.length ? data.subarray(usable) : null;
 
     const gain = VOLUME_LEVELS[getVolumeLevel()] / 100;
-    if (gain === 1) {
+    const { mono } = getPlaybackOptions();
+    if (gain === 1 && !mono) {
       done(null, data.subarray(0, usable));
       return;
     }
 
     const out = Buffer.allocUnsafe(usable);
-    for (let offset = 0; offset < usable; offset += BYTES_PER_SAMPLE) {
-      out.writeInt16LE(Math.round(data.readInt16LE(offset) * gain), offset);
+    for (let offset = 0; offset < usable; offset += BYTES_PER_FRAME) {
+      const left = data.readInt16LE(offset);
+      const right = data.readInt16LE(offset + BYTES_PER_SAMPLE);
+      if (mono) {
+        const both = Math.round(((left + right) / 2) * gain);
+        out.writeInt16LE(both, offset);
+        out.writeInt16LE(both, offset + BYTES_PER_SAMPLE);
+      } else {
+        out.writeInt16LE(Math.round(left * gain), offset);
+        out.writeInt16LE(Math.round(right * gain), offset + BYTES_PER_SAMPLE);
+      }
     }
     done(null, out);
   }
