@@ -29,6 +29,7 @@ const ACTION_LABEL: Record<string, string> = {
   'music.shuffle': '대기열 섞기',
   'music.back': '이전 곡',
   'music.volume': '볼륨',
+  'music.options': '재생 옵션',
   'music.join': '통화방 참여',
   'music.leave': '통화방 나가기',
   'music.enqueue': '곡 추가',

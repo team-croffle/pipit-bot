@@ -318,6 +318,8 @@ export interface PlaybackState {
   durationFormatted: string | null;
   volume: number;
   volumeLevel: PlaybackVolumeLevel;
+  mono: boolean;
+  autoplay: boolean;
   notice: { message: string; at: number } | null;
   /** Something has played before the current track in this session. */
   hasPrevious: boolean;
@@ -342,46 +344,6 @@ export interface PlaybackActionResult {
   message: string;
 }
 
-export type AuditCategory = 'dashboard' | 'music' | 'command' | 'github' | 'member';
-
-/** One line of the audit log. Music lines say only that someone used a feature. */
-export interface AuditEntry {
-  at: string;
-  category: AuditCategory;
-  action: string;
-  actor?: { id?: string; name: string };
-  target?: string;
-  outcome: 'ok' | 'failed' | 'skipped';
-  detail?: string;
-}
-
-export interface AuditPage {
-  entries: AuditEntry[];
-  next: string | null;
-}
-
-/** One invite: what Discord still knows about it, and the arrivals the bot has counted. */
-export interface InviteRow {
-  code: string;
-  inviterId: string | null;
-  inviterName: string | null;
-  joins: number;
-  lastJoinAt: string | null;
-  uses: number | null;
-  maxUses: number | null;
-  expiresAt: string | null;
-  active: boolean;
-}
-
-export interface InvitesResponse {
-  invites: InviteRow[];
-  /** False when the bot lacks Manage Server and can only show its own counts. */
-  canListInvites: boolean;
-  /** False when Discord withholds use counts (no Manage Server) — arrivals cannot be traced. */
-  hasUseCounts: boolean;
-  loadError: string | null;
-}
-
 /** One search result on the dashboard: a title and a length, picked by its index. */
 export interface MusicSearchResult {
   index: number;
@@ -395,4 +357,5 @@ export interface MusicSearchResponse {
   results: MusicSearchResult[];
 }
 
+export * from './audit-types';
 export * from './playlist-types';
