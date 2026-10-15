@@ -30,7 +30,7 @@
       <TabsList>
         <TabsTrigger value="control" data-tab="control">재생 제어</TabsTrigger>
         <TabsTrigger value="playlists" data-tab="playlists">재생목록</TabsTrigger>
-        <TabsTrigger value="options">재생 옵션</TabsTrigger>
+        <TabsTrigger value="options" data-tab="options">재생 옵션</TabsTrigger>
       </TabsList>
 
       <TabsContent value="control" class="flex flex-col gap-4">
@@ -60,7 +60,7 @@
       </TabsContent>
 
       <TabsContent value="options" class="flex flex-col gap-4">
-        <PlaybackOptions />
+        <PlaybackOptions :playback="playback" :busy="busy" :error="error" @action="run" />
         <ChannelRestriction :read-only="!me.canWriteSettings" />
       </TabsContent>
     </Tabs>
