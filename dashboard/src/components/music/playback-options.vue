@@ -3,19 +3,22 @@
   import { Card, CardContent } from '@/components/ui/card';
   import { Label } from '@/components/ui/label';
   import { Switch } from '@/components/ui/switch';
+  import type { PlaybackState } from '@/types';
 
-  /** Options the player does not expose yet — each one is tied to a roadmap version. */
-  const options = [
-    {
-      key: 'mono',
-      label: '모노 스트리밍',
-      help: '이어폰을 한쪽만 낄 때를 위해 좌우 채널을 합쳐 내보냅니다.',
-      version: 'v0.7.5',
-    },
+  const { playback, busy, error } = defineProps<{
+    playback: PlaybackState | null;
+    busy: boolean;
+    error: string;
+  }>();
+
+  const emit = defineEmits<{ action: [path: string, body?: unknown] }>();
+
+  /** Options that are not built yet — each one is tied to a roadmap version. */
+  const planned = [
     {
       key: 'autoplay',
       label: '자동 재생',
-      help: '대기열이 비어도 이어질 트랙을 자동으로 채웁니다.',
+      help: '대기열이 끝나 가면 music worker가 고른 비슷한 곡을 이어서 재생합니다.',
       version: 'v0.7.5',
     },
     {
@@ -25,13 +28,38 @@
       version: 'v0.7.6',
     },
   ];
+
+  function setMono(on: boolean) {
+    if (playback && playback.mono !== on) {
+      emit('action', '/api/music/playback/options', { mono: on });
+    }
+  }
 </script>
 
 <template>
   <Card>
     <CardContent class="flex flex-col">
       <div
-        v-for="option in options"
+        class="flex items-center justify-between gap-4 border-b py-4 first:pt-0 last:border-b-0 last:pb-0"
+      >
+        <div class="min-w-0">
+          <Label for="opt-mono">모노</Label>
+          <p class="text-muted-foreground mt-1 text-xs">
+            좌우 소리를 합쳐 양쪽에 똑같이 내보냅니다. 이어폰을 한쪽만 낄 때 켜 두세요. 재생 중인
+            곡에도 바로 적용됩니다.
+          </p>
+          <p v-if="error" class="text-destructive mt-1 text-xs" data-options-error>{{ error }}</p>
+        </div>
+        <Switch
+          id="opt-mono"
+          data-option="mono"
+          :model-value="playback?.mono ?? false"
+          :disabled="!playback || busy"
+          @update:model-value="(value) => setMono(value === true)"
+        />
+      </div>
+      <div
+        v-for="option in planned"
         :key="option.key"
         class="flex items-center justify-between gap-4 border-b py-4 first:pt-0 last:border-b-0 last:pb-0"
       >
