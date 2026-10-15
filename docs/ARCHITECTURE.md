@@ -67,8 +67,8 @@ Inside the process:
 
 - **Discord client** — a Sapphire client with slash commands, button and dialog handlers, and gateway listeners, and a `discord-player` `Player`
   whose only extractor reads local files. Its own audio processing chain is off — the files are already in the output
-  format — and the bot applies the volume itself as it streams them
-  ([015](./decisions/015_v0.7.0_bot-side-volume.md)).
+  format — and the bot applies the volume, and mono when it is on, itself as it streams them
+  ([015](./decisions/015_v0.7.0_bot-side-volume.md), [021](./decisions/021_v0.7.5_playback-options.md)).
 - **HTTP API** — a Hono app on the Node HTTP server, started before the client logs in. Dashboard routes require a
   signed-in session; changing settings also requires an admin group. Worker callbacks require the internal token.
 - **In memory** — the music job registry, the player's queue and history, short-lived caches of GitHub lists. All of it

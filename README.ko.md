@@ -56,7 +56,7 @@ DASHBOARD_SESSION_SECRET=
 
 `OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다: 제공자가 내려주는 `groups` 클레임과 대소문자 구분 없이 전체 일치로 비교합니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 제공자에 연결할 수 없으면 `/api/auth/login`과 콜백은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다.
 
-봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
 
 ## GitHub 알림
 
@@ -125,6 +125,7 @@ PR이나 이슈를 알린 메시지는 `data/github-messages.json`에 기억됩�
 - **추가** — 입력한 쿼리를 그대로 music worker에 보냅니다. 메뉴의 **다음에 재생**은 `/play next`처럼 대기열 맨 앞에 넣습니다
 - **검색** — music worker의 결과를 최대 5개 보여 주는 창을 엽니다. 결과마다 **추가**하거나 **다음에 재생**으로 넣을 수 있고, 여러 곡을 이어서 넣을 수 있습니다. 봇이 통화방에 들어가기 전에도 검색은 되고, 추가는 들어간 뒤에 됩니다
 - **볼륨** — 낮음 / 중간 / 높음, `/volume`과 같은 세 단계. 봇이 통화방에 있으면 재생 중이 아니어도 바꿀 수 있습니다
+- **재생 옵션** — **모노**는 좌우 소리를 합쳐 양쪽에 똑같이 내보냅니다(이어폰 한쪽으로 들을 때). 재생 중인 곡에도 바로 적용되고, 봇이 통화방에 없어도 바꿀 수 있습니다. 볼륨과 모노는 `data/playback-options.json`에 저장되어 재시작해도 유지됩니다
 
 대시보드, 배너, 명령은 같은 대기열을 씁니다. 어느 쪽에서든 이어서 조작할 수 있습니다.
 
@@ -133,7 +134,7 @@ PR이나 이슈를 알린 메시지는 `data/github-messages.json`에 기억됩�
 설정된 음악 채널에는 **리모컨 배너**가 하나 있고, 봇이 채널의 마지막 메시지로 유지합니다:
 
 - **대기 화면** — "💿 Pipit Hub Music", 곡을 요청하는 방법, 곡 제목이나 링크를 입력하는 창을 여는 **재생** 버튼, 그리고 **검색** 버튼
-- **재생 중 화면** — 곡, 신청한 사람, 진행 막대, 반복·볼륨·대기열, 그리고 일시정지/재개·다음·정지·대기열·곡 추가·검색·반복·볼륨 낮추기/높이기 버튼. 버튼의 결과는 누른 사람에게만 5초 동안 보입니다
+- **재생 중 화면** — 곡, 신청한 사람, 진행 막대, 반복·볼륨·대기열, 그리고 일시정지/재개·다음·정지·대기열·곡 추가·검색·반복·볼륨 낮추기/높이기·모노 버튼. 버튼의 결과는 누른 사람에게만 5초 동안 보입니다
 - 채널에 **곡 제목이나 링크를 치면** 재생합니다: 그 줄은 지워지고, 모두에게 보이는 짧은 배너가 결과를 알린 뒤 스스로 사라집니다. 줄을 지우려면 그 채널에서 봇에게 **메시지 관리** 권한이 필요합니다. 없으면 요청은 그대로 처리되고 줄만 남습니다
 
 **검색** — `/search`나 배너의 검색 버튼 — 은 결과를 최대 5개, 검색한 사람에게만 보여 줍니다. 하나를 골라 바로 재생하거나 다음 곡으로 넣습니다. 결과는 10분 동안, 검색한 사람만 고를 수 있습니다. 검색을 지원하는 music worker가 필요하고([docs/music-backend.md](./docs/music-backend.md)), 지원하지 않으면 봇이 그렇게 알려 주고 나머지는 그대로 동작합니다.
@@ -206,6 +207,7 @@ docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
 - `/playlist` — `list`, `show`, `create [personal]`, `rename`, `delete`, `add`(지금 곡·대기열 전체·제목이나 링크), `remove`, `move`, `import link [into]`, `play [shuffle]`. 재생목록 이름은 자동완성
 - `/join`, `/leave` — 내가 있는 통화방에 참여(또는 이동), 또는 나가기
 - 재생: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [level]`
+- 옵션: `/options [mono]` — 모노를 켜고 끄거나 재생 옵션을 봅니다
 - 대기열: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
 
 대시보드 음악 페이지와 음악 채널의 배너에서도 같은 조작을 할 수 있습니다([음악](#음악) 참고). 봇은 쿼리 문자열을 검증하거나 파싱하지 않습니다.
