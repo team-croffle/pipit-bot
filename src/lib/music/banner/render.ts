@@ -34,6 +34,7 @@ export const REMOTE = {
   loop: 'music:loop',
   volumeDown: 'music:vol-down',
   volumeUp: 'music:vol-up',
+  mono: 'music:mono',
 } as const;
 
 const ACCENT = 0xe9a23b;
@@ -107,7 +108,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(
       text(
-        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${VOLUME_LABEL[state.volumeLevel]} · ${queueLine}`,
+        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${VOLUME_LABEL[state.volumeLevel]}${state.mono ? ' · 🎧 모노' : ''} · ${queueLine}`,
       ),
     )
     .addSeparatorComponents(separator())
@@ -127,6 +128,14 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
         button(REMOTE.loop, '반복', '🔁'),
         button(REMOTE.volumeDown, '볼륨', '🔉').setDisabled(state.volumeLevel === 'low'),
         button(REMOTE.volumeUp, '볼륨', '🔊').setDisabled(state.volumeLevel === 'high'),
+      ),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        button(
+          REMOTE.mono,
+          state.mono ? '모노 끄기' : '모노',
+          '🎧',
+          state.mono ? ButtonStyle.Success : ButtonStyle.Secondary,
+        ),
       ),
     );
 }
@@ -153,7 +162,7 @@ export function renderBanner(state: PlaybackState) {
 export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
-    layout: 3,
+    layout: 4,
     search: hasCapability('search'),
     active: state.active,
     paused: state.paused,
@@ -161,6 +170,7 @@ export function bannerSignature(state: PlaybackState): string {
     requester: state.current?.requester?.userId ?? null,
     repeat: state.repeatMode,
     volume: state.volumeLevel,
+    mono: state.mono,
     pending: state.pendingCount,
   });
 }
