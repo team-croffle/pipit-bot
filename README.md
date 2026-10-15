@@ -56,7 +56,7 @@ Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik 
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 ## GitHub notifications
 
@@ -125,6 +125,7 @@ Everything the music commands do can be done from the dashboard's **Music** page
 - **Add** — the play box sends the query to the music worker as-is; its menu has **play next**, which puts the track at the front of the queue like `/play next`
 - **Search** — opens a dialog that lists up to five results from the music worker; each can be **added** or played **next**, several in a row. Searching works before the bot joins a voice channel; adding waits until it has
 - **Volume** — low / mid / high, the same three levels as `/volume`, whenever the bot is in a voice channel — playing or not
+- **Playback options** — **mono** mixes left and right into both ears, for listening with one earphone; it applies to the track that is playing and can be set even when the bot is not in a voice channel. Volume and mono are kept in `data/playback-options.json` and survive a restart
 
 The dashboard, the banner and the commands share one queue, so any of them can pick up where another left off.
 
@@ -133,7 +134,7 @@ The dashboard, the banner and the commands share one queue, so any of them can p
 A configured music channel holds one **remote-control banner**, kept by the bot as the channel's last message:
 
 - **Idle** — "💿 Pipit Hub Music", how to request a track, a **play** button that opens a dialog for a song title or a link, and a **search** button
-- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, add a track, search, repeat, and volume down and up. What a button did is shown only to the person who pressed it, for five seconds
+- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, add a track, search, repeat, volume down and up, and mono. What a button did is shown only to the person who pressed it, for five seconds
 - **Typing a song title or a link** into the channel plays it: the line is removed, and a short banner everyone can see says what happened and then removes itself. Removing the line needs the bot's **Manage Messages** permission in that channel; without it the request still runs and the line stays
 
 **Search** — `/search` or the banner's search button — lists up to five results only to the person who searched; they pick one and play it now or next. Results stay pickable for ten minutes, and only by whoever searched. Search needs a music worker that offers it (see [docs/music-backend.md](./docs/music-backend.md)); with one that does not, the bot says so and everything else works.
@@ -211,6 +212,7 @@ Usable in a music channel (or anywhere, when none is configured):
 - `/playlist` — `list`, `show`, `create [personal]`, `rename`, `delete`, `add` (the current track, the whole queue, or a title or link), `remove`, `move`, `import link [into]`, `play [shuffle]`; playlist names autocomplete
 - `/join`, `/leave` — join your voice channel (or move there), or leave
 - Playback: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [level]`
+- Options: `/options [mono]` — set mono on or off, or show the playback options
 - Queue: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
 
 The dashboard's Music page and the music channel's banner do the same (see [Music](#music)). The bot does not validate or parse the query string.
