@@ -6,13 +6,15 @@ import { getEnv } from '../env.js';
  * What the music worker says it can do beyond preparing tracks.
  *
  * A worker may list optional features in its health answer
- * (`{ "status": "ok", "capabilities": ["search", "expand"] }`, docs/music-backend.md); the
+ * (`{ "status": "ok", "capabilities": ["search", "expand", "related"] }`, docs/music-backend.md); the
  * bot then shows only the controls for those. The bot knows features by name and nothing
  * about how a worker provides them. A worker that sends no list is "unknown": every
  * control shows, and one the worker lacks answers that it is not available.
  */
 
-export type WorkerCapability = 'search' | 'expand';
+export type WorkerCapability = 'search' | 'expand' | 'related';
+
+const KNOWN = new Set<string>(['search', 'expand', 'related'] satisfies WorkerCapability[]);
 
 const REFRESH_MS = 5 * 60 * 1000;
 /** At start the worker may still be coming up next to the bot: ask again soon, a few times. */
@@ -62,7 +64,7 @@ export function hasCapability(name: WorkerCapability): boolean {
 export function workerCapabilities(): WorkerCapability[] | null {
   return known === null
     ? null
-    : ([...known].filter((item) => item === 'search' || item === 'expand') as WorkerCapability[]);
+    : ([...known].filter((item) => KNOWN.has(item)) as WorkerCapability[]);
 }
 
 /** Reads now (again every ten seconds for a minute while unreachable), then every five minutes. */
