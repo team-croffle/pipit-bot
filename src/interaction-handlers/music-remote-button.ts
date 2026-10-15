@@ -24,7 +24,7 @@ import {
 } from '../lib/music/playback.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { NO_PLAYLISTS, playPlaylistMessage } from '../lib/music/playlists/pickers.js';
-import { setVolumeLevel } from '../lib/music/queue-actions.js';
+import { setMono, setVolumeLevel } from '../lib/music/queue-actions.js';
 import { queueText } from '../lib/music/queue-view.js';
 import type { VolumeLevel } from '../lib/music/volume-levels.js';
 import { isMusicChannel } from '../preconditions/music-channel.js';
@@ -148,6 +148,8 @@ export class MusicRemoteButton extends InteractionHandler {
         return stepVolume(-1);
       case REMOTE.volumeUp:
         return stepVolume(1);
+      case REMOTE.mono:
+        return setMono(!getPlaybackState().mono);
       default:
         return { ok: false, message: 'That button no longer does anything.' };
     }
