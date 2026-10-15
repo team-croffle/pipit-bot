@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 
 import { getConfiguredGuild } from '../discord-guild.js';
 import { setPcmVolumeLevel } from './pcm-volume.js';
+import { updatePlaybackOptions } from './playback-options.js';
 import { formatTrackTitle, getGuildQueue, type PlaybackActionResult } from './playback.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
@@ -138,4 +139,10 @@ export function setVolumeLevel(level: VolumeLevel, guildId?: string): PlaybackAc
 
   setPcmVolumeLevel(level);
   return { ok: true, message: `Volume set to ${level} (${VOLUME_LEVELS[level]}).` };
+}
+
+/** A setting, not an action on the session: it applies whether or not the bot is in a voice channel. */
+export function setMono(on: boolean): PlaybackActionResult {
+  void updatePlaybackOptions({ mono: on });
+  return { ok: true, message: on ? 'Mono on: both ears hear the same.' : 'Mono off.' };
 }

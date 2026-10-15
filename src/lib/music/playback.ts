@@ -4,6 +4,7 @@ import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolumeLevel } from './pcm-volume.js';
+import { getPlaybackOptions } from './playback-options.js';
 import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 import { workerCapabilities, type WorkerCapability } from './worker-capabilities.js';
@@ -49,6 +50,9 @@ export interface PlaybackState {
   /** The bot's volume (pcm-volume.ts) — set even when nothing plays. */
   volume: number;
   volumeLevel: VolumeLevel;
+  /** Left and right mixed into both ears (pcm-volume.ts). */
+  mono: boolean;
+  autoplay: boolean;
   /** Something the player did on its own that deserves a word, e.g. a skipped track. */
   notice: PlaybackNotice | null;
   hasPrevious: boolean;
@@ -147,6 +151,8 @@ function buildState(
     durationFormatted,
     volume: VOLUME_LEVELS[getVolumeLevel()],
     volumeLevel: getVolumeLevel(),
+    mono: getPlaybackOptions().mono,
+    autoplay: getPlaybackOptions().autoplay,
     notice: getRecentNotice(),
     hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
     playlist: getFeedStatus(),
