@@ -1,5 +1,6 @@
 import { Transform, type TransformCallback } from 'node:stream';
 
+import { getPlaybackOptions, updatePlaybackOptions } from './playback-options.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
 /**
@@ -10,16 +11,15 @@ import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
  * the player only builds its volume stage inside that chain — so its `setVolume`
  * always failed and `!volume` silently changed nothing. Scaling the samples here
  * keeps the chain off, and the level lives outside any queue, so it can be set
- * while nothing plays and it carries over to the next session.
+ * while nothing plays and it carries over to the next session — and, kept in the
+ * playback options file, to the next start.
  */
-let current: VolumeLevel = 'high';
-
 export function getVolumeLevel(): VolumeLevel {
-  return current;
+  return getPlaybackOptions().volume;
 }
 
 export function setPcmVolumeLevel(level: VolumeLevel): void {
-  current = level;
+  void updatePlaybackOptions({ volume: level });
 }
 
 const BYTES_PER_SAMPLE = 2;
@@ -38,7 +38,7 @@ export class PcmVolume extends Transform {
     const usable = data.length - (data.length % BYTES_PER_SAMPLE);
     this.#carry = usable < data.length ? data.subarray(usable) : null;
 
-    const gain = VOLUME_LEVELS[current] / 100;
+    const gain = VOLUME_LEVELS[getVolumeLevel()] / 100;
     if (gain === 1) {
       done(null, data.subarray(0, usable));
       return;
