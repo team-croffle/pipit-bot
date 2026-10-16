@@ -16,6 +16,7 @@ import { PLAYER_NODE_OPTIONS } from '../../lib/music/player-node-options.js';
 import {
   moveQueuedTrack,
   removeQueuedTrack,
+  setAutoplay,
   setMono,
   setVolumeLevel,
   shuffleQueue,
@@ -120,12 +121,16 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   });
 
   app.post('/api/music/playback/options', dashboardViewer, async (c) => {
-    const body = await c.req.json<{ mono?: unknown }>();
-    if (typeof body.mono !== 'boolean') {
-      return c.json({ error: 'mono must be true or false' }, 400);
+    const body = await c.req.json<{ mono?: unknown; autoplay?: unknown }>();
+    if (typeof body.mono === 'boolean') {
+      return c.json(setMono(body.mono));
+    }
+    if (typeof body.autoplay === 'boolean') {
+      const result = setAutoplay(body.autoplay);
+      return c.json(result, result.ok ? 200 : 400);
     }
 
-    return c.json(setMono(body.mono));
+    return c.json({ error: 'mono or autoplay must be true or false' }, 400);
   });
 
   app.post('/api/music/voice/join', dashboardViewer, async (c) => {

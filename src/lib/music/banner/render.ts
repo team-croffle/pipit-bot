@@ -35,6 +35,7 @@ export const REMOTE = {
   volumeDown: 'music:vol-down',
   volumeUp: 'music:vol-up',
   mono: 'music:mono',
+  autoplay: 'music:autoplay',
 } as const;
 
 const ACCENT = 0xe9a23b;
@@ -110,7 +111,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(
       text(
-        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${VOLUME_LABEL[state.volumeLevel]}${state.mono ? ' · 🎧 모노' : ''} · ${queueLine}`,
+        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${VOLUME_LABEL[state.volumeLevel]}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}`,
       ),
     )
     .addSeparatorComponents(separator())
@@ -138,6 +139,16 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
           '🎧',
           state.mono ? ButtonStyle.Success : ButtonStyle.Secondary,
         ),
+        ...(hasCapability('related')
+          ? [
+              button(
+                REMOTE.autoplay,
+                state.autoplay ? '자동 재생 끄기' : '자동 재생',
+                '♾️',
+                state.autoplay ? ButtonStyle.Success : ButtonStyle.Secondary,
+              ),
+            ]
+          : []),
       ),
     );
 }
@@ -174,6 +185,8 @@ export function bannerSignature(state: PlaybackState): string {
     repeat: state.repeatMode,
     volume: state.volumeLevel,
     mono: state.mono,
+    autoplay: state.autoplay,
+    related: hasCapability('related'),
     pending: state.pendingCount,
   });
 }

@@ -1,10 +1,12 @@
 import { container } from '@sapphire/framework';
 
 import { getConfiguredGuild } from '../discord-guild.js';
+import { nudgeAutoplay } from './autoplay.js';
 import { setPcmVolumeLevel } from './pcm-volume.js';
 import { updatePlaybackOptions } from './playback-options.js';
 import { formatTrackTitle, getGuildQueue, type PlaybackActionResult } from './playback.js';
 import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
+import { hasCapability } from './worker-capabilities.js';
 
 /**
  * A queued track, named the way the caller knows it: the dashboard by id, because its
@@ -145,4 +147,18 @@ export function setVolumeLevel(level: VolumeLevel, guildId?: string): PlaybackAc
 export function setMono(on: boolean): PlaybackActionResult {
   void updatePlaybackOptions({ mono: on });
   return { ok: true, message: on ? 'Mono on: both ears hear the same.' : 'Mono off.' };
+}
+
+/** Also a setting; needs a music worker that can suggest tracks (`related`). */
+export function setAutoplay(on: boolean): PlaybackActionResult {
+  if (on && !hasCapability('related')) {
+    return { ok: false, message: 'The music worker does not offer autoplay.' };
+  }
+
+  void updatePlaybackOptions({ autoplay: on });
+  nudgeAutoplay();
+  return {
+    ok: true,
+    message: on ? 'Autoplay on: similar tracks follow when the queue runs out.' : 'Autoplay off.',
+  };
 }
