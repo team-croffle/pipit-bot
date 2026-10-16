@@ -3,6 +3,7 @@ import { Player } from 'discord-player';
 import { GatewayIntentBits, Partials } from 'discord.js';
 
 import type { EnvConfig } from './env.js';
+import { watchAutoplay } from './music/autoplay.js';
 import { LocalFileExtractor } from './music/local-file-extractor.js';
 import { watchMissingFiles } from './music/missing-file.js';
 import { watchPlaylistFeed } from './music/playlists/feeder.js';
@@ -50,6 +51,7 @@ export class CustomClient extends SapphireClient {
 
     watchMissingFiles(this.player);
     watchPlaylistFeed(this.player);
+    watchAutoplay(this.player);
   }
 
   public override async login(token?: string) {

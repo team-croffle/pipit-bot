@@ -4,7 +4,7 @@ import { rememberSource } from '../../lib/music/track-source.js';
 export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';
 
 /** Where a job was asked for — a retry always plays through the dashboard path. */
-export type JobOrigin = 'command' | 'dashboard';
+export type JobOrigin = 'command' | 'dashboard' | 'autoplay';
 
 export interface TrackMeta {
   title: string;
