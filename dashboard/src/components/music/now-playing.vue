@@ -45,9 +45,10 @@
       return '위에서 추가하거나 디스코드 명령을 사용하세요.';
     }
 
-    return props.playback?.voiceChannelName
+    const where = props.playback?.voiceChannelName
       ? `#${props.playback.voiceChannelName} 재생 중`
       : '재생 중';
+    return current.value.autoplay ? `${where} · 🤖 자동 재생` : where;
   });
 
   // Priority, not stacking: an error is the thing to read, then the player's own

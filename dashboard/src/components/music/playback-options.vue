@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { computed } from 'vue';
+
   import { Badge } from '@/components/ui/badge';
   import { Card, CardContent } from '@/components/ui/card';
   import { Label } from '@/components/ui/label';
@@ -16,12 +18,6 @@
   /** Options that are not built yet — each one is tied to a roadmap version. */
   const planned = [
     {
-      key: 'autoplay',
-      label: '자동 재생',
-      help: '대기열이 끝나 가면 music worker가 고른 비슷한 곡을 이어서 재생합니다.',
-      version: 'v0.7.5',
-    },
-    {
       key: 'repeat-default',
       label: '반복 재생 기본값',
       help: '새 세션이 시작될 때 적용할 반복 모드입니다.',
@@ -29,9 +25,20 @@
     },
   ];
 
+  /** Unknown (no list from the worker) counts as offered, as everywhere else. */
+  const autoplayOffered = computed(
+    () => !playback?.capabilities || playback.capabilities.includes('related'),
+  );
+
   function setMono(on: boolean) {
     if (playback && playback.mono !== on) {
       emit('action', '/api/music/playback/options', { mono: on });
+    }
+  }
+
+  function setAutoplay(on: boolean) {
+    if (playback && playback.autoplay !== on) {
+      emit('action', '/api/music/playback/options', { autoplay: on });
     }
   }
 </script>
@@ -56,6 +63,29 @@
           :model-value="playback?.mono ?? false"
           :disabled="!playback || busy"
           @update:model-value="(value) => setMono(value === true)"
+        />
+      </div>
+      <div
+        class="flex items-center justify-between gap-4 border-b py-4 first:pt-0 last:border-b-0 last:pb-0"
+      >
+        <div class="min-w-0">
+          <Label for="opt-autoplay" :class="autoplayOffered ? '' : 'text-muted-foreground'">
+            자동 재생
+          </Label>
+          <p class="text-muted-foreground mt-1 text-xs">
+            {{
+              autoplayOffered
+                ? '대기열의 마지막 곡이 끝나 가면 music worker가 고른 비슷한 곡을 이어서 재생합니다. 그 사이 누가 곡을 넣으면 그 곡이 먼저입니다. 반복이 켜져 있거나 재생목록을 재생하는 동안은 쉬어요.'
+                : '지금 music worker는 다음 곡 추천을 지원하지 않습니다.'
+            }}
+          </p>
+        </div>
+        <Switch
+          id="opt-autoplay"
+          data-option="autoplay"
+          :model-value="playback?.autoplay ?? false"
+          :disabled="!playback || busy || (!autoplayOffered && !playback.autoplay)"
+          @update:model-value="(value) => setAutoplay(value === true)"
         />
       </div>
       <div

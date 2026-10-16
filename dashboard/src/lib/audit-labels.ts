@@ -67,6 +67,7 @@ const REMOTE_LABEL: Record<string, string> = {
   'music:vol-down': '볼륨 내리기',
   'music:vol-up': '볼륨 올리기',
   'music:mono': '모노',
+  'music:autoplay': '자동 재생',
   'music:play-modal': '재생 창에서 요청',
   'music:search': '검색 창',
   'music:search-modal': '검색 창에서 검색',
