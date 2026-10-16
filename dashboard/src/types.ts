@@ -23,7 +23,7 @@ export interface JobRecord {
   error?: string;
   code?: string;
   lateResult?: { status: 'ready' | 'failed'; track?: TrackMeta; error?: string; at: number };
-  origin?: 'command' | 'dashboard';
+  origin?: 'command' | 'dashboard' | 'autoplay';
   next?: boolean;
   retryOf?: string;
   retriedAs?: string;
@@ -286,6 +286,7 @@ export interface PlaybackCurrentTrack {
   durationLabel: string;
   positionLabel: string;
   requester: { userId: string; name: string } | null;
+  autoplay: boolean;
 }
 
 export interface HistoryTrack {
@@ -299,6 +300,7 @@ export interface PlaybackTrackItem {
   index: number;
   title: string;
   duration: string | null;
+  autoplay: boolean;
 }
 
 export type PlaybackRepeatMode = 'off' | 'track' | 'queue' | 'autoplay';

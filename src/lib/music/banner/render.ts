@@ -91,9 +91,11 @@ function idle(container: ContainerBuilder): void {
 
 function playing(container: ContainerBuilder, state: PlaybackState): void {
   const current = state.current!;
-  const requester = current.requester
-    ? `👤 ${escapeMarkdown(current.requester.name)}님이 신청했어요`
-    : '🖥️ 대시보드에서 추가했어요';
+  const requester = current.autoplay
+    ? '🤖 자동 재생으로 이어 듣는 곡이에요'
+    : current.requester
+      ? `👤 ${escapeMarkdown(current.requester.name)}님이 신청했어요`
+      : '🖥️ 대시보드에서 추가했어요';
   const queueLine =
     state.pendingCount > 0 ? `📜 대기열 ${state.pendingCount}곡` : '📜 대기열이 비었어요';
 
@@ -168,6 +170,7 @@ export function bannerSignature(state: PlaybackState): string {
     paused: state.paused,
     title: state.current?.title ?? null,
     requester: state.current?.requester?.userId ?? null,
+    autoplayTrack: state.current?.autoplay ?? false,
     repeat: state.repeatMode,
     volume: state.volumeLevel,
     mono: state.mono,

@@ -2,6 +2,7 @@ import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 
 import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
+import { isAutoplayTrack } from './autoplay-files.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolumeLevel } from './pcm-volume.js';
 import { getPlaybackOptions } from './playback-options.js';
@@ -19,6 +20,8 @@ export interface PlaybackTrackItem {
   index: number;
   title: string;
   duration: string | null;
+  /** Put in the queue by autoplay (autoplay.ts), not by a person. */
+  autoplay: boolean;
 }
 
 export interface PlaybackCurrentTrack {
@@ -30,6 +33,8 @@ export interface PlaybackCurrentTrack {
   positionLabel: string;
   /** Who asked for it in Discord; null for a track added from the dashboard. */
   requester: { userId: string; name: string } | null;
+  /** Autoplay's own pick: no one asked for it. */
+  autoplay: boolean;
 }
 
 export type PlaybackRepeatMode = 'off' | 'track' | 'queue' | 'autoplay';
@@ -209,6 +214,7 @@ export function getPlaybackState(): PlaybackState {
           durationLabel: timestamp.total.label,
           positionLabel: timestamp.current.label,
           requester: requesterOf(current, guild),
+          autoplay: isAutoplayTrack(current),
         }
       : {
           title: formatTrackTitle(current),
@@ -218,12 +224,14 @@ export function getPlaybackState(): PlaybackState {
           durationLabel: current.duration ?? '—',
           positionLabel: '0:00',
           requester: requesterOf(current, guild),
+          autoplay: isAutoplayTrack(current),
         },
     queue.tracks.store.slice(0, QUEUE_PREVIEW_LIMIT).map((track, index) => ({
       id: track.id,
       index: index + 1,
       title: formatTrackTitle(track),
       duration: track.duration ?? null,
+      autoplay: isAutoplayTrack(track),
     })),
     queue.tracks.size,
     queue.tracks.size > 0 ? queue.durationFormatted : null,
