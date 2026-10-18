@@ -7,8 +7,10 @@
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+  import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
-  import type { DiscordVoiceChannel, PlaybackState, PlaybackVolumeLevel } from '@/types';
+  import { Slider } from '@/components/ui/slider';
+  import type { DiscordVoiceChannel, PlaybackState } from '@/types';
 
   const props = defineProps<{ playback: PlaybackState | null; busy: boolean }>();
 
@@ -66,22 +68,39 @@
     }
   }
 
-  const levels: { value: PlaybackVolumeLevel; label: string }[] = [
-    { value: 'low', label: '낮음' },
-    { value: 'mid', label: '중간' },
-    { value: 'high', label: '높음' },
-  ];
+  const MAX_VOLUME = 200;
 
-  // The bot keeps its own volume, so it can be set as soon as it is in a room —
-  // nothing has to be playing.
-  const volumeHint = computed(() =>
-    props.playback?.voiceChannelId ? '' : '통화방에 참여하면 바꿀 수 있습니다.',
+  /**
+   * What the slider and the box show. It follows the bot's value between polls, but not
+   * while someone is dragging or typing — a poll landing mid-drag would yank it back.
+   */
+  const draft = ref(100);
+  const editing = ref(false);
+  watch(
+    () => props.playback?.volume,
+    (volume) => {
+      if (volume !== undefined && !editing.value) {
+        draft.value = volume;
+      }
+    },
+    { immediate: true },
   );
 
-  function setVolume(level: PlaybackVolumeLevel): void {
-    if (props.playback?.volumeLevel !== level) {
-      emit('action', '/api/music/playback/volume', { level });
+  const boosted = computed(() => draft.value > 100);
+
+  /** Sent once a change is settled: the thumb let go, or the box left or Enter pressed. */
+  function commit(value: number): void {
+    editing.value = false;
+    const volume = Math.min(Math.max(Math.round(value), 0), MAX_VOLUME);
+    draft.value = volume;
+    if (Number.isFinite(volume) && props.playback?.volume !== volume) {
+      emit('action', '/api/music/playback/volume', { volume });
     }
+  }
+
+  function onSlide(values: number[] | undefined): void {
+    editing.value = true;
+    draft.value = values?.[0] ?? draft.value;
   }
 </script>
 
@@ -138,26 +157,55 @@
         </Button>
       </div>
 
-      <div class="flex flex-col gap-2 border-t pt-4">
-        <Label class="text-muted-foreground inline-flex items-center gap-1.5">
-          <Volume2 class="size-3.5" />
-          볼륨
-        </Label>
-        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="볼륨">
-          <Button
-            v-for="level in levels"
-            :key="level.value"
-            :data-volume-level="level.value"
-            size="sm"
-            :variant="playback?.volumeLevel === level.value ? 'default' : 'outline'"
-            :aria-pressed="playback?.volumeLevel === level.value"
-            :disabled="busy || !playback?.voiceChannelId"
-            @click="setVolume(level.value)"
-          >
-            {{ level.label }}
-          </Button>
+      <div class="flex flex-col gap-3 border-t pt-4">
+        <div class="flex items-center justify-between gap-3">
+          <Label for="volume-number" class="text-muted-foreground inline-flex items-center gap-1.5">
+            <Volume2 class="size-4" />
+            볼륨
+          </Label>
+          <Input
+            id="volume-number"
+            data-volume-number
+            type="number"
+            inputmode="numeric"
+            :min="0"
+            :max="MAX_VOLUME"
+            class="tnum h-8 w-20 text-right"
+            :model-value="draft"
+            :disabled="busy || !playback"
+            @focus="editing = true"
+            @update:model-value="(value) => (draft = Number(value))"
+            @keydown.enter="commit(draft)"
+            @blur="commit(draft)"
+          />
         </div>
-        <p class="text-muted-foreground min-h-4 text-xs">{{ volumeHint }}</p>
+        <Slider
+          data-volume-slider
+          aria-label="볼륨"
+          :min="0"
+          :max="MAX_VOLUME"
+          :step="1"
+          :model-value="[draft]"
+          :disabled="busy || !playback"
+          @update:model-value="onSlide"
+          @value-commit="(values: number[]) => commit(values[0] ?? draft)"
+        />
+        <div class="text-muted-foreground tnum flex justify-between text-xs" aria-hidden="true">
+          <span>0</span>
+          <span>100</span>
+          <span>200</span>
+        </div>
+        <p
+          class="min-h-4 text-xs"
+          :class="boosted ? 'text-warning' : 'text-muted-foreground'"
+          data-volume-hint
+        >
+          {{
+            boosted
+              ? '100을 넘으면 소리를 키웁니다 — 큰 소리는 깨질 수 있어요.'
+              : '100이 원래 크기입니다. 통화방에 없어도 바꿀 수 있어요.'
+          }}
+        </p>
       </div>
     </CardContent>
   </Card>
