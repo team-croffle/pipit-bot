@@ -16,6 +16,10 @@ export interface AuditEntry {
 export interface AuditPage {
   entries: AuditEntry[];
   next: string | null;
+  /** Given back when a numbered page was asked for. */
+  total?: number;
+  page?: number;
+  pageSize?: number;
 }
 
 /** One invite: what Discord still knows about it, and the arrivals the bot has counted. */

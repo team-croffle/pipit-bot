@@ -13,12 +13,21 @@ export interface AuditQuery {
   limit?: number;
   /** Only entries older than this `at` — the cursor for the next page. */
   before?: string;
+  /**
+   * A numbered page (from 1) of `limit` entries. Reads every day the range touches so the
+   * total is known; without it the query stops once it has `limit`.
+   */
+  page?: number;
 }
 
 export interface AuditPage {
   entries: AuditEntry[];
   /** The `before` for the next page, or null when there is no more. */
   next: string | null;
+  /** With `page`: every matching entry, and the page and size given back. */
+  total?: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export const DEFAULT_LIMIT = 100;
@@ -95,12 +104,23 @@ export async function queryAudit(query: AuditQuery = {}): Promise<AuditPage> {
   for (const day of days) {
     const text = await readFile(fileForDay(day), 'utf8').catch(() => '');
     entries.push(...parseLines(text).filter((entry) => matches(entry, effective, needle)));
-    if (entries.length > limit) {
+    if (query.page === undefined && entries.length > limit) {
       break;
     }
   }
 
   const sorted = entries.toSorted((a, b) => b.at.localeCompare(a.at));
+  if (query.page !== undefined) {
+    const start = (Math.max(query.page, 1) - 1) * limit;
+    return {
+      entries: sorted.slice(start, start + limit),
+      next: null,
+      total: sorted.length,
+      page: Math.max(query.page, 1),
+      pageSize: limit,
+    };
+  }
+
   const page = sorted.slice(0, limit);
   return { entries: page, next: sorted.length > limit ? page.at(-1)!.at : null };
 }
