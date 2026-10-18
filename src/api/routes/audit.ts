@@ -9,7 +9,7 @@ const ISO_TIME = /^\d{4}-\d{2}-\d{2}(T[\d:.]+Z)?$/;
 
 export function mountAuditRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   app.get('/api/audit', dashboardViewer, async (c) => {
-    const { from, to, before, q, category, limit } = c.req.query();
+    const { from, to, before, q, category, limit, page } = c.req.query();
     for (const [name, value] of Object.entries({ from, to, before })) {
       if (value && !ISO_TIME.test(value)) {
         return c.json({ error: `${name} must be an ISO date or UTC time` }, 400);
@@ -30,6 +30,11 @@ export function mountAuditRoutes(app: Hono<{ Variables: ApiVariables }>): void {
       return c.json({ error: `limit must be 1–${MAX_LIMIT}` }, 400);
     }
 
+    const pageNumber = page === undefined ? undefined : Number(page);
+    if (pageNumber !== undefined && (!Number.isInteger(pageNumber) || pageNumber < 1)) {
+      return c.json({ error: 'page must be a whole number from 1' }, 400);
+    }
+
     return c.json(
       await queryAudit({
         from,
@@ -38,6 +43,7 @@ export function mountAuditRoutes(app: Hono<{ Variables: ApiVariables }>): void {
         search: q,
         categories: categories as AuditCategory[],
         limit: size,
+        page: pageNumber,
       }),
     );
   });

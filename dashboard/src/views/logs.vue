@@ -2,15 +2,16 @@
   import { RefreshCw } from 'lucide-vue-next';
   import { onMounted } from 'vue';
 
+  import ListPagination from '@/components/common/list-pagination.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import AuditFilters from '@/components/logs/audit-filters.vue';
   import AuditList from '@/components/logs/audit-list.vue';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent } from '@/components/ui/card';
-  import { useAuditLog } from '@/composables/use-audit-log';
+  import { AUDIT_PAGE_SIZES, useAuditLog } from '@/composables/use-audit-log';
 
-  const { categories, period, search, entries, next, loading, loadingMore, error, load, loadMore } =
+  const { categories, period, search, entries, total, page, pageSize, loading, error, load } =
     useAuditLog();
 
   onMounted(load);
@@ -44,17 +45,15 @@
           empty-text="이 조건에 맞는 기록이 없습니다."
         >
           <AuditList :entries="entries" />
-          <Button
-            v-if="next"
-            variant="outline"
-            class="self-center"
-            :disabled="loadingMore"
-            data-audit-more
-            @click="loadMore"
-          >
-            {{ loadingMore ? '불러오는 중…' : '더 보기' }}
-          </Button>
         </StateBlock>
+        <ListPagination
+          v-if="total > 0"
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :sizes="AUDIT_PAGE_SIZES"
+          label="audit"
+        />
       </CardContent>
     </Card>
   </div>
