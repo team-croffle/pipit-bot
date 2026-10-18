@@ -212,7 +212,6 @@
             >
               {{ current?.title ?? '재생 중인 트랙이 없습니다' }}
             </p>
-            <AddToPlaylist v-if="current" :source="{ from: 'current' }" size="xs" />
           </div>
           <p class="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
             <span class="truncate">{{ subtitle }}</span>
@@ -245,7 +244,7 @@
         </Badge>
       </div>
 
-      <div class="flex items-center justify-center gap-2.5">
+      <div class="flex flex-wrap items-center justify-center gap-2.5" data-now-controls>
         <Button
           variant="outline"
           size="icon"
@@ -310,6 +309,7 @@
         >
           <Square />
         </Button>
+        <AddToPlaylist :source="{ from: 'current' }" :disabled="busy || !current" control />
       </div>
     </CardContent>
   </Card>
