@@ -40,7 +40,8 @@ export const REMOTE = {
 } as const;
 
 const ACCENT = 0xe9a23b;
-const BAR_SEGMENTS = 14;
+/** Bar characters beside the knob; the knob sits at the share played. */
+const BAR_SEGMENTS = 19;
 
 const REPEAT_LABEL: Record<PlaybackState['repeatMode'], string> = {
   off: '반복 꺼짐',
