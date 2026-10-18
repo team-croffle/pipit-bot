@@ -1,11 +1,8 @@
-import { container } from '@sapphire/framework';
-
-import { getConfiguredGuild } from '../discord-guild.js';
 import { nudgeAutoplay } from './autoplay.js';
-import { setPcmVolumeLevel } from './pcm-volume.js';
+import { setPcmVolume } from './pcm-volume.js';
 import { updatePlaybackOptions } from './playback-options.js';
 import { formatTrackTitle, getGuildQueue, type PlaybackActionResult } from './playback.js';
-import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
+import { isVolume, MAX_VOLUME, MIN_VOLUME } from './volume.js';
 import { hasCapability } from './worker-capabilities.js';
 
 /**
@@ -132,15 +129,23 @@ export function shuffleQueue(guildId?: string): PlaybackActionResult {
   return { ok: true, message: `Shuffled ${queue.tracks.size} tracks.` };
 }
 
-/** Needs the bot in a voice channel, not a playing track — see pcm-volume.ts. */
-export function setVolumeLevel(level: VolumeLevel, guildId?: string): PlaybackActionResult {
-  const guild = guildId ? container.client.guilds.cache.get(guildId) : getConfiguredGuild();
-  if (!guild?.members.me?.voice.channelId) {
-    return { ok: false, message: 'Join a voice channel first.' };
+/** A setting like mono: it applies whether or not the bot is in a voice channel (pcm-volume.ts). */
+export function setVolume(volume: number): PlaybackActionResult {
+  if (!isVolume(volume)) {
+    return {
+      ok: false,
+      message: `The volume is a whole number from ${MIN_VOLUME} to ${MAX_VOLUME}.`,
+    };
   }
 
-  setPcmVolumeLevel(level);
-  return { ok: true, message: `Volume set to ${level} (${VOLUME_LEVELS[level]}).` };
+  setPcmVolume(volume);
+  return {
+    ok: true,
+    message:
+      volume > 100
+        ? `Volume set to ${volume} — above 100 is a boost, and loud parts may distort.`
+        : `Volume set to ${volume}.`,
+  };
 }
 
 /** A setting, not an action on the session: it applies whether or not the bot is in a voice channel. */

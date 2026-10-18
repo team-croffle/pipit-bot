@@ -1,7 +1,6 @@
 import { Transform, type TransformCallback } from 'node:stream';
 
 import { getPlaybackOptions, updatePlaybackOptions } from './playback-options.js';
-import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 
 /**
  * The bot's own volume, applied to the PCM it streams.
@@ -14,12 +13,17 @@ import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
  * while nothing plays and it carries over to the next session — and, kept in the
  * playback options file, to the next start.
  */
-export function getVolumeLevel(): VolumeLevel {
+export function getVolume(): number {
   return getPlaybackOptions().volume;
 }
 
-export function setPcmVolumeLevel(level: VolumeLevel): void {
-  void updatePlaybackOptions({ volume: level });
+export function setPcmVolume(volume: number): void {
+  void updatePlaybackOptions({ volume });
+}
+
+/** A boosted sample can leave the 16-bit range; it is cut at the edge. */
+function clampSample(value: number): number {
+  return Math.min(Math.max(Math.round(value), -32768), 32767);
 }
 
 const BYTES_PER_SAMPLE = 2;
@@ -27,11 +31,11 @@ const BYTES_PER_SAMPLE = 2;
 const BYTES_PER_FRAME = 2 * BYTES_PER_SAMPLE;
 
 /**
- * Scales signed 16-bit little-endian stereo samples by the current level and, with mono
+ * Scales signed 16-bit little-endian stereo samples by the current volume and, with mono
  * on, puts the average of left and right into both ears — so one earphone hears
  * everything. Both are read per chunk, so a change applies to whatever has not been read
- * yet — a fraction of a second behind on a playing track. Gains never exceed 1 and an
- * average never exceeds its parts, so nothing clips.
+ * yet — a fraction of a second behind on a playing track. Up to 100 nothing clips; above it
+ * (a boost) loud passages are cut at the edge of the 16-bit range.
  */
 export class PcmVolume extends Transform {
   #carry: Buffer | null = null;
@@ -42,7 +46,7 @@ export class PcmVolume extends Transform {
     const usable = data.length - (data.length % BYTES_PER_FRAME);
     this.#carry = usable < data.length ? data.subarray(usable) : null;
 
-    const gain = VOLUME_LEVELS[getVolumeLevel()] / 100;
+    const gain = getVolume() / 100;
     const { mono } = getPlaybackOptions();
     if (gain === 1 && !mono) {
       done(null, data.subarray(0, usable));
@@ -54,12 +58,12 @@ export class PcmVolume extends Transform {
       const left = data.readInt16LE(offset);
       const right = data.readInt16LE(offset + BYTES_PER_SAMPLE);
       if (mono) {
-        const both = Math.round(((left + right) / 2) * gain);
+        const both = clampSample(((left + right) / 2) * gain);
         out.writeInt16LE(both, offset);
         out.writeInt16LE(both, offset + BYTES_PER_SAMPLE);
       } else {
-        out.writeInt16LE(Math.round(left * gain), offset);
-        out.writeInt16LE(Math.round(right * gain), offset + BYTES_PER_SAMPLE);
+        out.writeInt16LE(clampSample(left * gain), offset);
+        out.writeInt16LE(clampSample(right * gain), offset + BYTES_PER_SAMPLE);
       }
     }
     done(null, out);

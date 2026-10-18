@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 
 import type { PlaybackState } from '../playback.js';
+import { MAX_VOLUME, MIN_VOLUME } from '../volume.js';
 import { hasCapability } from '../worker-capabilities.js';
 
 /**
@@ -46,12 +47,6 @@ const REPEAT_LABEL: Record<PlaybackState['repeatMode'], string> = {
   track: '한 곡 반복',
   queue: '대기열 반복',
   autoplay: '자동 재생',
-};
-
-const VOLUME_LABEL: Record<PlaybackState['volumeLevel'], string> = {
-  low: '낮음',
-  mid: '중간',
-  high: '높음',
 };
 
 function text(content: string): TextDisplayBuilder {
@@ -111,7 +106,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(
       text(
-        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${VOLUME_LABEL[state.volumeLevel]}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}`,
+        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${state.volume}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}`,
       ),
     )
     .addSeparatorComponents(separator())
@@ -129,8 +124,8 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
         button(REMOTE.play, '곡 추가', '➕'),
         ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍')] : []),
         button(REMOTE.loop, '반복', '🔁'),
-        button(REMOTE.volumeDown, '볼륨', '🔉').setDisabled(state.volumeLevel === 'low'),
-        button(REMOTE.volumeUp, '볼륨', '🔊').setDisabled(state.volumeLevel === 'high'),
+        button(REMOTE.volumeDown, '−10', '🔉').setDisabled(state.volume <= MIN_VOLUME),
+        button(REMOTE.volumeUp, '+10', '🔊').setDisabled(state.volume >= MAX_VOLUME),
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(
@@ -183,7 +178,7 @@ export function bannerSignature(state: PlaybackState): string {
     requester: state.current?.requester?.userId ?? null,
     autoplayTrack: state.current?.autoplay ?? false,
     repeat: state.repeatMode,
-    volume: state.volumeLevel,
+    volume: state.volume,
     mono: state.mono,
     autoplay: state.autoplay,
     related: hasCapability('related'),

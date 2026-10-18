@@ -4,10 +4,9 @@ import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import { isAutoplayTrack } from './autoplay-files.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
-import { getVolumeLevel } from './pcm-volume.js';
+import { getVolume } from './pcm-volume.js';
 import { getPlaybackOptions } from './playback-options.js';
 import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
-import { VOLUME_LEVELS, type VolumeLevel } from './volume-levels.js';
 import { workerCapabilities, type WorkerCapability } from './worker-capabilities.js';
 
 // WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
@@ -54,7 +53,6 @@ export interface PlaybackState {
   durationFormatted: string | null;
   /** The bot's volume (pcm-volume.ts) — set even when nothing plays. */
   volume: number;
-  volumeLevel: VolumeLevel;
   /** Left and right mixed into both ears (pcm-volume.ts). */
   mono: boolean;
   autoplay: boolean;
@@ -154,8 +152,7 @@ function buildState(
     tracks,
     pendingCount,
     durationFormatted,
-    volume: VOLUME_LEVELS[getVolumeLevel()],
-    volumeLevel: getVolumeLevel(),
+    volume: getVolume(),
     mono: getPlaybackOptions().mono,
     autoplay: getPlaybackOptions().autoplay,
     notice: getRecentNotice(),

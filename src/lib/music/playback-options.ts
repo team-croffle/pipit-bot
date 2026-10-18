@@ -5,7 +5,7 @@ import { container } from '@sapphire/framework';
 
 import { dataDir } from '../constants.js';
 import { loadSettingsFile } from '../settings-file.js';
-import { isVolumeLevel, type VolumeLevel } from './volume-levels.js';
+import { DEFAULT_VOLUME, volumeFrom } from './volume.js';
 
 /**
  * How the bot plays, kept in `data/playback-options.json` so it survives a restart.
@@ -15,13 +15,14 @@ import { isVolumeLevel, type VolumeLevel } from './volume-levels.js';
  * track that is playing.
  */
 export interface PlaybackOptions {
-  volume: VolumeLevel;
+  /** 0–200; 100 is the file as prepared. */
+  volume: number;
   /** Left and right mixed into both ears — for listening with one earphone. */
   mono: boolean;
   autoplay: boolean;
 }
 
-const DEFAULTS: PlaybackOptions = { volume: 'high', mono: false, autoplay: false };
+const DEFAULTS: PlaybackOptions = { volume: DEFAULT_VOLUME, mono: false, autoplay: false };
 
 let filePath = join(dataDir, 'playback-options.json');
 let options: PlaybackOptions = { ...DEFAULTS };
@@ -34,7 +35,8 @@ function parse(raw: unknown): PlaybackOptions {
 
   const stored = raw as Partial<Record<keyof PlaybackOptions, unknown>>;
   return {
-    volume: isVolumeLevel(stored.volume) ? stored.volume : DEFAULTS.volume,
+    // A file from before v0.7.5-rc.3 holds a level name; it reads as the same loudness.
+    volume: volumeFrom(stored.volume) ?? DEFAULTS.volume,
     mono: stored.mono === true,
     autoplay: stored.autoplay === true,
   };

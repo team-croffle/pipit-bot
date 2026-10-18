@@ -18,12 +18,12 @@ import {
   removeQueuedTrack,
   setAutoplay,
   setMono,
-  setVolumeLevel,
+  setVolume,
   shuffleQueue,
   skipToQueuedTrack,
 } from '../../lib/music/queue-actions.js';
 import { joinVoiceChannel, leaveVoiceChannel } from '../../lib/music/voice-connection.js';
-import { isVolumeLevel } from '../../lib/music/volume-levels.js';
+import { volumeFrom } from '../../lib/music/volume.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import type { ApiVariables } from '../context.js';
 
@@ -111,12 +111,14 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   });
 
   app.post('/api/music/playback/volume', dashboardViewer, async (c) => {
-    const body = await c.req.json<{ level?: unknown }>();
-    if (!isVolumeLevel(body.level)) {
-      return c.json({ error: 'level must be low, mid, or high' }, 400);
+    // `level` is what a dashboard from before v0.7.5-rc.3 still sends.
+    const body = await c.req.json<{ volume?: unknown; level?: unknown }>();
+    const volume = volumeFrom(body.volume ?? body.level);
+    if (volume === null) {
+      return c.json({ error: 'volume must be a whole number from 0 to 200' }, 400);
     }
 
-    const result = setVolumeLevel(body.level);
+    const result = setVolume(volume);
     return c.json(result, result.ok ? 200 : 400);
   });
 
