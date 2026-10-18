@@ -12,7 +12,7 @@ import {
 import { replyNotice, type Notice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { REMOTE } from '../lib/music/banner/render.js';
-import { getVolumeLevel } from '../lib/music/pcm-volume.js';
+import { getVolume } from '../lib/music/pcm-volume.js';
 import {
   getPlaybackState,
   pausePlayback,
@@ -24,9 +24,9 @@ import {
 } from '../lib/music/playback.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { NO_PLAYLISTS, playPlaylistMessage } from '../lib/music/playlists/pickers.js';
-import { setAutoplay, setMono, setVolumeLevel } from '../lib/music/queue-actions.js';
+import { setAutoplay, setMono, setVolume } from '../lib/music/queue-actions.js';
 import { queueText } from '../lib/music/queue-view.js';
-import type { VolumeLevel } from '../lib/music/volume-levels.js';
+import { clampVolume, REMOTE_VOLUME_STEP } from '../lib/music/volume.js';
 import { isMusicChannel } from '../preconditions/music-channel.js';
 
 export const PLAY_MODAL = 'music:play-modal';
@@ -37,12 +37,8 @@ export const SEARCH_MODAL = 'music:search-modal';
 const RESULT_SECONDS = 5;
 
 const LOOP_NEXT: Record<string, LoopMode> = { off: 'track', track: 'queue', queue: 'off' };
-const VOLUME_STEPS: VolumeLevel[] = ['low', 'mid', 'high'];
-
 function stepVolume(by: -1 | 1): Notice {
-  const index = VOLUME_STEPS.indexOf(getVolumeLevel()) + by;
-  const level = VOLUME_STEPS[Math.min(Math.max(index, 0), VOLUME_STEPS.length - 1)];
-  return setVolumeLevel(level);
+  return setVolume(clampVolume(getVolume() + by * REMOTE_VOLUME_STEP));
 }
 
 function playModal(): ModalBuilder {
