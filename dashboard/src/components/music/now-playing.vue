@@ -24,6 +24,7 @@
     DropdownMenuTrigger,
   } from '@/components/ui/dropdown-menu';
   import { Input } from '@/components/ui/input';
+  import { Progress } from '@/components/ui/progress';
   import { playlistFeedback } from '@/composables/use-playlist-saver';
   import type { PlaybackRepeatMode, PlaybackState, PlaybackStatus } from '@/types';
 
@@ -213,18 +214,12 @@
             <AddToPlaylist v-if="current" :source="{ from: 'current' }" size="xs" />
           </div>
           <p class="text-muted-foreground mt-0.5 truncate text-xs">{{ subtitle }}</p>
-          <div
-            class="bg-muted mt-3 h-1.5 overflow-hidden rounded-full"
-            role="progressbar"
-            :aria-valuenow="progress"
-            aria-valuemin="0"
-            aria-valuemax="100"
-          >
-            <div
-              class="bg-primary h-full rounded-full transition-[width] duration-300"
-              :style="{ width: `${progress}%` }"
-            />
-          </div>
+          <Progress
+            data-now-progress
+            class="mt-3 h-1.5"
+            :model-value="progress"
+            :aria-label="current ? `${progress}% 재생` : '재생 중인 트랙 없음'"
+          />
           <p class="text-muted-foreground tnum mt-1.5 flex justify-between text-xs">
             <span>{{ current?.positionLabel ?? '--:--' }}</span>
             <span>{{ current?.durationLabel ?? '--:--' }}</span>
