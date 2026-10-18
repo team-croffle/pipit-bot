@@ -34,7 +34,7 @@
         :class="[linkClass, item.exact ? exactActiveClass : activeClass]"
         @click="emit('navigate')"
       >
-        <component :is="item.icon" class="size-4 shrink-0" />
+        <component :is="item.icon" class="size-5 shrink-0" />
         <span class="truncate">{{ item.label }}</span>
         <Badge v-if="item.planned" variant="outline" class="ml-auto px-1.5 py-0 text-[0.65rem]">
           {{ item.planned }}

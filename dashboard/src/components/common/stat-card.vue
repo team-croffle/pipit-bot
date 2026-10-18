@@ -10,7 +10,7 @@
   <Card class="gap-0 py-4">
     <CardContent class="px-4">
       <div class="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-        <component :is="icon" v-if="icon" class="size-3.5" />
+        <component :is="icon" v-if="icon" class="size-4" />
         <span class="truncate">{{ label }}</span>
       </div>
       <p class="tnum mt-1.5 text-2xl leading-tight font-semibold tracking-tight">{{ value }}</p>

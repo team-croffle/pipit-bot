@@ -74,7 +74,7 @@
       </Select>
       <div class="relative min-w-0 flex-1">
         <Search
-          class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+          class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-[1.125rem] -translate-y-1/2"
         />
         <Input
           v-model="search"

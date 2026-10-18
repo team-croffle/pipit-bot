@@ -170,7 +170,7 @@
               class="text-muted-foreground flex shrink-0 items-center gap-1 text-sm"
               data-search-added
             >
-              <Check class="size-4" />
+              <Check class="size-[1.125rem]" />
               {{ added[result.index] === 'next' ? '다음 곡으로 넣음' : '추가함' }}
             </p>
             <div v-else class="flex shrink-0 gap-2">

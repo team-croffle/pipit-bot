@@ -160,7 +160,7 @@
       <div class="flex flex-col gap-3 border-t pt-4">
         <div class="flex items-center justify-between gap-3">
           <Label for="volume-number" class="text-muted-foreground inline-flex items-center gap-1.5">
-            <Volume2 class="size-4" />
+            <Volume2 class="size-5" />
             볼륨
           </Label>
           <Input
