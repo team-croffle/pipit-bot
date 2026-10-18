@@ -319,7 +319,6 @@ export interface PlaybackState {
   pendingCount: number;
   durationFormatted: string | null;
   volume: number;
-  volumeLevel: PlaybackVolumeLevel;
   mono: boolean;
   autoplay: boolean;
   notice: { message: string; at: number } | null;
@@ -338,8 +337,6 @@ export interface PlaylistFeed {
   remaining: number;
   failed: number;
 }
-
-export type PlaybackVolumeLevel = 'low' | 'mid' | 'high';
 
 export interface PlaybackActionResult {
   ok: boolean;
