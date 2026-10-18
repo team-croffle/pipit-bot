@@ -32,7 +32,7 @@
       :title="option.label"
       @click="set(option.value)"
     >
-      <component :is="option.icon" class="size-3.5" />
+      <component :is="option.icon" class="size-4" />
       <span class="sr-only">{{ option.label }}</span>
     </button>
   </div>

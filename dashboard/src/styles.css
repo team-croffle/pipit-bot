@@ -176,3 +176,29 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/*
+ * Icons one step larger across the dashboard (v0.7.5). The vendored button gives an icon
+ * without a size class 16px (12px in the xs sizes); this raises them to 18px and 14px
+ * without editing components/ui/. Unlayered on purpose: unlayered rules win over the
+ * utility classes the button carries.
+ */
+:root {
+  --icon-size: 1.125rem;
+  --icon-size-xs: 0.875rem;
+}
+
+:is([data-slot='button'], [data-size], [data-slot^='pagination-']):not(
+    [data-size='xs'],
+    [data-size='icon-xs']
+  )
+  svg:not([class*='size-']) {
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+/* `data-size` also marks a button rendered through another component (a menu trigger). */
+:is([data-size='xs'], [data-size='icon-xs']) svg:not([class*='size-']) {
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
+}

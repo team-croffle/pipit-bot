@@ -132,7 +132,7 @@
           role="alert"
           data-team-warning
         >
-          <TriangleAlert class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          <TriangleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <span>
             이 역할은 멘션이 허용돼 있지 않고 봇에 '모두 멘션' 권한이 없어 알림이 가지 않습니다.
           </span>
