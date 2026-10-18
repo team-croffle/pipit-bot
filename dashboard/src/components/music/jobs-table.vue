@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { RotateCcw, X } from 'lucide-vue-next';
-  import { onMounted, onUnmounted, ref } from 'vue';
+  import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
   import { fetchJson, postJson } from '@/api';
+  import ListPagination from '@/components/common/list-pagination.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
@@ -30,6 +31,20 @@
   const actionMessage = ref('');
   const actionFailed = ref(false);
   const busyId = ref<string | null>(null);
+
+  /** Five a page; the poll keeps the page, and a page that empties moves to the last one. */
+  const PAGE_SIZE = 5;
+  const page = ref(1);
+  const pageSize = ref(PAGE_SIZE);
+  const shown = computed(() =>
+    jobs.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value),
+  );
+  watch(
+    () => jobs.value.length,
+    (count) => {
+      page.value = Math.min(page.value, Math.max(1, Math.ceil(count / pageSize.value)));
+    },
+  );
   let timer: ReturnType<typeof setInterval> | undefined;
 
   function formatTime(epochMs: number): string {
@@ -131,7 +146,7 @@
             </TableHeader>
             <TableBody>
               <TableRow
-                v-for="job in jobs"
+                v-for="job in shown"
                 :key="job.jobId"
                 data-job-row
                 :data-job-id="job.jobId"
@@ -197,7 +212,7 @@
 
         <ul class="flex list-none flex-col gap-2 p-0 md:hidden">
           <li
-            v-for="job in jobs"
+            v-for="job in shown"
             :key="job.jobId"
             data-job-row
             :data-job-id="job.jobId"
@@ -254,6 +269,13 @@
             </div>
           </li>
         </ul>
+        <ListPagination
+          v-model:page="page"
+          v-model:page-size="pageSize"
+          :total="jobs.length"
+          label="jobs"
+          class="mt-3"
+        />
       </StateBlock>
     </CardContent>
   </Card>
