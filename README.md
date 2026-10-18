@@ -105,7 +105,7 @@ The bot records who did what and whether it worked:
 - how each music job ended (its origin, and the failure code when it failed)
 - GitHub deliveries (sent, edited, skipped or failed, with the reason) and members joining (invite code, inviter) or leaving
 
-**For music it records only who used which feature** — never the track, never what was asked for. Entries are appended to one file per day, `data/audit/YYYY-MM-DD.jsonl` (UTC), and files older than **90 days** are removed. Entries hold Discord user ids and display names and dashboard user names; keep that in mind for whoever can read `data/`. The dashboard's **로깅** page lists them by category, period and text.
+**For music it records only who used which feature** — never the track, never what was asked for. Entries are appended to one file per day, `data/audit/YYYY-MM-DD.jsonl` (UTC), and files older than **90 days** are removed. Entries hold Discord user ids and display names and dashboard user names; keep that in mind for whoever can read `data/`. The dashboard's **로깅** page lists them by category, period and text, in numbered pages of 5, 10, 20 or 30 rows.
 
 ## Reaction roles
 
@@ -153,7 +153,7 @@ Playlists live on the Music page's **playlists** tab and behind `/playlist`:
 
 ### Music jobs
 
-Each request is a **job** the music worker prepares before the bot can play it. The **Music jobs** card lists them with their state:
+Each request is a **job** the music worker prepares before the bot can play it. The **Music jobs** card lists them with their state, five a page:
 
 - a job still being prepared can be **cancelled** — the bot stops waiting and never plays it, even if the file arrives later
 - a failed or cancelled job can be **retried** as a new job with the same request (still at the front if it was "play next"); failures a retry cannot fix, such as nothing found, offer no retry
