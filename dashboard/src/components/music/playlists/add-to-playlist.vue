@@ -25,6 +25,8 @@
     label?: string;
     disabled?: boolean;
     size?: 'xs' | 'sm';
+    /** Drawn like the round playback buttons it sits beside. */
+    control?: boolean;
   }>();
   const emit = defineEmits<{ saved: [] }>();
 
@@ -60,8 +62,9 @@
   <DropdownMenu @update:open="onOpen">
     <DropdownMenuTrigger as-child>
       <Button
-        :variant="label ? 'outline' : 'ghost'"
-        :size="label ? (size ?? 'sm') : size === 'sm' ? 'icon-sm' : 'icon-xs'"
+        :variant="label || control ? 'outline' : 'ghost'"
+        :size="control ? 'icon' : label ? (size ?? 'sm') : size === 'sm' ? 'icon-sm' : 'icon-xs'"
+        :class="control ? 'rounded-full' : ''"
         :disabled="disabled || saving"
         :aria-label="label ?? '재생목록에 담기'"
         title="재생목록에 담기"
