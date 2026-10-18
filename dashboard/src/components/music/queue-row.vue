@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ArrowDown, ArrowUp, Ellipsis, SkipForward, X } from 'lucide-vue-next';
+  import { ArrowDown, ArrowUp, Bot, Ellipsis, SkipForward, X } from 'lucide-vue-next';
   import { computed } from 'vue';
 
   import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
@@ -57,14 +57,13 @@
       {{ track.index }}
     </span>
     <span class="min-w-0 flex-1 truncate">{{ track.title }}</span>
-    <span
+    <Bot
       v-if="track.autoplay"
-      class="text-muted-foreground shrink-0 text-xs"
-      title="자동 재생으로 들어온 곡"
+      class="text-muted-foreground size-4 shrink-0"
+      role="img"
+      aria-label="자동 재생으로 들어온 곡"
       data-autoplay-row
-    >
-      🤖
-    </span>
+    />
     <span v-if="track.duration" class="text-muted-foreground tnum shrink-0 text-xs">
       {{ track.duration }}
     </span>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import {
+    Bot,
     ChevronDown,
     ListStart,
     Music,
@@ -49,7 +50,7 @@
     const where = props.playback?.voiceChannelName
       ? `#${props.playback.voiceChannelName} 재생 중`
       : '재생 중';
-    return current.value.autoplay ? `${where} · 🤖 자동 재생` : where;
+    return where;
   });
 
   // Priority, not stacking: an error is the thing to read, then the player's own
@@ -213,7 +214,17 @@
             </p>
             <AddToPlaylist v-if="current" :source="{ from: 'current' }" size="xs" />
           </div>
-          <p class="text-muted-foreground mt-0.5 truncate text-xs">{{ subtitle }}</p>
+          <p class="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
+            <span class="truncate">{{ subtitle }}</span>
+            <span
+              v-if="current?.autoplay"
+              class="inline-flex shrink-0 items-center gap-1"
+              data-autoplay-current
+            >
+              <Bot class="size-4" aria-hidden="true" />
+              자동 재생
+            </span>
+          </p>
           <Progress
             data-now-progress
             class="mt-3 h-1.5"
