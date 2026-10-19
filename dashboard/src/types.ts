@@ -321,6 +321,8 @@ export interface PlaybackState {
   volume: number;
   mono: boolean;
   autoplay: boolean;
+  musicEnabled?: boolean;
+  repeatDefault?: 'off' | 'track' | 'queue';
   notice: { message: string; at: number } | null;
   /** Something has played before the current track in this session. */
   hasPrevious: boolean;

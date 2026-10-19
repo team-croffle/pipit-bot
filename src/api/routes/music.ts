@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 
 import { getConfiguredGuild } from '../../lib/discord-guild.js';
 import { getRecentTracks, playPrevious } from '../../lib/music/history.js';
+import { isRepeatDefault } from '../../lib/music/playback-options.js';
 import {
   clearQueue,
   getPlaybackState,
@@ -18,6 +19,7 @@ import {
   removeQueuedTrack,
   setAutoplay,
   setMono,
+  setRepeatDefault,
   setVolume,
   shuffleQueue,
   skipToQueuedTrack,
@@ -123,7 +125,11 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   });
 
   app.post('/api/music/playback/options', dashboardViewer, async (c) => {
-    const body = await c.req.json<{ mono?: unknown; autoplay?: unknown }>();
+    const body = await c.req.json<{
+      mono?: unknown;
+      autoplay?: unknown;
+      repeatDefault?: unknown;
+    }>();
     if (typeof body.mono === 'boolean') {
       return c.json(setMono(body.mono));
     }
@@ -132,7 +138,14 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
       return c.json(result, result.ok ? 200 : 400);
     }
 
-    return c.json({ error: 'mono or autoplay must be true or false' }, 400);
+    if (isRepeatDefault(body.repeatDefault)) {
+      return c.json(setRepeatDefault(body.repeatDefault));
+    }
+
+    return c.json(
+      { error: 'mono or autoplay must be true or false, or repeatDefault off, track or queue' },
+      400,
+    );
   });
 
   app.post('/api/music/voice/join', dashboardViewer, async (c) => {

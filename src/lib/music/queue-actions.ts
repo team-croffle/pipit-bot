@@ -1,6 +1,6 @@
 import { nudgeAutoplay } from './autoplay.js';
 import { setPcmVolume } from './pcm-volume.js';
-import { updatePlaybackOptions } from './playback-options.js';
+import { updatePlaybackOptions, type RepeatDefault } from './playback-options.js';
 import { formatTrackTitle, getGuildQueue, type PlaybackActionResult } from './playback.js';
 import { isVolume, MAX_VOLUME, MIN_VOLUME } from './volume.js';
 import { hasCapability } from './worker-capabilities.js';
@@ -152,6 +152,12 @@ export function setVolume(volume: number): PlaybackActionResult {
 export function setMono(on: boolean): PlaybackActionResult {
   void updatePlaybackOptions({ mono: on });
   return { ok: true, message: on ? 'Mono on: both ears hear the same.' : 'Mono off.' };
+}
+
+/** The repeat mode new sessions start in; the playing one keeps its own. */
+export function setRepeatDefault(mode: RepeatDefault): PlaybackActionResult {
+  void updatePlaybackOptions({ repeatDefault: mode });
+  return { ok: true, message: `New sessions start with repeat ${mode}.` };
 }
 
 /** Also a setting; needs a music worker that can suggest tracks (`related`). */

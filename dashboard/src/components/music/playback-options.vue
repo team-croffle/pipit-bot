@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed } from 'vue';
 
-  import { Badge } from '@/components/ui/badge';
+  import { Button } from '@/components/ui/button';
   import { Card, CardContent } from '@/components/ui/card';
   import { Label } from '@/components/ui/label';
   import { Switch } from '@/components/ui/switch';
@@ -15,20 +15,22 @@
 
   const emit = defineEmits<{ action: [path: string, body?: unknown] }>();
 
-  /** Options that are not built yet — each one is tied to a roadmap version. */
-  const planned = [
-    {
-      key: 'repeat-default',
-      label: '반복 재생 기본값',
-      help: '새 세션이 시작될 때 적용할 반복 모드입니다.',
-      version: 'v0.7.6',
-    },
-  ];
-
   /** Unknown (no list from the worker) counts as offered, as everywhere else. */
   const autoplayOffered = computed(
     () => !playback?.capabilities || playback.capabilities.includes('related'),
   );
+
+  const repeatModes = [
+    { value: 'off', label: '끔' },
+    { value: 'track', label: '한 곡' },
+    { value: 'queue', label: '대기열' },
+  ] as const;
+
+  function setRepeatDefault(mode: 'off' | 'track' | 'queue') {
+    if (playback && playback.repeatDefault !== mode) {
+      emit('action', '/api/music/playback/options', { repeatDefault: mode });
+    }
+  }
 
   function setMono(on: boolean) {
     if (playback && playback.mono !== on) {
@@ -89,17 +91,28 @@
         />
       </div>
       <div
-        v-for="option in planned"
-        :key="option.key"
-        class="flex items-center justify-between gap-4 border-b py-4 first:pt-0 last:border-b-0 last:pb-0"
+        class="flex flex-col gap-3 border-b py-4 first:pt-0 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
       >
         <div class="min-w-0">
-          <Label :for="`opt-${option.key}`" class="text-muted-foreground">{{ option.label }}</Label>
-          <p class="text-muted-foreground mt-1 text-xs">{{ option.help }}</p>
+          <Label>반복 재생 기본값</Label>
+          <p class="text-muted-foreground mt-1 text-xs">
+            새 세션이 시작될 때의 반복 모드입니다. 지금 재생 중인 대기열은 그대로입니다. 반복이 켜져
+            있으면 자동 재생은 쉽니다.
+          </p>
         </div>
-        <div class="flex shrink-0 items-center gap-2.5">
-          <Badge variant="secondary">{{ option.version }} 예정</Badge>
-          <Switch :id="`opt-${option.key}`" disabled />
+        <div class="flex shrink-0 gap-1.5" role="group" aria-label="반복 재생 기본값">
+          <Button
+            v-for="mode in repeatModes"
+            :key="mode.value"
+            size="sm"
+            :data-repeat-default="mode.value"
+            :variant="playback?.repeatDefault === mode.value ? 'default' : 'outline'"
+            :aria-pressed="playback?.repeatDefault === mode.value"
+            :disabled="!playback || busy"
+            @click="setRepeatDefault(mode.value)"
+          >
+            {{ mode.label }}
+          </Button>
         </div>
       </div>
     </CardContent>

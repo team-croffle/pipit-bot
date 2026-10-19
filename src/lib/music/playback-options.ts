@@ -20,9 +20,22 @@ export interface PlaybackOptions {
   /** Left and right mixed into both ears — for listening with one earphone. */
   mono: boolean;
   autoplay: boolean;
+  /** The repeat mode a new music session starts with (repeat-default.ts). */
+  repeatDefault: RepeatDefault;
 }
 
-const DEFAULTS: PlaybackOptions = { volume: DEFAULT_VOLUME, mono: false, autoplay: false };
+export type RepeatDefault = 'off' | 'track' | 'queue';
+
+export function isRepeatDefault(value: unknown): value is RepeatDefault {
+  return value === 'off' || value === 'track' || value === 'queue';
+}
+
+const DEFAULTS: PlaybackOptions = {
+  volume: DEFAULT_VOLUME,
+  mono: false,
+  autoplay: false,
+  repeatDefault: 'off',
+};
 
 let filePath = join(dataDir, 'playback-options.json');
 let options: PlaybackOptions = { ...DEFAULTS };
@@ -39,6 +52,7 @@ function parse(raw: unknown): PlaybackOptions {
     volume: volumeFrom(stored.volume) ?? DEFAULTS.volume,
     mono: stored.mono === true,
     autoplay: stored.autoplay === true,
+    repeatDefault: isRepeatDefault(stored.repeatDefault) ? stored.repeatDefault : 'off',
   };
 }
 
