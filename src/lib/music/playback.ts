@@ -7,6 +7,7 @@ import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolume } from './pcm-volume.js';
 import { getPlaybackOptions } from './playback-options.js';
 import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
+import { shareOf } from './track-format.js';
 import { workerCapabilities, type WorkerCapability } from './worker-capabilities.js';
 
 // WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
@@ -27,6 +28,7 @@ export interface PlaybackCurrentTrack {
   title: string;
   durationMs: number;
   positionMs: number;
+  /** The share played, 0–1 (track-format.ts `shareOf`). */
   progress: number;
   durationLabel: string;
   positionLabel: string;
@@ -207,7 +209,7 @@ export function getPlaybackState(): PlaybackState {
           title: formatTrackTitle(current),
           durationMs: timestamp.total.value,
           positionMs: timestamp.current.value,
-          progress: timestamp.progress,
+          progress: shareOf(timestamp.current.value, timestamp.total.value),
           durationLabel: timestamp.total.label,
           positionLabel: timestamp.current.label,
           requester: requesterOf(current, guild),
