@@ -19,6 +19,8 @@
   import { Skeleton } from './components/ui/skeleton';
   import type { DashboardIdentity, HealthResponse } from './types';
 
+  const appVersion = import.meta.env.VITE_APP_VERSION;
+
   const me = ref<DashboardIdentity | null>(null);
   const error = ref('');
   const loading = ref(true);
@@ -69,7 +71,7 @@
     <aside
       class="border-sidebar-border bg-sidebar sticky top-0 hidden h-dvh w-60 shrink-0 border-r lg:block"
     >
-      <AppSidebar version="v0.6.4-dev" />
+      <AppSidebar :version="appVersion" />
     </aside>
 
     <div class="flex min-w-0 flex-1 flex-col">
@@ -85,7 +87,7 @@
           <SheetContent side="left" class="w-64 p-0">
             <SheetTitle class="sr-only">내비게이션</SheetTitle>
             <SheetDescription class="sr-only">대시보드 페이지 목록</SheetDescription>
-            <AppSidebar version="v0.6.4-dev" @navigate="mobileNavOpen = false" />
+            <AppSidebar :version="appVersion" @navigate="mobileNavOpen = false" />
           </SheetContent>
         </Sheet>
 
