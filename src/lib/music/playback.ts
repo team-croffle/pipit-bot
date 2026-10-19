@@ -6,7 +6,7 @@ import { isEnabled } from '../features.js';
 import { isAutoplayTrack } from './autoplay-files.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolume } from './pcm-volume.js';
-import { getPlaybackOptions } from './playback-options.js';
+import { getPlaybackOptions, type RepeatDefault } from './playback-options.js';
 import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
 import { shareOf } from './track-format.js';
 import { workerCapabilities, type WorkerCapability } from './worker-capabilities.js';
@@ -61,6 +61,7 @@ export interface PlaybackState {
   autoplay: boolean;
   /** False when music is switched off on this server (features.ts). */
   musicEnabled: boolean;
+  repeatDefault: RepeatDefault;
   /** Something the player did on its own that deserves a word, e.g. a skipped track. */
   notice: PlaybackNotice | null;
   hasPrevious: boolean;
@@ -161,6 +162,7 @@ function buildState(
     mono: getPlaybackOptions().mono,
     autoplay: getPlaybackOptions().autoplay,
     musicEnabled: isEnabled('music'),
+    repeatDefault: getPlaybackOptions().repeatDefault,
     notice: getRecentNotice(),
     hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
     playlist: getFeedStatus(),

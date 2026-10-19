@@ -5,7 +5,7 @@ import { replyNotice } from '../../lib/discord/notice.js';
 import { guildOnly } from '../../lib/discord/slash.js';
 import { requestBannerRefresh } from '../../lib/music/banner/manager.js';
 import { getPlaybackOptions } from '../../lib/music/playback-options.js';
-import { setAutoplay, setMono } from '../../lib/music/queue-actions.js';
+import { setAutoplay, setMono, setRepeatDefault } from '../../lib/music/queue-actions.js';
 
 const onOff = (on: boolean) => (on ? 'on' : 'off');
 const ON_OFF = [
@@ -32,6 +32,16 @@ export class UserCommand extends Command {
             .setName('autoplay')
             .setDescription('Keep playing similar tracks when the queue runs out')
             .addChoices(...ON_OFF),
+        )
+        .addStringOption((option) =>
+          option
+            .setName('repeat')
+            .setDescription('The repeat mode a new session starts with')
+            .addChoices(
+              { name: 'off', value: 'off' },
+              { name: 'track', value: 'track' },
+              { name: 'queue', value: 'queue' },
+            ),
         ),
     );
   }
@@ -39,11 +49,12 @@ export class UserCommand extends Command {
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const mono = interaction.options.getString('mono');
     const autoplay = interaction.options.getString('autoplay');
-    if (!mono && !autoplay) {
+    const repeat = interaction.options.getString('repeat') as 'off' | 'track' | 'queue' | null;
+    if (!mono && !autoplay && !repeat) {
       const options = getPlaybackOptions();
       await replyNotice(interaction, {
         ok: true,
-        message: `Mono: ${onOff(options.mono)} · Autoplay: ${onOff(options.autoplay)} · Volume: ${options.volume}`,
+        message: `Mono: ${onOff(options.mono)} · Autoplay: ${onOff(options.autoplay)} · Repeat for new sessions: ${options.repeatDefault} · Volume: ${options.volume}`,
       });
       return;
     }
@@ -51,6 +62,7 @@ export class UserCommand extends Command {
     const results = [
       ...(mono ? [setMono(mono === 'on')] : []),
       ...(autoplay ? [setAutoplay(autoplay === 'on')] : []),
+      ...(repeat ? [setRepeatDefault(repeat)] : []),
     ];
     await replyNotice(interaction, {
       ok: results.every((result) => result.ok),
