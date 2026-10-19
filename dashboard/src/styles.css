@@ -202,3 +202,11 @@
   width: var(--icon-size-xs);
   height: var(--icon-size-xs);
 }
+
+/*
+ * The now-playing bar glides: the page's clock moves it once a second (use-playback.ts),
+ * and a linear transition of the same length joins the steps into one motion.
+ */
+[data-now-progress] [data-slot='progress-indicator'] {
+  transition: transform 1s linear;
+}

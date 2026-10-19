@@ -40,7 +40,8 @@
     props.playback?.active ? (props.playback.current ?? null) : null,
   );
 
-  const progress = computed(() => Math.round((current.value?.progress ?? 0) * 100));
+  /** A percentage with two decimals — whole steps made the bar jump once every few seconds. */
+  const progress = computed(() => Math.round((current.value?.progress ?? 0) * 10_000) / 100);
 
   const subtitle = computed(() => {
     if (!current.value) {
@@ -228,7 +229,7 @@
             data-now-progress
             class="mt-3 h-1.5"
             :model-value="progress"
-            :aria-label="current ? `${progress}% 재생` : '재생 중인 트랙 없음'"
+            :aria-label="current ? `${Math.round(progress)}% 재생` : '재생 중인 트랙 없음'"
           />
           <p class="text-muted-foreground tnum mt-1.5 flex justify-between text-xs">
             <span>{{ current?.positionLabel ?? '--:--' }}</span>
