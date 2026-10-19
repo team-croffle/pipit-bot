@@ -2,6 +2,7 @@ import { appendFile, mkdir } from 'node:fs/promises';
 
 import { container } from '@sapphire/framework';
 
+import { isEnabled } from '../features.js';
 import { dayKey, fileForDay, getAuditDir } from './store.js';
 import type { AuditEntry } from './types.js';
 
@@ -25,6 +26,11 @@ function clip(text: string | undefined): string | undefined {
  * logged, and the action being recorded goes on regardless.
  */
 export function audit(entry: Omit<AuditEntry, 'at'> & { at?: string }): Promise<void> {
+  // Switched off: nothing is kept — except the switching itself, so the log says why it stops.
+  if (!isEnabled('audit') && !entry.action.startsWith('features.')) {
+    return Promise.resolve();
+  }
+
   const line: AuditEntry = {
     ...entry,
     at: entry.at ?? new Date().toISOString(),

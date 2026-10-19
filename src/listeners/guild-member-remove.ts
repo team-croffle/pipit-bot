@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import { Events, type GuildMember, type PartialGuildMember } from 'discord.js';
 
+import { isEnabled } from '../lib/features.js';
 import {
   formatTemplate,
   getGuildEventSettings,
@@ -18,7 +19,7 @@ export class UserEvent extends Listener {
 
     await onMemberLeave(member);
     const settings = getGuildEventSettings();
-    const template = pickRandomMessage(settings.leaveMessages);
+    const template = isEnabled('memberMessages') ? pickRandomMessage(settings.leaveMessages) : null;
     if (!template || !settings.logChannelId) {
       return;
     }

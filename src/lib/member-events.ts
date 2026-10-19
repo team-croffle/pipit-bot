@@ -3,6 +3,7 @@ import type { Guild, GuildMember, PartialGuildMember } from 'discord.js';
 
 import { actorOf } from './audit/discord.js';
 import { audit } from './audit/log.js';
+import { isEnabled } from './features.js';
 import { getGuildEventSettings } from './guild-event-settings.js';
 import type { InviteMatch } from './invite-cache.js';
 import { countInviteJoin } from './invite-stats.js';
@@ -34,7 +35,8 @@ export function daysStayed(member: GuildMember | PartialGuildMember): number | n
  */
 async function postRecord(guild: Guild, line: string): Promise<void> {
   const channelId = getGuildEventSettings().recordChannelId;
-  if (!channelId) {
+  // The record channel is part of invite tracking.
+  if (!channelId || !isEnabled('invites')) {
     return;
   }
 

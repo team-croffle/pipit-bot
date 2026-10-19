@@ -1,5 +1,7 @@
 import { GuildFeature, type Guild } from 'discord.js';
 
+import { isEnabled, onFeatureChange } from './features.js';
+
 export interface InviteMatch {
   code: string;
   uses: number;
@@ -23,6 +25,11 @@ function snapshotInvites(guild: Guild): Map<string, InviteMatch> {
 }
 
 export async function refreshGuildInvites(guild: Guild): Promise<void> {
+  if (!isEnabled('invites')) {
+    inviteCache.delete(guild.id);
+    return;
+  }
+
   try {
     await guild.invites.fetch();
     inviteCache.set(guild.id, snapshotInvites(guild));
@@ -41,6 +48,11 @@ export async function refreshGuildInvites(guild: Guild): Promise<void> {
 }
 
 export async function consumeUsedInvite(guild: Guild): Promise<InviteMatch | null> {
+  // Invite tracking switched off: arrivals are not traced to an invite or counted.
+  if (!isEnabled('invites')) {
+    return null;
+  }
+
   const previous = inviteCache.get(guild.id) ?? new Map();
   const previousVanity = vanityUses.get(guild.id) ?? 0;
 
@@ -79,4 +91,15 @@ export async function consumeUsedInvite(guild: Guild): Promise<InviteMatch | nul
   }
 
   return null;
+}
+
+/** Switching invite tracking on starts from what Discord knows now, not from a stale snapshot. */
+export function watchInviteSwitch(guilds: () => Iterable<Guild>): void {
+  onFeatureChange((feature, on) => {
+    if (feature === 'invites' && on) {
+      for (const guild of guilds()) {
+        void refreshGuildInvites(guild);
+      }
+    }
+  });
 }
