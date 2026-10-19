@@ -3,6 +3,7 @@ import { container } from '@sapphire/framework';
 import { startApiServer } from './api/server.js';
 import { startAuditRetention } from './lib/audit/retention.js';
 import { CustomClient } from './lib/client.js';
+import { loadFeatures } from './lib/features.js';
 import { loadTrackedMessages } from './lib/github/message-tracker.js';
 import { loadGithubNotifySettings } from './lib/github/settings.js';
 import { loadGuildEventSettings } from './lib/guild-event-settings.js';
@@ -19,6 +20,8 @@ const main = async () => {
   try {
     await loadGuildEventSettings();
     await loadGithubNotifySettings();
+    // Before login: the command registry, filled at login, leaves out switched-off features.
+    await loadFeatures();
     await loadTrackedMessages();
     await loadReactionRoleSettings();
     await loadInviteStats();
