@@ -76,6 +76,10 @@ Inside the process:
 - **On disk** — settings, tracked GitHub messages and invite counts under `data/`, each loaded at start-up and written
   whole when it changes; the audit log, appended a line at a time to one file per day under `data/audit/`.
 
+**Feature switches** ([022](./decisions/022_v0.7.6_feature-switches.md)) are one entry point, `isEnabled(feature)`, read
+where each feature acts. Switching music or GitHub replaces the bot's slash commands with those of the switched-on
+features, after the framework's own registration at start-up and again on every change.
+
 The **audit log** is written from four places, so no feature has to remember to: a middleware after every dashboard
 change, `replyNotice` (which answers every slash command, button and dialog), `recordDelivery` for GitHub, and the member
 listeners. Music lines say only that someone used a feature — never the track or what was asked for

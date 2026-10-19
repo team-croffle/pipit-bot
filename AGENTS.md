@@ -56,7 +56,7 @@ Discussion of a specific worker implementation does not belong in this repositor
   maps from `DASHBOARD_ADMIN_GROUPS`, matched against the `groups` claim. An unreachable provider is a `502`, not a `500`.
 - Runtime settings persist as JSON under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json` —
   routing, the login-to-user map and the `teams` team-to-role map —, `github-messages.json`, `reaction-roles.json`,
-  `playlists.json`, `playback-options.json`). No hard-coded settings in source; every loader tolerates a missing file
+  `playlists.json`, `playback-options.json`, `features.json`). No hard-coded settings in source; every loader tolerates a missing file
   and reports a damaged one (`loadSettingsFile`).
 - GitHub notifications: one public route `POST /webhooks/github` with `X-Hub-Signature-256` verification; everything
   substituted into a message is sanitized (`sanitizeGithubText`), only mapped Discord ids may ping, embeds carry the

@@ -56,7 +56,7 @@ DASHBOARD_SESSION_SECRET=
 
 `OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다: 제공자가 내려주는 `groups` 클레임과 대소문자 구분 없이 전체 일치로 비교합니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 제공자에 연결할 수 없으면 `/api/auth/login`과 콜백은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다.
 
-봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, `features.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
 
 ## GitHub 알림
 
@@ -160,6 +160,17 @@ PR이나 이슈를 알린 메시지는 `data/github-messages.json`에 기억됩�
 - 실패에는 이유가 표시됩니다 — worker가 짧은 코드를 함께 보낼 수 있습니다([docs/music-backend.md](./docs/music-backend.md) 참고). 너무 오래 걸리는 작업은 끝없이 기다리지 않고 시간 초과로 실패합니다
 - 대기열에서 기다리는 동안 준비된 파일이 사라진 곡은 건너뛰고, 음악 채널과 대시보드에 알립니다
 
+## 기능별 켜고 끄기
+
+**설정** 페이지에서 일곱 기능을 켜고 끕니다: 음악, GitHub 알림, 감사 로깅, 초대 추적, 입장·퇴장 메시지, 입장 역할, 리액션 롤. `data/features.json`이 없으면 지금처럼 전부 켜져 있고, GitHub 스위치는 GitHub 페이지의 전체 스위치와 같습니다.
+
+끄면 어디서나 꺼집니다:
+
+- **명령** — 꺼진 기능의 슬래시 명령(음악 명령들, GitHub은 `/remind`)이 디스코드 목록에서 사라지고, 켜면 돌아옵니다. 디스코드에 반영되는 데 잠시 걸릴 수 있습니다. `/help`는 켜진 것만 보여 줍니다
+- **음악** — 끄면 재생을 멈추고 통화방에서 나갑니다. 음악 채널 배너는 꺼져 있다고 알리고, 채널 메시지는 건드리지 않습니다
+- **나머지** — 감사 로깅이 꺼진 동안은 기록하지 않습니다(끈 사실은 남음). 초대 추적을 끄면 초대 매칭·집계·기록 채널이 멈추고, 입장·퇴장 메시지와 입장 역할은 건너뛰며, 리액션 롤 패널에 반응해도 아무 일도 없습니다
+- **대시보드** — 꺼진 기능의 페이지도 열리되 위에 안내와 설정 링크가 붙고, 사이드바 항목이 흐려집니다
+
 ## 소스 추상화
 
 이 저장소는 음악 백엔드를 외부 **music worker**로만 설명합니다 — 특정 소스도, 워커의 이름도 언급하지 않습니다. [docs/music-backend.md](docs/music-backend.md)의 계약이 인터페이스의 전부입니다.
@@ -207,7 +218,7 @@ docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
 - `/playlist` — `list`, `show`, `create [personal]`, `rename`, `delete`, `add`(지금 곡·대기열 전체·제목이나 링크), `remove`, `move`, `import link [into]`, `play [shuffle]`. 재생목록 이름은 자동완성
 - `/join`, `/leave` — 내가 있는 통화방에 참여(또는 이동), 또는 나가기
 - 재생: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [0–200]`
-- 옵션: `/options [mono] [autoplay]` — 모노나 자동 재생을 켜고 끄거나 재생 옵션을 봅니다
+- 옵션: `/options [mono] [autoplay] [repeat]` — 모노·자동 재생을 켜고 끄거나, 새 세션의 반복 모드를 정하거나, 재생 옵션을 봅니다
 - 대기열: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
 
 대시보드 음악 페이지와 음악 채널의 배너에서도 같은 조작을 할 수 있습니다([음악](#음악) 참고). 봇은 쿼리 문자열을 검증하거나 파싱하지 않습니다.

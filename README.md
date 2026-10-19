@@ -56,7 +56,7 @@ Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik 
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, `features.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
 
 ## GitHub notifications
 
@@ -160,6 +160,17 @@ Each request is a **job** the music worker prepares before the bot can play it. 
 - a failure shows its reason — the worker may send a short code with it (see [docs/music-backend.md](./docs/music-backend.md)) — and a job that takes too long fails as a timeout instead of waiting forever
 - a queued track whose prepared file has gone is skipped, and the skip is announced in the music channel and on the dashboard
 
+## Feature switches
+
+The **설정** page switches seven features on and off: music, GitHub notifications, the audit log, invite tracking, join and leave messages, join roles and reaction roles. A missing `data/features.json` means everything is on, as before; the GitHub switch is the same as the master switch on the GitHub page.
+
+Off means off everywhere:
+
+- **Commands** — a switched-off feature's slash commands leave Discord's menus (music's commands, and `/remind` for GitHub) and come back when it is switched on; Discord can take a moment to show the change. `/help` lists only what is on
+- **Music** — switching it off stops playback and leaves the voice channel; the music channel's banner says music is off and messages there are left alone
+- **The others** — nothing is recorded while the audit log is off (the switching itself is); invites are neither traced nor counted and the record channel stays quiet; join and leave messages and join roles are skipped; reacting to a reaction-role panel does nothing
+- **Dashboard** — a page whose feature is off still opens, with a notice and a link back to the settings; its sidebar item is dimmed
+
 ## Source abstraction
 
 This repository describes its music backend only as an external **music worker** —
@@ -212,7 +223,7 @@ Usable in a music channel (or anywhere, when none is configured):
 - `/playlist` — `list`, `show`, `create [personal]`, `rename`, `delete`, `add` (the current track, the whole queue, or a title or link), `remove`, `move`, `import link [into]`, `play [shuffle]`; playlist names autocomplete
 - `/join`, `/leave` — join your voice channel (or move there), or leave
 - Playback: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [0–200]`
-- Options: `/options [mono] [autoplay]` — switch mono or autoplay on or off, or show the playback options
+- Options: `/options [mono] [autoplay] [repeat]` — switch mono or autoplay, set the repeat mode new sessions start with, or show the playback options
 - Queue: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
 
 The dashboard's Music page and the music channel's banner do the same (see [Music](#music)). The bot does not validate or parse the query string.
