@@ -19,13 +19,15 @@ import {
  * WHY polling the playback state instead of hooking every action: the state changes
  * from slash commands, the remote's buttons, the dashboard and the player itself (a
  * track ends). Comparing a signature every few seconds catches all of them in one
- * place; the banner is edited only when what it shows changed, plus a slower tick for
- * the progress bar while a track plays. Actions taken from the banner ask for an
+ * place; the banner is edited when what it shows changed, and on every tick while a
+ * track plays so the progress bar moves (one edit per channel every three seconds stays
+ * well inside Discord's per-channel edit limit). Actions taken from the banner ask for an
  * immediate refresh so the remote answers at once.
  */
 
-const TICK_MS = 5_000;
-const PROGRESS_MS = 30_000;
+const TICK_MS = 3_000;
+/** A playing track redraws on every tick, a little early so timer drift never skips one. */
+const PROGRESS_MS = TICK_MS - 500;
 
 let lastSignature = '';
 let lastDrawnAt = 0;
