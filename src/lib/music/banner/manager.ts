@@ -3,8 +3,8 @@ import { DiscordAPIError, RESTJSONErrorCodes, type SendableChannels } from 'disc
 
 import { getConfiguredGuild } from '../../discord-guild.js';
 import { getRuntimeConfig } from '../../runtime-config.js';
-import { getPlaybackState } from '../playback.js';
-import { bannerSignature, renderBanner } from './render.js';
+import { getPlaybackState, type PlaybackState } from '../playback.js';
+import { BAR_CELLS, bannerSignature, knobCell, renderBanner } from './render.js';
 import {
   bannerChannels,
   bannerMessageId,
@@ -19,20 +19,20 @@ import {
  * WHY polling the playback state instead of hooking every action: the state changes
  * from slash commands, the remote's buttons, the dashboard and the player itself (a
  * track ends). Comparing a signature every few seconds catches all of them in one
- * place; the banner is edited when what it shows changed, and on every tick while a
- * track plays so the progress bar moves (one edit per channel every three seconds stays
- * well inside Discord's per-channel edit limit). Actions taken from the banner ask for an
+ * place; the banner is edited only when what it shows changed. The progress bar is part
+ * of that: its knob moves one cell per 1/25 of the track, and while a track plays the next
+ * redraw is timed for the moment the knob reaches its next cell. Actions taken from the banner ask for an
  * immediate refresh so the remote answers at once.
  */
 
-const TICK_MS = 3_000;
-/** A playing track redraws on every tick, a little early so timer drift never skips one. */
-const PROGRESS_MS = TICK_MS - 500;
+const TICK_MS = 5_000;
+/** Lands the knob redraw just after the cell boundary, not just before it. */
+const CELL_SLACK_MS = 250;
 
 let lastSignature = '';
-let lastDrawnAt = 0;
 let busy = false;
 let timer: ReturnType<typeof setInterval> | undefined;
+let cellTimer: ReturnType<typeof setTimeout> | undefined;
 const warned = new Set<string>();
 
 function sendableChannel(channelId: string): SendableChannels | null {
@@ -85,9 +85,8 @@ async function refresh(force: boolean): Promise<void> {
 
   const state = getPlaybackState();
   const signature = bannerSignature(state);
-  const now = Date.now();
-  const progressDue = state.active && !state.paused && now - lastDrawnAt >= PROGRESS_MS;
-  if (!force && signature === lastSignature && !progressDue) {
+  scheduleNextCell(state);
+  if (!force && signature === lastSignature) {
     return;
   }
 
@@ -98,10 +97,33 @@ async function refresh(force: boolean): Promise<void> {
       await draw(channelId, payload);
     }
     lastSignature = signature;
-    lastDrawnAt = now;
   } finally {
     busy = false;
   }
+}
+
+/**
+ * While a track plays, looks again when the knob is due in its next cell: a track of
+ * 4:10 moves it every 10 seconds. The regular tick still catches everything else.
+ */
+function scheduleNextCell(state: PlaybackState): void {
+  clearTimeout(cellTimer);
+  const current = state.current;
+  if (!state.active || state.paused || !current || !(current.durationMs > 0)) {
+    return;
+  }
+
+  const cellMs = current.durationMs / BAR_CELLS;
+  const next = (knobCell(current.progress) + 1) * cellMs;
+  if (next >= current.durationMs) {
+    return;
+  }
+  cellTimer = setTimeout(
+    () =>
+      void refresh(false).catch((error: unknown) => container.logger.warn('[music-banner]', error)),
+    next - current.positionMs + CELL_SLACK_MS,
+  );
+  cellTimer.unref?.();
 }
 
 /** Ask for a redraw now — after an action taken from the banner itself. */

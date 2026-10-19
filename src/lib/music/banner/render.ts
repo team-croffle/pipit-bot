@@ -40,8 +40,13 @@ export const REMOTE = {
 } as const;
 
 const ACCENT = 0xe9a23b;
-/** Bar characters beside the knob; the knob sits at the share played. */
-const BAR_SEGMENTS = 19;
+/** Cells of the progress bar, the knob included; the knob steps one cell per 1/25 of the track. */
+export const BAR_CELLS = 25;
+
+/** Which cell the knob is in, 0–24 — the banner is redrawn when this changes. */
+export function knobCell(progress: number): number {
+  return Math.min(Math.floor(Math.min(Math.max(progress, 0), 1) * BAR_CELLS), BAR_CELLS - 1);
+}
 
 const REPEAT_LABEL: Record<PlaybackState['repeatMode'], string> = {
   off: '반복 꺼짐',
@@ -63,8 +68,8 @@ function button(id: string, label: string, emoji: string, style = ButtonStyle.Se
 }
 
 function progressBar(progress: number): string {
-  const filled = Math.round(Math.min(Math.max(progress, 0), 1) * BAR_SEGMENTS);
-  return `${'▬'.repeat(filled)}🔘${'▬'.repeat(BAR_SEGMENTS - filled)}`;
+  const cell = knobCell(progress);
+  return `${'▬'.repeat(cell)}🔘${'▬'.repeat(BAR_CELLS - 1 - cell)}`;
 }
 
 function idle(container: ContainerBuilder): void {
@@ -100,9 +105,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
     .addTextDisplayComponents(
       text(state.paused ? '## ⏸️ 잠시 멈췄어요' : '## 💿 지금 이 곡을 들려 드리고 있어요'),
       text(`### ${escapeMarkdown(current.title)}`),
-      text(
-        `-# ${requester}\n\`${current.positionLabel}\` ${progressBar(current.progress)} \`${current.durationLabel}\``,
-      ),
+      text(`-# ${requester}\n${progressBar(current.progress)} \`${current.durationLabel}\``),
     )
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(
@@ -165,8 +168,8 @@ export function renderBanner(state: PlaybackState) {
 }
 
 /**
- * What the banner shows, minus the clock. Compared between ticks so the banner is
- * edited when something changed — not every few seconds just because time passed.
+ * What the banner shows. Compared between ticks so the banner is edited when something
+ * changed — the knob's cell included, so the bar moves one cell at a time.
  */
 export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
@@ -184,5 +187,6 @@ export function bannerSignature(state: PlaybackState): string {
     autoplay: state.autoplay,
     related: hasCapability('related'),
     pending: state.pendingCount,
+    knob: state.active && state.current ? knobCell(state.current.progress) : null,
   });
 }
