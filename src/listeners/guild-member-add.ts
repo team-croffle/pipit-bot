@@ -2,6 +2,7 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener } from '@sapphire/framework';
 import { Events, type GuildMember } from 'discord.js';
 
+import { isEnabled } from '../lib/features.js';
 import {
   formatTemplate,
   getGuildEventSettings,
@@ -25,7 +26,7 @@ export class UserEvent extends Listener {
         ? 'Unknown'
         : `<@${invite.inviterId}>`;
 
-    const template = pickRandomMessage(settings.joinMessages);
+    const template = isEnabled('memberMessages') ? pickRandomMessage(settings.joinMessages) : null;
     if (template && settings.logChannelId) {
       const channel = member.guild.channels.cache.get(settings.logChannelId);
       if (channel?.isTextBased() && 'send' in channel) {
@@ -48,7 +49,7 @@ export class UserEvent extends Listener {
       }
     }
 
-    if (settings.joinRoleIds.length === 0) {
+    if (settings.joinRoleIds.length === 0 || !isEnabled('joinRoles')) {
       return;
     }
 
