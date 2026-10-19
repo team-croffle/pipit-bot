@@ -4,6 +4,7 @@ import type { ButtonInteraction, StringSelectMenuInteraction } from 'discord.js'
 
 import { replyNotice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
+import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { canEnqueuePlayback } from '../lib/music/playback.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { playPlaylist } from '../lib/music/playlists/feeder.js';
@@ -27,6 +28,9 @@ export class PlaylistPickerSelect extends InteractionHandler {
   }
 
   public override async run(interaction: StringSelectMenuInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     const viewer = discordViewer(
       interaction.user,
       interaction.inCachedGuild() ? interaction.member : null,
@@ -78,6 +82,9 @@ export class PlaylistPickerPlay extends InteractionHandler {
   }
 
   public override async run(interaction: ButtonInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     if (!interaction.inCachedGuild()) {
       return;
     }

@@ -4,6 +4,7 @@ import { MessageFlags, type ModalSubmitInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
+import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { requestPlay } from '../lib/music/request.js';
 import { answerSearch } from '../lib/music/search-flow.js';
 import { PLAY_MODAL, PLAY_MODAL_QUERY, SEARCH_MODAL } from './music-remote-button.js';
@@ -25,6 +26,9 @@ export class MusicPlayModal extends InteractionHandler {
   }
 
   public override async run(interaction: ModalSubmitInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     if (!interaction.inCachedGuild()) {
       return;
     }
