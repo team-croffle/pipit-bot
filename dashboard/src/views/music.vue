@@ -52,11 +52,15 @@
             </div>
           </div>
         </StateBlock>
-        <JobsTable />
+        <JobsTable @changed="refresh" />
       </TabsContent>
 
       <TabsContent value="playlists">
-        <PlaylistsPanel :playback="playback" :discord-linked="Boolean(me.discordUserId)" />
+        <PlaylistsPanel
+          :playback="playback"
+          :discord-linked="Boolean(me.discordUserId)"
+          @changed="refresh"
+        />
       </TabsContent>
 
       <TabsContent value="options" class="flex flex-col gap-4">

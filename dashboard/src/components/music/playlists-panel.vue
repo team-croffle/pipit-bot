@@ -16,6 +16,8 @@
   import PlaylistNameDialog from './playlists/playlist-name-dialog.vue';
 
   const props = defineProps<{ playback: PlaybackState | null; discordLinked: boolean }>();
+  /** Playing changes the playback state; the page syncs with the bot only now and then. */
+  const emit = defineEmits<{ changed: [] }>();
 
   const {
     playlists,
@@ -180,7 +182,7 @@
               :playlist="selected"
               :busy="busy"
               :can-play="Boolean(props.playback?.canEnqueue)"
-              @play="(shuffle) => play(selected!.id, shuffle)"
+              @play="(shuffle) => play(selected!.id, shuffle).then(() => emit('changed'))"
               @rename="(name) => rename(selected!.id, name)"
               @remove="remove(selected!.id)"
               :can-import="canImport"
