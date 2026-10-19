@@ -70,6 +70,9 @@
     }
   }
 
+  /** Cancelling or retrying changes the playback state; the page syncs only now and then. */
+  const emit = defineEmits<{ changed: [] }>();
+
   async function act(job: JobRecord, action: 'cancel' | 'retry'): Promise<void> {
     busyId.value = job.jobId;
     try {
@@ -79,6 +82,7 @@
           ? '작업을 취소했습니다. 나중에 준비가 끝나도 재생하지 않습니다.'
           : '같은 요청으로 다시 준비하고 있습니다.';
       actionFailed.value = false;
+      emit('changed');
     } catch (cause) {
       if (isRedirect(cause)) {
         return;
