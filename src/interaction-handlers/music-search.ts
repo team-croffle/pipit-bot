@@ -4,6 +4,7 @@ import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction 
 
 import { replyNotice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
+import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { NO_PLAYLISTS, saveToPlaylistMessage } from '../lib/music/playlists/pickers.js';
 import { requestPlay } from '../lib/music/request.js';
@@ -33,6 +34,9 @@ export class MusicSearchPick extends InteractionHandler {
   }
 
   public override async run(interaction: StringSelectMenuInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     const id = parse(interaction.customId);
     const results = id ? getResults(id.searchId, interaction.user.id) : undefined;
     if (!id || !results) {
@@ -59,6 +63,9 @@ export class MusicSearchPlay extends InteractionHandler {
   }
 
   public override async run(interaction: ButtonInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     if (!interaction.inCachedGuild()) {
       return;
     }

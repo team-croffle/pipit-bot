@@ -5,6 +5,7 @@ import { escapeMarkdown, type Message } from 'discord.js';
 import { actorOf } from '../lib/audit/discord.js';
 import { audit } from '../lib/audit/log.js';
 import { disappearsIn, noticeMessage, type Notice } from '../lib/discord/notice.js';
+import { isEnabled } from '../lib/features.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { requestPlay } from '../lib/music/request.js';
 import { getRuntimeConfig } from '../lib/runtime-config.js';
@@ -32,7 +33,9 @@ export class UserEvent extends Listener<typeof Events.MessageCreate> {
       message.system ||
       message.webhookId ||
       !message.inGuild() ||
-      !getRuntimeConfig().musicChannelIds.includes(message.channelId)
+      !getRuntimeConfig().musicChannelIds.includes(message.channelId) ||
+      // Switched off: the channel is left alone — nothing is played or removed.
+      !isEnabled('music')
     ) {
       return;
     }

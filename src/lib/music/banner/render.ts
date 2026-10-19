@@ -72,6 +72,14 @@ function progressBar(progress: number): string {
   return `${'▬'.repeat(cell)}🔘${'▬'.repeat(BAR_CELLS - 1 - cell)}`;
 }
 
+/** Music switched off from the dashboard: no buttons, nothing to press. */
+function switchedOff(container: ContainerBuilder): void {
+  container.addTextDisplayComponents(
+    text('## 💿 Pipit Hub Music'),
+    text('**음악 기능이 꺼져 있어요.**\n-# 관리자가 대시보드 설정에서 다시 켤 수 있어요.'),
+  );
+}
+
 function idle(container: ContainerBuilder): void {
   container
     .addTextDisplayComponents(
@@ -154,7 +162,9 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
 
 export function renderBanner(state: PlaybackState) {
   const container = new ContainerBuilder().setAccentColor(ACCENT);
-  if (state.active && state.current) {
+  if (state.musicEnabled === false) {
+    switchedOff(container);
+  } else if (state.active && state.current) {
     playing(container, state);
   } else {
     idle(container);
@@ -176,6 +186,7 @@ export function bannerSignature(state: PlaybackState): string {
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
     layout: 4,
     search: hasCapability('search'),
+    off: state.musicEnabled === false,
     active: state.active,
     paused: state.paused,
     title: state.current?.title ?? null,

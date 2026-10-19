@@ -13,6 +13,7 @@ import {
   type JobRecord,
   type TrackMeta,
 } from '../../api/jobs/pending-registry.js';
+import { isEnabled } from '../features.js';
 import { enqueueMusicJob } from './backend-client.js';
 import { describeFailure } from './failure-codes.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
@@ -106,6 +107,11 @@ export async function playPreparedTrack(
   next: boolean,
   requestedBy?: string,
 ): Promise<void> {
+  // A job that finishes after music was switched off is kept as a file, never played.
+  if (!isEnabled('music')) {
+    throw new Error('Music is switched off.');
+  }
+
   const { guild, voiceChannel } = await ensureBotVoiceChannel();
 
   // Checked when the file is ready, not when it was asked for: the track that was

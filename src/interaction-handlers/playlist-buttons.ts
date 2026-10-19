@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import type { ButtonInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
+import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { deletePlaylist, PlaylistError } from '../lib/music/playlists/store.js';
 import { PLAYLIST_DELETE } from '../lib/music/playlists/subcommands.js';
@@ -17,6 +18,9 @@ export class PlaylistDeleteButton extends InteractionHandler {
   }
 
   public override async run(interaction: ButtonInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     const id = interaction.customId.slice(PLAYLIST_DELETE.length + 1);
     await interaction.deferUpdate();
     try {

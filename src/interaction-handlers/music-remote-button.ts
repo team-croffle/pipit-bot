@@ -12,6 +12,7 @@ import {
 import { replyNotice, type Notice } from '../lib/discord/notice.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { REMOTE } from '../lib/music/banner/render.js';
+import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { getVolume } from '../lib/music/pcm-volume.js';
 import {
   getPlaybackState,
@@ -87,6 +88,9 @@ export class MusicRemoteButton extends InteractionHandler {
   }
 
   public override async run(interaction: ButtonInteraction) {
+    if (await refuseWhenMusicOff(interaction)) {
+      return;
+    }
     if (!isMusicChannel(interaction.channelId)) {
       await replyNotice(interaction, {
         ok: false,

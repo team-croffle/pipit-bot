@@ -3,7 +3,7 @@ import { join, normalize, relative } from 'node:path';
 import { Readable } from 'node:stream';
 
 import { container } from '@sapphire/framework';
-import { Hono, type Context } from 'hono';
+import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { stream } from 'hono/streaming';
 
@@ -18,6 +18,7 @@ import {
   listVoiceChannels,
 } from '../lib/discord-guild.js';
 import type { EnvConfig } from '../lib/env.js';
+import { isEnabled } from '../lib/features.js';
 import {
   getGuildEventLoadError,
   getGuildEventSettings,
@@ -90,6 +91,16 @@ async function serveDistFile(c: Context, filePath: string): Promise<Response | n
   });
 }
 
+// Music switched off: reading still works (the page shows what is there), acting does not.
+const musicOff: MiddlewareHandler = (c, next) => {
+  if (c.req.method !== 'GET' && !isEnabled('music')) {
+    return Promise.resolve(
+      c.json({ ok: false, message: 'Music is switched off on this server.' }, 409),
+    );
+  }
+  return next();
+};
+
 export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> {
   const app = new Hono<{ Variables: ApiVariables }>();
 
@@ -99,6 +110,10 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   });
 
   app.use('/api/*', auditDashboard);
+
+  app.use('/api/music/*', musicOff);
+  app.use('/api/playlists', musicOff);
+  app.use('/api/playlists/*', musicOff);
 
   app.get('/api/health', (c) => c.json({ status: 'ok' }));
 

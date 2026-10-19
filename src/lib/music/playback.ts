@@ -2,6 +2,7 @@ import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 
 import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
+import { isEnabled } from '../features.js';
 import { isAutoplayTrack } from './autoplay-files.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolume } from './pcm-volume.js';
@@ -58,6 +59,8 @@ export interface PlaybackState {
   /** Left and right mixed into both ears (pcm-volume.ts). */
   mono: boolean;
   autoplay: boolean;
+  /** False when music is switched off on this server (features.ts). */
+  musicEnabled: boolean;
   /** Something the player did on its own that deserves a word, e.g. a skipped track. */
   notice: PlaybackNotice | null;
   hasPrevious: boolean;
@@ -157,6 +160,7 @@ function buildState(
     volume: getVolume(),
     mono: getPlaybackOptions().mono,
     autoplay: getPlaybackOptions().autoplay,
+    musicEnabled: isEnabled('music'),
     notice: getRecentNotice(),
     hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
     playlist: getFeedStatus(),
