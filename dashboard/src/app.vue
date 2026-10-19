@@ -4,6 +4,7 @@
   import { RouterView, useRoute } from 'vue-router';
 
   import { fetchJson, logout } from './api';
+  import FeatureOffNotice from './components/common/feature-off-notice.vue';
   import AppSidebar from './components/layout/app-sidebar.vue';
   import BrandMark from './components/layout/brand-mark.vue';
   import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
@@ -17,6 +18,7 @@
     SheetTrigger,
   } from './components/ui/sheet';
   import { Skeleton } from './components/ui/skeleton';
+  import { useFeatures } from './composables/use-features';
   import type { DashboardIdentity, HealthResponse } from './types';
 
   const appVersion = import.meta.env.VITE_APP_VERSION;
@@ -45,7 +47,10 @@
     },
   );
 
+  const { load: loadFeatures } = useFeatures();
+
   onMounted(async () => {
+    void loadFeatures();
     try {
       me.value = await fetchJson<DashboardIdentity>('/api/me');
     } catch (cause) {
@@ -136,7 +141,10 @@
           <Skeleton class="h-56 w-full" />
         </div>
 
-        <RouterView v-else-if="me" :me="me" />
+        <template v-else-if="me">
+          <FeatureOffNotice />
+          <RouterView :me="me" />
+        </template>
       </main>
     </div>
   </div>

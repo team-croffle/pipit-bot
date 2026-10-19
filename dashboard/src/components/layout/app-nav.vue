@@ -2,9 +2,12 @@
   import { RouterLink } from 'vue-router';
 
   import { Badge } from '@/components/ui/badge';
+  import { NAV_FEATURE, useFeatures } from '@/composables/use-features';
   import { navSections } from '@/nav';
 
   const emit = defineEmits<{ navigate: [] }>();
+  const { isOff } = useFeatures();
+  const dimmed = (to: string) => Boolean(NAV_FEATURE[to] && isOff(NAV_FEATURE[to]));
 
   const linkClass =
     'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50';
@@ -31,7 +34,13 @@
         v-for="item in section.items"
         :key="item.to"
         :to="item.to"
-        :class="[linkClass, item.exact ? exactActiveClass : activeClass]"
+        :class="[
+          linkClass,
+          item.exact ? exactActiveClass : activeClass,
+          dimmed(item.to) ? 'opacity-50' : '',
+        ]"
+        :data-nav-off="dimmed(item.to) || undefined"
+        :title="dimmed(item.to) ? `${item.label} — 꺼져 있음` : undefined"
         @click="emit('navigate')"
       >
         <component :is="item.icon" class="size-5 shrink-0" />

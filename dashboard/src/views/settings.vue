@@ -1,7 +1,9 @@
 <script setup lang="ts">
+  import { onMounted, ref } from 'vue';
   import { RouterLink } from 'vue-router';
 
   import PageHeader from '@/components/common/page-header.vue';
+  import StateBlock from '@/components/common/state-block.vue';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import {
@@ -21,26 +23,34 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
+  import { FEATURE_LIST, useFeatures, type Feature } from '@/composables/use-features';
   import type { DashboardIdentity } from '@/types';
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
 
-  /**
-   * Per-feature on/off is a v0.7.6 item, but the list is worth showing now: it is how
-   * the operator will read at a glance what the bot is doing, and each row already
-   * points at the page that governs it today.
-   */
-  const features = [
-    { label: '음악', on: true, to: '/music' },
-    { label: 'GitHub PR 리마인더', on: true, to: '/github' },
-    { label: '초대 로거', on: true, to: '/invites' },
-    { label: '리액션 롤', on: true, to: '/reaction-roles' },
-    { label: '감사 로깅', on: false, to: '/logs' },
-    { label: '음악 결산', on: false, to: '/settlement' },
-    { label: '캘린더 연동', on: false, to: '/calendar' },
-    { label: '투표 연동', on: false, to: '/polls' },
+  const { states, loadError, set, load } = useFeatures();
+  const busy = ref<Feature | null>(null);
+  const failure = ref('');
+
+  /** Not built yet — shown so the list reads as the whole plan. */
+  const planned = [
+    { label: '음악 결산', to: '/settlement', version: 'v0.8.1' },
+    { label: '캘린더 연동', to: '/calendar', version: 'v0.9' },
+    { label: '투표 연동', to: '/polls', version: 'v0.10' },
   ];
+
+  async function toggle(feature: Feature, on: boolean): Promise<void> {
+    busy.value = feature;
+    failure.value = await set(feature, on);
+    busy.value = null;
+  }
+
+  onMounted(() => {
+    if (!states.value) {
+      void load();
+    }
+  });
 </script>
 
 <template>
@@ -73,26 +83,56 @@
         <CardHeader>
           <CardTitle class="text-base">기능별 on/off</CardTitle>
           <CardDescription>
-            기능 단위로 켜고 끕니다. 지금은 각 기능 페이지에서 개별로 관리합니다.
+            기능 단위로 켜고 끕니다. 끄면 그 기능의 디스코드 명령도 사라집니다(디스코드에 반영되는
+            데 잠시 걸릴 수 있어요).
           </CardDescription>
-          <CardAction>
-            <Badge variant="secondary">v0.7.6 예정</Badge>
-          </CardAction>
         </CardHeader>
         <CardContent class="flex flex-col">
-          <div
-            v-for="feature in features"
-            :key="feature.label"
-            class="flex items-center justify-between gap-4 border-b py-3 first:pt-0 last:border-b-0 last:pb-0"
-          >
-            <RouterLink
-              :to="feature.to"
-              class="hover:text-primary min-w-0 truncate text-sm transition-colors"
-            >
-              {{ feature.label }}
-            </RouterLink>
-            <Switch :model-value="feature.on" disabled />
-          </div>
+          <StateBlock :loading="!states && !loadError" :error="loadError">
+            <div class="flex flex-col">
+              <div
+                v-for="feature in FEATURE_LIST"
+                :key="feature.key"
+                class="flex items-center justify-between gap-4 border-b py-3 first:pt-0 last:border-b-0"
+              >
+                <div class="min-w-0">
+                  <RouterLink
+                    :to="feature.to"
+                    class="hover:text-primary truncate text-sm font-medium transition-colors"
+                  >
+                    {{ feature.label }}
+                  </RouterLink>
+                  <p class="text-muted-foreground mt-0.5 text-xs">{{ feature.help }}</p>
+                </div>
+                <Switch
+                  :data-feature="feature.key"
+                  :aria-label="feature.label"
+                  :model-value="states?.[feature.key] ?? false"
+                  :disabled="readOnly || busy !== null"
+                  @update:model-value="(value) => toggle(feature.key, value === true)"
+                />
+              </div>
+              <div
+                v-for="item in planned"
+                :key="item.label"
+                class="flex items-center justify-between gap-4 border-b py-3 last:border-b-0 last:pb-0"
+              >
+                <RouterLink
+                  :to="item.to"
+                  class="text-muted-foreground hover:text-primary truncate text-sm transition-colors"
+                >
+                  {{ item.label }}
+                </RouterLink>
+                <div class="flex shrink-0 items-center gap-2.5">
+                  <Badge variant="secondary">{{ item.version }} 예정</Badge>
+                  <Switch disabled />
+                </div>
+              </div>
+            </div>
+          </StateBlock>
+          <p v-if="failure" class="text-destructive mt-3 text-xs" role="alert" data-feature-error>
+            {{ failure }}
+          </p>
         </CardContent>
       </Card>
 
