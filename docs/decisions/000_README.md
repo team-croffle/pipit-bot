@@ -71,3 +71,4 @@ Each file has:
 | [019](./019_v0.7.3_track-search.md) | v0.7.3 | Search has its own way in, and the bot keeps the results |
 | [020](./020_v0.7.4_playlists.md) | v0.7.4 | Playlists: shared or personal, fed into the queue two at a time |
 | [021](./021_v0.7.5_playback-options.md) | v0.7.5 | Playback options live with the bot: mono mixed as it streams, autoplay asked of the worker |
+| [022](./022_v0.7.6_feature-switches.md) | v0.7.6 | Features switch off as a whole, commands included |
