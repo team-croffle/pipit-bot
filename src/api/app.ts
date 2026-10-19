@@ -33,6 +33,7 @@ import { SESSION_COOKIE } from './auth/session.js';
 import type { ApiVariables } from './context.js';
 import { mountAuditRoutes } from './routes/audit.js';
 import { mountAuthRoutes } from './routes/auth.js';
+import { mountFeatureRoutes } from './routes/features.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
 import { mountInviteRoutes } from './routes/invites.js';
@@ -208,6 +209,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   });
 
   mountAuditRoutes(app);
+  mountFeatureRoutes(app);
   mountGithubNotifyRoutes(app, config);
   mountGithubWebhookRoutes(app);
   mountMusicRoutes(app);

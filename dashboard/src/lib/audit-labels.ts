@@ -48,6 +48,7 @@ const ACTION_LABEL: Record<string, string> = {
   'music.ready': '곡 준비 완료',
   'music.failed': '곡 준비 실패',
   'settings.update': '설정 저장',
+  'features.update': '기능 켜고 끄기',
   'member-events.update': '입장·퇴장 설정 저장',
   'github-notify.update': 'GitHub 알림 설정 저장',
   'github.remind': '다시 알리기',
