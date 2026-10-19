@@ -1,6 +1,7 @@
 import { ApplyOptions } from '@sapphire/decorators';
 import { Command } from '@sapphire/framework';
 
+import { isCommandEnabled } from '../lib/discord/command-features.js';
 import { replyNotice } from '../lib/discord/notice.js';
 import { guildOnly } from '../lib/discord/slash.js';
 
@@ -16,6 +17,7 @@ export class UserCommand extends Command {
 
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const lines = [...this.container.stores.get('commands').values()]
+      .filter((command) => isCommandEnabled(command))
       .toSorted((a, b) => a.name.localeCompare(b.name))
       .map((command) => `\`/${command.name}\` — ${command.description}`);
 
