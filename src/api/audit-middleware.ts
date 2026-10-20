@@ -3,6 +3,7 @@ import { createMiddleware } from 'hono/factory';
 import { audit } from '../lib/audit/log.js';
 import type { AuditCategory, AuditOutcome } from '../lib/audit/types.js';
 import type { DashboardIdentity } from './auth/dashboard.js';
+import type { AuditNote } from './context.js';
 
 interface ActionRule {
   method: string;
@@ -110,7 +111,7 @@ async function failureDetail(response: Response): Promise<string> {
  * status code — what was played or asked for stays out of the log.
  */
 export const auditDashboard = createMiddleware<{
-  Variables: { identity?: DashboardIdentity };
+  Variables: { identity?: DashboardIdentity; auditNote?: AuditNote };
 }>(async (c, next) => {
   await next();
 
@@ -124,6 +125,8 @@ export const auditDashboard = createMiddleware<{
   }
 
   const { action, target } = describe(method, path);
+  // A route may know more than the path does — which feature was switched, and which way.
+  const note = c.get('auditNote');
   // Playlists are music: like the rest, recorded without names or tracks.
   const category: AuditCategory =
     path.startsWith('/api/music/') || path.startsWith('/api/playlists') ? 'music' : 'dashboard';
@@ -132,7 +135,7 @@ export const auditDashboard = createMiddleware<{
   // WHY 403 apart: it is only ever `dashboardWrite` refusing a read-only account, which
   // tells a different story from something that broke.
   const outcome: AuditOutcome = ok ? 'ok' : status === 403 ? 'denied' : 'failed';
-  let detail: string | undefined;
+  let detail = note?.detail;
   if (!ok) {
     detail = category === 'music' ? String(status) : await failureDetail(c.res);
   }
@@ -141,7 +144,7 @@ export const auditDashboard = createMiddleware<{
     category,
     action,
     actor: { name: identity.user ?? identity.groups[0] ?? 'dashboard' },
-    target,
+    target: note?.target ?? target,
     outcome,
     detail,
   });
