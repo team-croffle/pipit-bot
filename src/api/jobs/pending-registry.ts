@@ -128,6 +128,9 @@ function settle(record: JobRecord, settleWaiter: (waiter: PendingWaiter) => void
     void audit({
       category: 'music',
       action: `music.${record.status}`,
+      // Nobody asked for an autoplay track, so the bot stands as the actor. The other
+      // origins already name the person on the line that asked (`/play`, `music.enqueue`).
+      actor: record.origin === 'autoplay' ? { name: 'pipit-bot' } : undefined,
       target: record.jobId,
       outcome: record.status === 'ready' ? 'ok' : 'failed',
       detail: [record.origin, record.code].filter(Boolean).join(' · ') || undefined,
