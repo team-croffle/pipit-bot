@@ -10,7 +10,11 @@ export const AUDIT_CATEGORIES = ['dashboard', 'music', 'command', 'github', 'mem
 
 export type AuditCategory = (typeof AUDIT_CATEGORIES)[number];
 
-export type AuditOutcome = 'ok' | 'failed' | 'skipped';
+/**
+ * How it went: `ok` it was done, `denied` it was refused because the actor may not write,
+ * `failed` it broke, `skipped` it was deliberately left undone.
+ */
+export type AuditOutcome = 'ok' | 'denied' | 'failed' | 'skipped';
 
 export interface AuditActor {
   /** A Discord user id, when the actor is a Discord user. */
