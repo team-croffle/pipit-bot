@@ -9,7 +9,8 @@ export interface AuditEntry {
   action: string;
   actor?: { id?: string; name: string };
   target?: string;
-  outcome: 'ok' | 'failed' | 'skipped';
+  /** `denied` is a refusal for want of write access; `failed` is something that broke. */
+  outcome: 'ok' | 'denied' | 'failed' | 'skipped';
   detail?: string;
 }
 

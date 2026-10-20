@@ -12,8 +12,20 @@ export const CATEGORIES = Object.keys(CATEGORY_LABEL) as AuditCategory[];
 
 export const OUTCOME_LABEL: Record<AuditEntry['outcome'], string> = {
   ok: '성공',
-  failed: '실패',
+  denied: '권한 없음',
+  failed: '오류',
   skipped: '건너뜀',
+};
+
+/** The feature switches, as `features.update` records them. */
+const FEATURE_LABEL: Record<string, string> = {
+  music: '음악',
+  github: 'GitHub 알림',
+  audit: '감사 로깅',
+  invites: '초대 추적',
+  memberMessages: '입장·퇴장 메시지',
+  joinRoles: '입장 역할',
+  reactionRoles: '리액션 롤',
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -83,6 +95,34 @@ const REMOTE_LABEL: Record<string, string> = {
   'playlist:save': '재생목록에 담기',
   'playlist:delete': '재생목록 지우기',
 };
+
+/**
+ * `2026.10.20. 15:04:05` in the reader's own time — padded so the column lines up, and
+ * exact, because a log is read to find out when something happened.
+ */
+export function timestamp(at: string): string {
+  const time = new Date(at);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  const day = `${time.getFullYear()}.${pad(time.getMonth() + 1)}.${pad(time.getDate())}.`;
+  return `${day} ${pad(time.getHours())}:${pad(time.getMinutes())}:${pad(time.getSeconds())}`;
+}
+
+/** Switching a feature records its key and `on`/`off`; both read better in Korean. */
+export function targetLabel(entry: AuditEntry): string | undefined {
+  if (entry.action === 'features.update' && entry.target) {
+    return FEATURE_LABEL[entry.target] ?? entry.target;
+  }
+
+  return entry.target;
+}
+
+export function detailLabel(entry: AuditEntry): string | undefined {
+  if (entry.action === 'features.update' && (entry.detail === 'on' || entry.detail === 'off')) {
+    return entry.detail === 'on' ? '켬' : '끔';
+  }
+
+  return entry.detail;
+}
 
 /** A person-readable name for an action; unknown actions are shown as recorded. */
 export function actionLabel(action: string): string {
