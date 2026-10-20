@@ -102,10 +102,13 @@ The bot records who did what and whether it worked:
 
 - changes made from the dashboard (settings, music controls, reaction-role panels, reminders, …) — never the request body
 - slash commands, remote-control buttons and the play dialog in Discord, and requests typed into a music channel; commands that only show something (`/queue`, `/help`) are skipped
-- how each music job ended (its origin, and the failure code when it failed)
+- how each music job ended (its origin, and the failure code when it failed); a track autoplay brought in is recorded with `pipit-bot` as the actor
 - GitHub deliveries (sent, edited, skipped or failed, with the reason) and members joining (invite code, inviter) or leaving
+- switching a feature on or off records which feature changed and which way — a refused attempt too
 
-**For music it records only who used which feature** — never the track, never what was asked for. Entries are appended to one file per day, `data/audit/YYYY-MM-DD.jsonl` (UTC), and files older than **90 days** are removed. Entries hold Discord user ids and display names and dashboard user names; keep that in mind for whoever can read `data/`. The dashboard's **로깅** page lists them by category, period and text, in numbered pages of 5, 10, 20 or 30 rows.
+An entry ends one of four ways: **성공** (done) · **권한 없음** (refused: the dashboard account may not write) · **오류** (it broke) · **건너뜀** (deliberately left undone).
+
+**For music it records only who used which feature** — never the track, never what was asked for. Entries are appended to one file per day, `data/audit/YYYY-MM-DD.jsonl` (UTC), and files older than **90 days** are removed. Entries hold Discord user ids and display names and dashboard user names; keep that in mind for whoever can read `data/`. The dashboard's **로깅** page lists them by category, period and text, in numbered pages of 5, 10, 20 or 30 rows; the table reads 시각 · 기능 · 수행 작업 · 사용자 · 대상 · 내용 · 결과, with the time written out in the reader's own zone as `2026.10.20. 15:04:05`.
 
 ## Reaction roles
 
