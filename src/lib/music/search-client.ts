@@ -1,4 +1,5 @@
 import { getEnv } from '../env.js';
+import { reportUnreachable } from './worker-status.js';
 
 /** One search result as the worker gives it. `query` is opaque: sent back unchanged as a job query. */
 export interface SearchCandidate {
@@ -69,16 +70,19 @@ export async function searchMusic(
       signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
     });
   } catch {
-    throw new SearchFailure('unavailable', MESSAGES.unavailable);
+    throw new SearchFailure('unavailable', await reportUnreachable());
   }
 
   if (response.status === 404 || response.status === 405 || response.status === 501) {
     throw new SearchFailure('unsupported', MESSAGES.unsupported);
   }
 
+  if (response.status === 503) {
+    throw new SearchFailure('unavailable', await reportUnreachable());
+  }
+
   if (!response.ok) {
-    const kind: SearchFailureKind =
-      response.status === 400 ? 'rejected' : response.status === 503 ? 'unavailable' : 'internal';
+    const kind: SearchFailureKind = response.status === 400 ? 'rejected' : 'internal';
     throw new SearchFailure(kind, MESSAGES[kind]);
   }
 

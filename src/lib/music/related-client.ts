@@ -1,5 +1,6 @@
 import { getEnv } from '../env.js';
 import { SearchFailure, type SearchCandidate } from './search-client.js';
+import { reportUnreachable } from './worker-status.js';
 
 /** Most recent tracks sent as the ground for "what comes next", newest first. */
 export const MAX_SEEDS = 5;
@@ -34,15 +35,18 @@ export async function relatedMusic(
       signal: AbortSignal.timeout(RELATED_TIMEOUT_MS),
     });
   } catch {
-    throw new SearchFailure('unavailable', 'The music worker is unavailable.');
+    throw new SearchFailure('unavailable', await reportUnreachable());
   }
 
   if (response.status === 404 || response.status === 405 || response.status === 501) {
     throw new SearchFailure('unsupported', 'The music worker does not offer autoplay.');
   }
+  if (response.status === 503) {
+    throw new SearchFailure('unavailable', await reportUnreachable());
+  }
+
   if (!response.ok) {
-    const kind =
-      response.status === 400 ? 'rejected' : response.status === 503 ? 'unavailable' : 'internal';
+    const kind = response.status === 400 ? 'rejected' : 'internal';
     throw new SearchFailure(kind, 'The music worker could not suggest a next track.');
   }
 

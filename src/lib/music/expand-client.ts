@@ -1,5 +1,6 @@
 import { getEnv } from '../env.js';
 import { SearchFailure, type SearchCandidate } from './search-client.js';
+import { reportUnreachable } from './worker-status.js';
 
 /** What the music worker made of one request: an optional title and the tracks in it. */
 export interface Expanded {
@@ -28,15 +29,18 @@ export async function expandMusic(query: string): Promise<Expanded> {
       signal: AbortSignal.timeout(EXPAND_TIMEOUT_MS),
     });
   } catch {
-    throw new SearchFailure('unavailable', 'The music worker is unavailable.');
+    throw new SearchFailure('unavailable', await reportUnreachable());
   }
 
   if (response.status === 404 || response.status === 405 || response.status === 501) {
     throw new SearchFailure('unsupported', 'The music worker does not offer importing.');
   }
+  if (response.status === 503) {
+    throw new SearchFailure('unavailable', await reportUnreachable());
+  }
+
   if (!response.ok) {
-    const kind =
-      response.status === 400 ? 'rejected' : response.status === 503 ? 'unavailable' : 'internal';
+    const kind = response.status === 400 ? 'rejected' : 'internal';
     throw new SearchFailure(
       kind,
       kind === 'rejected'
