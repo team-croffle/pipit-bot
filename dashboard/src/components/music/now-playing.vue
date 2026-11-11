@@ -54,11 +54,30 @@
     return where;
   });
 
-  // Priority, not stacking: an error is the thing to read, then the player's own
-  // notice, then whatever the last action reported, then why enqueueing is unavailable.
+  const workerDown = computed(() => props.playback?.worker?.status === 'down');
+
+  /** How long the worker has been down, by the poll that brought it. */
+  function downFor(since: number | null | undefined): string {
+    const minutes = since ? Math.floor((Date.now() - since) / 60_000) : 0;
+    if (minutes < 1) {
+      return '방금 꺼졌어요';
+    }
+
+    return minutes < 60 ? `${minutes}분째` : `${Math.floor(minutes / 60)}시간째`;
+  }
+
+  // Priority, not stacking: an error is the thing to read, then a music worker that is
+  // down (nothing new can be prepared), then the player's own notice, then whatever the
+  // last action reported, then why enqueueing is unavailable.
   const status = computed(() => {
     if (props.error) {
       return props.error;
+    }
+
+    // Adding stays possible — a worker that has just come back takes the request — but
+    // this says why it will most likely fail. It goes away on the poll after it is back.
+    if (workerDown.value) {
+      return `음악 워커가 꺼져 있어요 · ${downFor(props.playback?.worker?.since)}`;
     }
 
     // Something the player did on its own (a track skipped for a missing file) is
@@ -188,7 +207,7 @@
       <p
         data-playback-status
         class="min-h-5 text-sm"
-        :class="error ? 'text-destructive' : 'text-muted-foreground'"
+        :class="error ? 'text-destructive' : workerDown ? 'text-warning' : 'text-muted-foreground'"
         :role="error ? 'alert' : undefined"
         aria-live="polite"
       >
