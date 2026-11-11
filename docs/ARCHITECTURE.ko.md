@@ -108,6 +108,10 @@ dashboard/            Vue SPA — dashboard/dist로 빌드되어 / 에서 제공
 두 개로 유지하며 대기열이 움직일 때 다음 곡을 요청하고, 준비가 먼저 끝난 곡도 재생목록 순서대로 넣습니다. 가져오기는 worker에 요청
 하나를 풀어 달라고 하고(`POST /v1/expand`), 검색과 가져오기 중 무엇을 보여 줄지는 worker의 선택 항목 `capabilities`가 정합니다.
 
+**worker 상태**([023](./decisions/023_v0.7.7_worker-status.md)): 같은 health 확인으로 봇은 worker가 살아 있는지도 압니다 — 살아
+있으면 5분마다, 꺼져 있으면 10초부터 1분까지, 요청이 닿지 못하면 바로 묻습니다. 요청은 다시 보내지 않고, 대신 배너·명령 답·
+대시보드가 worker가 꺼져 있다고 말하며 돌아오면 저절로 평소로 돌아갑니다.
+
 ## GitHub 알림
 
 ![GitHub 알림: 웹훅 경로와 리마인드 경로](./img/architecture/05-github-flow.png)

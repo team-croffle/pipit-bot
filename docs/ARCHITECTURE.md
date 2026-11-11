@@ -113,6 +113,11 @@ feeder keeps two tracks prepared-but-not-started and asks for the next as the qu
 order even when they finish preparing out of turn. Importing asks the worker to expand one request (`POST /v1/expand`);
 the worker's optional `capabilities` decide which of search and import the bot shows.
 
+**Worker status** ([023](./decisions/023_v0.7.7_worker-status.md)): the same health read tells the bot whether the worker
+is up — every five minutes while it is, from 10 seconds up to a minute while it is not, and at once when a request
+cannot reach it. Requests are never resent; the banner, command replies and the dashboard say the worker is down
+instead, and go back to normal on their own.
+
 ## GitHub notifications
 
 ![GitHub notifications: the webhook path and the remind path](./img/architecture/05-github-flow.png)
