@@ -14,7 +14,7 @@ import {
   type TrackMeta,
 } from '../../api/jobs/pending-registry.js';
 import { isEnabled } from '../features.js';
-import { enqueueMusicJob } from './backend-client.js';
+import { EnqueueFailure, enqueueMusicJob } from './backend-client.js';
 import { describeFailure } from './failure-codes.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
@@ -67,8 +67,8 @@ export async function submitMusicJob(
     // the worker could not be reached.
     resolveFailed(
       jobId,
-      error instanceof Error ? error.message : 'Music service is unavailable.',
-      'unavailable',
+      error instanceof Error ? error.message : 'The music worker is unavailable.',
+      error instanceof EnqueueFailure ? error.code : 'unavailable',
     );
     throw error;
   }

@@ -1,3 +1,5 @@
+import { getWorkerStatus, unreachableMessage } from './worker-status.js';
+
 /**
  * Why a music job failed, as a short code the worker may send with its failure
  * callback (docs/music-backend.md). The code is optional — a worker that sends only
@@ -39,6 +41,11 @@ function isKnown(code: string): code is FailureCode {
 
 /** The sentence a command answers with: the code's meaning, then the worker's own words. */
 export function describeFailure(code: string | undefined, error: string | undefined): string {
+  // A worker known to be down is the whole story; its last words add nothing.
+  if (code === 'unavailable' && getWorkerStatus().status === 'down') {
+    return unreachableMessage();
+  }
+
   const base = code && isKnown(code) ? DESCRIPTIONS[code] : undefined;
   if (!base) {
     return error ?? 'Failed to prepare track.';

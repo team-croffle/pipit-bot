@@ -40,6 +40,8 @@ const timing = {
   /** A burst of failed requests asks once. */
   failureGapMs: 2000,
   healthTimeoutMs: 5000,
+  /** How long a failed request's answer waits for the read it pulled forward. */
+  reportWaitMs: 500,
 };
 
 let current: WorkerStatus = { status: 'unknown', since: null, checkedAt: null };
@@ -144,6 +146,28 @@ export function noteWorkerFailure(): Promise<void> {
   }
 
   return check();
+}
+
+const DOWN_MESSAGE = 'The music worker is down right now — try again once it is back.';
+const UNAVAILABLE_MESSAGE = 'The music worker is unavailable.';
+
+/** The sentence for an answer that could not come from the worker, by what is known now. */
+export function unreachableMessage(): string {
+  return current.status === 'down' ? DOWN_MESSAGE : UNAVAILABLE_MESSAGE;
+}
+
+/**
+ * A request could not reach the worker: asks it (once, shared with the rest of a burst)
+ * and returns the sentence to answer with — "down" only once a read has confirmed it.
+ * A refused connection is confirmed in milliseconds; a worker that hangs would hang the
+ * read too, so the answer waits only briefly and the read finishes on its own.
+ */
+export async function reportUnreachable(): Promise<string> {
+  await Promise.race([
+    noteWorkerFailure(),
+    new Promise((resolve) => setTimeout(resolve, timing.reportWaitMs).unref()),
+  ]);
+  return unreachableMessage();
 }
 
 /** Reads now, then keeps reading on the schedule above. */
