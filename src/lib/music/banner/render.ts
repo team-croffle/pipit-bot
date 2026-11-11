@@ -13,11 +13,17 @@ import {
 import type { PlaybackState } from '../playback.js';
 import { MAX_VOLUME, MIN_VOLUME } from '../volume.js';
 import { hasCapability } from '../worker-capabilities.js';
+import { getWorkerStatus } from '../worker-status.js';
 
 /**
  * The music channel's remote control: one message per music channel, drawn from the
  * playback state. Idle, it says how to start; playing, it shows the track and the
  * controls. Components V2 — no `content` or `embeds` alongside.
+ *
+ * A music worker known to be down is said here and nowhere else in the channel: idle,
+ * the banner says so instead of inviting a request; playing, the track goes on (it is
+ * a local file) and one line warns that new ones cannot be prepared. Both go away on
+ * their own when the worker is back — the banner is redrawn on every change of status.
  *
  * Copy follows AGENTS.md §2: "a song title or a link", never a source.
  */
@@ -80,12 +86,19 @@ function switchedOff(container: ContainerBuilder): void {
   );
 }
 
+/** Only a read that failed counts: right after start the status is still unknown. */
+function workerDown(): boolean {
+  return getWorkerStatus().status === 'down';
+}
+
 function idle(container: ContainerBuilder): void {
   container
     .addTextDisplayComponents(
       text('## 💿 Pipit Hub Music'),
       text(
-        '**이 채널에 곡 제목이나 URL을 입력하여 재생해 보세요.**\n-# 곡을 준비해서 바로 들려 드릴게요. 통화방에 먼저 들어가 있어 주세요.',
+        workerDown()
+          ? '**음악 워커가 꺼져 있어요.**\n-# 지금은 곡을 준비할 수 없어요. 돌아오면 이 안내가 저절로 사라져요.'
+          : '**이 채널에 곡 제목이나 URL을 입력하여 재생해 보세요.**\n-# 곡을 준비해서 바로 들려 드릴게요. 통화방에 먼저 들어가 있어 주세요.',
       ),
     )
     .addSeparatorComponents(separator())
@@ -118,7 +131,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(
       text(
-        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${state.volume}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}`,
+        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${state.volume}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}${workerDown() ? '\n-# ⚠️ 음악 워커가 꺼져 있어 새 곡은 지금 준비할 수 없어요.' : ''}`,
       ),
     )
     .addSeparatorComponents(separator())
@@ -184,8 +197,9 @@ export function renderBanner(state: PlaybackState) {
 export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
-    layout: 4,
+    layout: 5,
     search: hasCapability('search'),
+    workerDown: workerDown(),
     off: state.musicEnabled === false,
     active: state.active,
     paused: state.paused,

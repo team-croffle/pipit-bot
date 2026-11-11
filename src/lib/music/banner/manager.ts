@@ -4,6 +4,7 @@ import { DiscordAPIError, RESTJSONErrorCodes, type SendableChannels } from 'disc
 import { getConfiguredGuild } from '../../discord-guild.js';
 import { getRuntimeConfig } from '../../runtime-config.js';
 import { getPlaybackState, type PlaybackState } from '../playback.js';
+import { onWorkerStatusChange } from '../worker-status.js';
 import { BAR_CELLS, bannerSignature, knobCell, renderBanner } from './render.js';
 import {
   bannerChannels,
@@ -34,6 +35,7 @@ let busy = false;
 let timer: ReturnType<typeof setInterval> | undefined;
 let cellTimer: ReturnType<typeof setTimeout> | undefined;
 const warned = new Set<string>();
+let watchingWorker = false;
 
 function sendableChannel(channelId: string): SendableChannels | null {
   const channel = getConfiguredGuild()?.channels.cache.get(channelId);
@@ -158,6 +160,11 @@ export async function syncBanners(): Promise<void> {
 export async function startBanners(): Promise<void> {
   await loadBannerStore();
   await syncBanners();
+  // The worker going down or coming back is news now, not at the next tick.
+  if (!watchingWorker) {
+    watchingWorker = true;
+    onWorkerStatusChange(() => requestBannerRefresh());
+  }
   timer ??= setInterval(() => {
     void refresh(false).catch((error: unknown) => container.logger.warn('[music-banner]', error));
   }, TICK_MS);
