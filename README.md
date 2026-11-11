@@ -144,6 +144,8 @@ A configured music channel holds one **remote-control banner**, kept by the bot 
 
 The banner is posted when the bot starts or a music channel is added, re-posted if it is deleted, and removed from a channel that stops being a music channel.
 
+When the **music worker is down**, the banner says so: idle, it shows that tracks cannot be prepared right now instead of how to request one; playing, the track goes on and one line warns that new tracks cannot be prepared. Nothing new is posted in the channel, and the banner goes back to normal on its own once the worker is back. Requests are still sent while it is down — the reply says the worker is down if it still is — and the dashboard's Music page shows the same note with how long it has lasted. How the bot tells, see [docs/music-backend.md](./docs/music-backend.md).
+
 ### Playlists
 
 Playlists live on the Music page's **playlists** tab and behind `/playlist`:

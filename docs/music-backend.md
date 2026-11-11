@@ -22,6 +22,14 @@ GET /v1/health → 200 { "status": "ok", "capabilities": ["search", "expand", "r
 
 `capabilities` is optional: it names the optional features below that the worker offers (`search`, `expand`, `related`), and the bot shows only those controls. A worker that leaves it out is treated as "may offer anything" — every control shows, and one the worker lacks answers that it is not available.
 
+The bot also reads the health answer to know whether the worker is **up**. This asks nothing new of a worker; it is how the bot reads what is already required:
+
+- only a `200` counts as up. Any other status, a refused connection or no answer within 5 seconds counts as down
+- while up, the bot asks every five minutes; while down, after 10 seconds, then 20, 40 and every 60 seconds until it is back
+- when a request (`/v1/jobs`, `/v1/search`, `/v1/expand`, `/v1/related`) cannot reach the worker — a refused connection, a timeout or a `503` (any `5xx` for `/v1/jobs`) — the bot asks at once instead of waiting for the next read. An answer the worker did give, such as a `400`, says nothing about whether it is up
+- the bot does **not** resend a failed request. While the worker is down, requests are still sent, so the first one after the worker is back succeeds; the people asking are told the worker is down, on the music channel's banner, in command replies and on the dashboard
+- a `/v1/jobs` request gives up after 10 seconds — the worker only accepts the job there (`202`) and prepares it afterwards
+
 After preparing audio on the shared volume:
 
 ```
