@@ -330,6 +330,8 @@ export interface PlaybackState {
   playlist?: PlaylistFeed | null;
   /** The music worker's optional features; null or absent when it does not say. */
   capabilities?: ('search' | 'expand' | 'related')[] | null;
+  /** Whether the music worker can be reached; absent from an older bot. */
+  worker?: { status: 'unknown' | 'up' | 'down'; since: number | null };
 }
 
 export interface PlaylistFeed {

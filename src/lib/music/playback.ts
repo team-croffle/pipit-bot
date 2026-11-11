@@ -10,6 +10,7 @@ import { getPlaybackOptions, type RepeatDefault } from './playback-options.js';
 import { getFeedStatus, stopFeed, type FeedStatus } from './playlists/feed-state.js';
 import { shareOf } from './track-format.js';
 import { workerCapabilities, type WorkerCapability } from './worker-capabilities.js';
+import { getWorkerStatus, type WorkerReachability } from './worker-status.js';
 
 // WHY 100 and not the whole queue: the dashboard polls this every few seconds, and a
 // queue that long is already past what anyone scrolls through.
@@ -69,6 +70,8 @@ export interface PlaybackState {
   playlist: FeedStatus | null;
   /** The music worker's optional features, or null when it does not say. */
   capabilities: WorkerCapability[] | null;
+  /** Whether the music worker can be reached, and since when (worker-status.ts). */
+  worker: { status: WorkerReachability; since: number | null };
 }
 
 export interface PlaybackActionResult {
@@ -167,6 +170,7 @@ function buildState(
     hasPrevious: (getGuildQueue()?.history.size ?? 0) > 0,
     playlist: getFeedStatus(),
     capabilities: workerCapabilities(),
+    worker: { status: getWorkerStatus().status, since: getWorkerStatus().since },
   };
 }
 
