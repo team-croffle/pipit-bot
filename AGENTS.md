@@ -56,11 +56,11 @@ Discussion of a specific worker implementation does not belong in this repositor
   maps from `DASHBOARD_ADMIN_GROUPS`, matched against the `groups` claim. An unreachable provider is a `502`, not a `500`.
 - Data the bot produces and keeps adding to lives in **PostgreSQL** (`DATABASE_URL`, drizzle; schema in
   `src/lib/db/schema.ts`, migrations in `drizzle/` via `yarn db:generate`, applied at start): tracked GitHub messages,
-  music channel banners, invite counts. Storage modules keep their rows in memory and write through; feature code never
+  music channel banners, invite counts, the audit log. Storage modules keep their rows in memory and write through; feature code never
   touches the driver. A file from before is moved in once with `migrateFile` and kept as `*.migrated`.
 - Runtime settings persist as JSON under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json` —
   routing, the login-to-user map and the `teams` team-to-role map —, `reaction-roles.json`, `playlists.json`,
-  `playback-options.json`, `features.json`). No hard-coded settings in source; every loader tolerates a missing file
+  `playback-options.json`, `features.json`, `audit-settings.json`). No hard-coded settings in source; every loader tolerates a missing file
   and reports a damaged one (`loadSettingsFile`).
 - GitHub notifications: one public route `POST /webhooks/github` with `X-Hub-Signature-256` verification; everything
   substituted into a message is sanitized (`sanitizeGithubText`), only mapped Discord ids may ping, embeds carry the
