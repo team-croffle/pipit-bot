@@ -25,3 +25,10 @@ export const trackedMessages = pgTable('tracked_messages', {
   at: timestamp('at', { withTimezone: true, mode: 'string' }).notNull(),
   mentioned: text('mentioned').array().notNull().default([]),
 });
+
+/** Which message is the remote-control banner in each music channel (music/banner/store.ts). */
+export const musicBanners = pgTable('music_banners', {
+  channelId: text('channel_id').primaryKey(),
+  messageId: text('message_id').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
