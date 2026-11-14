@@ -50,9 +50,13 @@ OIDC_REDIRECT_URI=
 # default: openid profile email groups
 OIDC_SCOPES=
 DASHBOARD_SESSION_SECRET=
+# the dashboard's address for the music channel remote's link; default: the origin of OIDC_REDIRECT_URI
+DASHBOARD_URL=
 ```
 
 Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik and Dex are known to work, and any provider that supports the flow should. The bot is the OIDC client — no auth proxy container in this compose. Set `OIDC_*` and `DASHBOARD_SESSION_SECRET` in production. Do not expose `/internal/*` on the public host. Music worker callbacks use `INTERNAL_TOKEN`.
+
+`DASHBOARD_URL` is where people open the dashboard; the music channel's remote links to its Music page. Without it the bot uses the origin of `OIDC_REDIRECT_URI` — set it when the dashboard lives under a path, or when OIDC is not used. With neither, the remote has no link. Only `http` and `https` addresses are accepted; anything else stops the bot at start.
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
 
@@ -136,15 +140,17 @@ The dashboard, the banner and the commands share one queue, so any of them can p
 
 A configured music channel holds one **remote-control banner**, kept by the bot as the channel's last message:
 
-- **Idle** — "💿 Pipit Hub Music", how to request a track, a **play** button that opens a dialog for a song title or a link, and a **search** button
-- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, add a track, search, repeat, volume down and up by ten, mono, and autoplay. What a button did is shown only to the person who pressed it, for five seconds
+- **Idle** — "💿 Pipit Hub Music", how to request a track, a **play** button that opens a dialog for a song title or a link, **search**, **playlists**, **join** and a **관제 센터** link
+- **Playing** — the track, who asked for it, a progress bar, repeat / volume / queue, and buttons for pause or resume, next, stop, the queue, playlists, add a track, search, repeat, volume down and up by ten, mono, autoplay, join and the **관제 센터** link. What a button did is shown only to the person who pressed it, for five seconds
+- **Join** brings the bot into the presser's voice channel, as `/join` does — except that it never moves a session that is playing in another channel; `/join` or the dashboard does that
+- The **관제 센터** link opens the dashboard's Music page (see `DASHBOARD_URL` under [Environment](#environment)); without a known address it is left out
 - **Typing a song title or a link** into the channel plays it: the line is removed, and a short banner everyone can see says what happened and then removes itself. Removing the line needs the bot's **Manage Messages** permission in that channel; without it the request still runs and the line stays
 
 **Search** — `/search` or the banner's search button — lists up to five results only to the person who searched; they pick one and play it now or next. Results stay pickable for ten minutes, and only by whoever searched. Search needs a music worker that offers it (see [docs/music-backend.md](./docs/music-backend.md)); with one that does not, the bot says so and everything else works.
 
 The banner is posted when the bot starts or a music channel is added, re-posted if it is deleted, and removed from a channel that stops being a music channel.
 
-When the **music worker is down**, the banner says so: idle, it shows that tracks cannot be prepared right now instead of how to request one; playing, the track goes on and one line warns that new tracks cannot be prepared. Nothing new is posted in the channel, and the banner goes back to normal on its own once the worker is back. Requests are still sent while it is down — the reply says the worker is down if it still is — and the dashboard's Music page shows the same note with how long it has lasted. How the bot tells, see [docs/music-backend.md](./docs/music-backend.md).
+When the **music worker is down**, the banner says so: idle, it shows that tracks cannot be prepared right now instead of how to request one; playing, the track goes on and one line warns that new tracks cannot be prepared. The buttons that need the worker — play, add a track, search, playlists and autoplay — are disabled meanwhile; the rest keep working. Nothing new is posted in the channel, and the banner goes back to normal on its own once the worker is back. Requests are still sent while it is down — the reply says the worker is down if it still is — and the dashboard's Music page shows the same note with how long it has lasted. How the bot tells, see [docs/music-backend.md](./docs/music-backend.md).
 
 ### Playlists
 
