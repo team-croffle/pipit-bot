@@ -40,6 +40,8 @@ export interface EnvConfig {
   oidc: OidcConfig | null;
   /** The dashboard's public address, without a trailing slash; null when it is not known. */
   dashboardUrl: string | null;
+  /** PostgreSQL; required to run, checked when connecting (src/lib/db/client.ts). */
+  databaseUrl: string | null;
   nodeEnv: string;
 }
 
@@ -236,6 +238,7 @@ export function loadEnv(): EnvConfig {
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
     oidc,
     dashboardUrl: parseDashboardUrl(oidc),
+    databaseUrl: process.env.DATABASE_URL?.trim() || null,
     nodeEnv,
   };
 }

@@ -3,6 +3,7 @@ import { container } from '@sapphire/framework';
 import { startApiServer } from './api/server.js';
 import { startAuditRetention } from './lib/audit/retention.js';
 import { CustomClient } from './lib/client.js';
+import { closeDatabase, connectDatabase } from './lib/db/client.js';
 import { loadFeatures } from './lib/features.js';
 import { loadTrackedMessages } from './lib/github/message-tracker.js';
 import { loadGithubNotifySettings } from './lib/github/settings.js';
@@ -18,6 +19,8 @@ const client = new CustomClient(env);
 
 const main = async () => {
   try {
+    // First: everything after it may read a table.
+    await connectDatabase();
     await loadGuildEventSettings();
     await loadGithubNotifySettings();
     // Before login: the command registry, filled at login, leaves out switched-off features.
@@ -44,6 +47,7 @@ const main = async () => {
   } catch (error) {
     container.logger.fatal(error);
     await client.destroy();
+    await closeDatabase();
     process.exit(1);
   }
 };
