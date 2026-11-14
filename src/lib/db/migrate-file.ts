@@ -1,4 +1,4 @@
-import { copyFile, readFile, rename } from 'node:fs/promises';
+import { access, copyFile, readFile, rename } from 'node:fs/promises';
 import { basename } from 'node:path';
 
 import { container } from '@sapphire/framework';
@@ -48,8 +48,14 @@ function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 }
 
+/** Never over an earlier `*.migrated` — that one is the copy a way back depends on. */
 async function renameAside(path: string): Promise<void> {
-  await rename(path, `${path}.migrated`);
+  const target = `${path}.migrated`;
+  const taken = await access(target).then(
+    () => true,
+    () => false,
+  );
+  await rename(path, taken ? `${target}-${new Date().toISOString().replaceAll(':', '-')}` : target);
 }
 
 export async function migrateFile<T>(migration: FileMigration<T>): Promise<MigrationOutcome> {
@@ -71,9 +77,11 @@ export async function migrateFile<T>(migration: FileMigration<T>): Promise<Migra
     .from(fileMigrations)
     .where(eq(fileMigrations.name, migration.name));
   if (done) {
+    // Either a start stopped right after the move, or the file came back later (an older
+    // image ran in between). Its content is not moved again: the database is the record.
     await finish(undefined);
-    container.logger.info(
-      `[db] ${migration.label} were already moved in; finished setting the file aside`,
+    container.logger.warn(
+      `[db] ${basename(migration.path)} is here again but ${migration.label} were moved in on ${done.migratedAt.toISOString().slice(0, 10)}; set it aside without moving it in`,
     );
     return 'finished';
   }
