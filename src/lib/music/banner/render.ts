@@ -22,8 +22,10 @@ import { getWorkerStatus } from '../worker-status.js';
  *
  * A music worker known to be down is said here and nowhere else in the channel: idle,
  * the banner says so instead of inviting a request; playing, the track goes on (it is
- * a local file) and one line warns that new ones cannot be prepared. Both go away on
- * their own when the worker is back — the banner is redrawn on every change of status.
+ * a local file) and one line warns that new ones cannot be prepared. The buttons that
+ * need the worker — play, add, search, playlists, autoplay — are disabled meanwhile;
+ * the ones that act on what is already playing stay. All of it goes away on its own
+ * when the worker is back — the banner is redrawn on every change of status.
  *
  * Copy follows AGENTS.md §2: "a song title or a link", never a source.
  */
@@ -92,6 +94,7 @@ function workerDown(): boolean {
 }
 
 function idle(container: ContainerBuilder): void {
+  const down = workerDown();
   container
     .addTextDisplayComponents(
       text('## 💿 Pipit Hub Music'),
@@ -105,15 +108,16 @@ function idle(container: ContainerBuilder): void {
     .addTextDisplayComponents(text('### 🎛️ 리모컨'))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
-        button(REMOTE.play, '재생', '▶️', ButtonStyle.Primary),
-        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍')] : []),
-        button(REMOTE.playlists, '재생목록', '📁'),
+        button(REMOTE.play, '재생', '▶️', ButtonStyle.Primary).setDisabled(down),
+        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍').setDisabled(down)] : []),
+        button(REMOTE.playlists, '재생목록', '📁').setDisabled(down),
       ),
     );
 }
 
 function playing(container: ContainerBuilder, state: PlaybackState): void {
   const current = state.current!;
+  const down = workerDown();
   const requester = current.autoplay
     ? '🤖 자동 재생으로 이어 듣는 곡이에요'
     : current.requester
@@ -131,7 +135,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(
       text(
-        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${state.volume}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}${workerDown() ? '\n-# ⚠️ 음악 워커가 꺼져 있어 새 곡은 지금 준비할 수 없어요.' : ''}`,
+        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${state.volume}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}${down ? '\n-# ⚠️ 음악 워커가 꺼져 있어 새 곡은 지금 준비할 수 없어요.' : ''}`,
       ),
     )
     .addSeparatorComponents(separator())
@@ -143,11 +147,11 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
         button(REMOTE.skip, '다음', '⏭️'),
         button(REMOTE.stop, '정지', '⏹️', ButtonStyle.Danger),
         button(REMOTE.queue, '대기열', '📜'),
-        button(REMOTE.playlists, '재생목록', '📁'),
+        button(REMOTE.playlists, '재생목록', '📁').setDisabled(down),
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
-        button(REMOTE.play, '곡 추가', '➕'),
-        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍')] : []),
+        button(REMOTE.play, '곡 추가', '➕').setDisabled(down),
+        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍').setDisabled(down)] : []),
         button(REMOTE.loop, '반복', '🔁'),
         button(REMOTE.volumeDown, '−10', '🔉').setDisabled(state.volume <= MIN_VOLUME),
         button(REMOTE.volumeUp, '+10', '🔊').setDisabled(state.volume >= MAX_VOLUME),
@@ -166,7 +170,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
                 state.autoplay ? '자동 재생 끄기' : '자동 재생',
                 '♾️',
                 state.autoplay ? ButtonStyle.Success : ButtonStyle.Secondary,
-              ),
+              ).setDisabled(down),
             ]
           : []),
       ),
@@ -197,7 +201,7 @@ export function renderBanner(state: PlaybackState) {
 export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
-    layout: 5,
+    layout: 6,
     search: hasCapability('search'),
     workerDown: workerDown(),
     off: state.musicEnabled === false,
