@@ -29,6 +29,13 @@
       "when": 1794691127560,
       "tag": "0003_music_banners",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794691195834,
+      "tag": "0004_invite_stats",
+      "breakpoints": true
     }
   ]
 }
