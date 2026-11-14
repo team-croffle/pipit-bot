@@ -38,6 +38,8 @@ export interface EnvConfig {
   dashboardDevUser: string;
   dashboardDevRole: DashboardDevRole;
   oidc: OidcConfig | null;
+  /** The dashboard's public address, without a trailing slash; null when it is not known. */
+  dashboardUrl: string | null;
   nodeEnv: string;
 }
 
@@ -218,6 +220,7 @@ export function loadEnv(): EnvConfig {
   );
 
   const nodeEnv = process.env.NODE_ENV ?? 'development';
+  const oidc = parseOidc(nodeEnv);
 
   return {
     botToken,
@@ -231,9 +234,42 @@ export function loadEnv(): EnvConfig {
     dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
     dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
-    oidc: parseOidc(nodeEnv),
+    oidc,
+    dashboardUrl: parseDashboardUrl(oidc),
     nodeEnv,
   };
+}
+
+/**
+ * Where people open the dashboard — for the music channel remote's link. DASHBOARD_URL
+ * when set; otherwise the origin of the OIDC redirect, which already names the
+ * dashboard's public address; otherwise unknown, and the link is left out.
+ *
+ * Only http(s): Discord refuses a link button with any other scheme, and with it the
+ * whole banner message.
+ */
+function parseDashboardUrl(oidc: OidcConfig | null): string | null {
+  const raw = process.env.DASHBOARD_URL?.trim();
+  if (raw) {
+    const url = parseHttpUrl(raw);
+    if (!url) {
+      throw new Error(`Invalid DASHBOARD_URL="${raw}". Expected an http or https URL.`);
+    }
+
+    return url.href.replace(/\/$/, '');
+  }
+
+  return oidc ? (parseHttpUrl(oidc.redirectUri)?.origin ?? null) : null;
+}
+
+/** An http(s) URL, or null — `URL.canParse` is not in every Node this runs on. */
+function parseHttpUrl(raw: string): URL | null {
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
 }
 
 let cached: EnvConfig | undefined;
