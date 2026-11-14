@@ -1,4 +1,13 @@
-import { bigint, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core';
 
 /**
  * The tables. Only data the bot produces and keeps adding to lives here — tracked
@@ -59,4 +68,33 @@ export const auditEntries = pgTable(
     index('audit_entries_at').on(table.at),
     index('audit_entries_category_at').on(table.category, table.at),
   ],
+);
+
+/** Playlists (music/playlists/store.ts); their tracks are in `playlist_items`, in order. */
+export const playlists = pgTable('playlists', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  scope: text('scope').notNull(),
+  ownerId: text('owner_id'),
+  createdById: text('created_by_id'),
+  createdByName: text('created_by_name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull(),
+});
+
+/** The tracks of a playlist. `request` is what is sent to the music worker — never shown. */
+export const playlistItems = pgTable(
+  'playlist_items',
+  {
+    playlistId: text('playlist_id')
+      .notNull()
+      .references(() => playlists.id, { onDelete: 'cascade' }),
+    id: text('id').notNull(),
+    position: integer('position').notNull(),
+    title: text('title').notNull(),
+    durationSec: integer('duration_sec'),
+    request: text('request').notNull(),
+    typed: boolean('typed').notNull().default(false),
+  },
+  (table) => [primaryKey({ columns: [table.playlistId, table.id] })],
 );
