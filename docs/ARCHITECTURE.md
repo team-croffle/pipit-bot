@@ -74,14 +74,13 @@ Inside the process:
   signed-in session; changing settings also requires an admin group. Worker callbacks require the internal token.
 - **In memory** — the music job registry, the player's queue and history, short-lived caches of GitHub lists. All of it
   is rebuilt or forgotten on restart.
-- **In the database** — tracked GitHub messages, the music channels' banner messages, invite counts and the audit log
-  ([024](./decisions/024_v0.8.0_database.md)). Each store loads its rows into memory at start-up, so the code that reads
+- **In the database** — tracked GitHub messages, the music channels' banner messages, invite counts, the audit log,
+  playlists, reaction-role panels and the GitHub ↔ Discord account links ([024](./decisions/024_v0.8.0_database.md)). Each store loads its rows into memory at start-up, so the code that reads
   them stays synchronous, and writes every change straight through; the audit log alone is queried in SQL, by period,
   category and text. Migrations are applied when the bot starts; a file
   from before is moved in once and kept as `*.migrated`.
 - **On disk** — settings under `data/`, each loaded at start-up and written whole when it changes (a person can fix them
-  in an editor when the dashboard is locked out). Playlists and reaction-role panels are still files in v0.8.0-rc.2 and
-  move into the database in the next pre-release.
+  in an editor when the dashboard is locked out).
 
 **Feature switches** ([022](./decisions/022_v0.7.6_feature-switches.md)) are one entry point, `isEnabled(feature)`, read
 where each feature acts. Switching music or GitHub replaces the bot's slash commands with those of the switched-on
@@ -114,7 +113,7 @@ A job always ends — ready, failed, timed out or cancelled — and the dashboar
 ([016](./decisions/016_v0.7.1_music-job-lifecycle.md)). The queue, voice connection and volume are the bot's; the worker
 never sees them.
 
-**Playlists** ([020](./decisions/020_v0.7.4_playlists.md)) are kept in `data/playlists.json` with the request behind each
+**Playlists** ([020](./decisions/020_v0.7.4_playlists.md)) are kept in the database with the request behind each
 track — learnt when a job is ready, per prepared file — and shown by title only. Playing one is not a burst of jobs: a
 feeder keeps two tracks prepared-but-not-started and asks for the next as the queue moves, putting tracks in playlist
 order even when they finish preparing out of turn. Importing asks the worker to expand one request (`POST /v1/expand`);
@@ -159,5 +158,5 @@ signs in through the bot's OIDC client ([004](./decisions/004_v0.5.0_dashboard-s
 
 ## Where it is going
 
-The [roadmap](./ROADMAP.md) has the direction. The database (v0.8) arrives in steps: tracked messages, banners and invite
-counts first, then the audit log, then playlists, reaction-role panels and the GitHub-to-Discord account links.
+The [roadmap](./ROADMAP.md) has the direction. With the database in place (v0.8), the next features — monthly summaries,
+calendars, polls — read the same data from more than one place.
