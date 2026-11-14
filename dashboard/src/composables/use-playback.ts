@@ -15,6 +15,13 @@ const PREPARING_SYNC_MS = 3_000;
 const CLOCK_MS = 1_000;
 /** The bot may take a moment to start the next track; ask again no sooner than this. */
 const END_SYNC_GAP_MS = 3_000;
+/**
+ * The player finishes an action after answering it: a skip ends the stream at once, but
+ * the track it skipped is still "current" until the player has handled the end. Asked
+ * right away, the bot reports the old track; this second ask, a moment later, reports
+ * where the player actually landed.
+ */
+const SETTLE_SYNC_MS = 1_000;
 
 function timeLabel(ms: number): string {
   const total = Math.floor(ms / 1000);
@@ -46,6 +53,7 @@ export function usePlayback() {
   const message = ref('');
   const busy = ref(false);
   let syncTimer: ReturnType<typeof setTimeout> | undefined;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
   let clockTimer: ReturnType<typeof setInterval> | undefined;
   /** When the clock last asked because a track ended — at most every few seconds. */
   let endSyncAt = 0;
@@ -129,6 +137,8 @@ export function usePlayback() {
       message.value = result.message;
       error.value = result.ok ? '' : result.message;
       await refresh();
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => void refresh(), SETTLE_SYNC_MS);
     } catch (cause) {
       if (isRedirect(cause)) {
         return;
@@ -186,6 +196,7 @@ export function usePlayback() {
 
   onUnmounted(() => {
     clearTimeout(syncTimer);
+    clearTimeout(settleTimer);
     clearInterval(clockTimer);
     document.removeEventListener('visibilitychange', onVisible);
   });
