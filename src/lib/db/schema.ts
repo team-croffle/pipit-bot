@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -97,4 +98,31 @@ export const playlistItems = pgTable(
     typed: boolean('typed').notNull().default(false),
   },
   (table) => [primaryKey({ columns: [table.playlistId, table.id] })],
+);
+
+/** Reaction role panels (reaction-roles/settings.ts), in the order the dashboard keeps them. */
+export const reactionRolePanels = pgTable('reaction_role_panels', {
+  id: text('id').primaryKey(),
+  position: integer('position').notNull(),
+  name: text('name').notNull(),
+  channelId: text('channel_id').notNull(),
+  /** Null until the bot has published the panel. */
+  messageId: text('message_id'),
+  singleReaction: boolean('single_reaction').notNull().default(false),
+  /** The embed template as the dashboard composed it. */
+  embed: jsonb('embed').notNull(),
+});
+
+/** The emoji → role choices of a panel, in order. */
+export const reactionRoleOptions = pgTable(
+  'reaction_role_options',
+  {
+    panelId: text('panel_id')
+      .notNull()
+      .references(() => reactionRolePanels.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    emoji: text('emoji').notNull(),
+    roleId: text('role_id').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.panelId, table.position] })],
 );

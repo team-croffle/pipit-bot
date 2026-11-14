@@ -50,6 +50,13 @@
       "when": 1794693282452,
       "tag": "0006_playlists",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794693598753,
+      "tag": "0007_reaction_roles",
+      "breakpoints": true
     }
   ]
 }

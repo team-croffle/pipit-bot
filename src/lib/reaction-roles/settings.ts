@@ -13,15 +13,21 @@
  * WHY a store of its own rather than another slice of `guild-events.json`: that
  * document is replaced whole on every write, and a panel carries far more than a
  * couple of ids.
+ *
+ * WHY the database (since v0.8.0, `reaction_role_panels`): a published panel carries the
+ * id of the message the bot posted — state the bot produced, not a setting a person
+ * edits by hand (docs/decisions/024_v0.8.0_database.md). The old
+ * `data/reaction-roles.json` is moved in once. A save reaches the database before the
+ * panels in memory change, and a failed save reaches the dashboard as before.
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
+import { migrateFile } from '../db/migrate-file.js';
 import { emptyEmbedTemplate, parsePlainEmbedTemplate } from '../embed/template.js';
 import type { EmbedTemplate } from '../embed/template.js';
-import { loadSettingsFile } from '../settings-file.js';
+import { readPanels, savePanels, writePanels } from './storage.js';
 
 export interface ReactionRoleOption {
   /** A `:name:` shortcode for a custom emoji, or the character for a standard one. */
@@ -53,7 +59,7 @@ export interface ReactionRoleSettings {
   panels: ReactionRolePanel[];
 }
 
-const settingsPath = join(dataDir, 'reaction-roles.json');
+const legacyPath = join(dataDir, 'reaction-roles.json');
 const snowflake = /^\d{17,20}$/;
 const panelId = /^[\w-]{1,64}$/;
 
@@ -198,20 +204,27 @@ export function findPanelByMessage(messageId: string): ReactionRolePanel | undef
 
 let loadError: string | null = null;
 
-/** Why the file on disk is not in use, or null when it is. Cleared by a successful save. */
+/** Why the old file could not be moved in, or null. Cleared by a successful save. */
 export function getReactionRoleLoadError(): string | null {
   return loadError;
 }
 
 export async function loadReactionRoleSettings(): Promise<ReactionRoleSettings> {
-  const loaded = await loadSettingsFile({
-    path: settingsPath,
-    label: 'Reaction role settings',
+  const outcome = await migrateFile({
+    name: 'reaction-roles.json',
+    path: legacyPath,
+    label: 'reaction role panels',
     parse: parseReactionRoleSettings,
-    empty: emptySettings,
+    insert: async (tx, parsed) => {
+      await writePanels(tx, parsed);
+      return parsed.panels.length;
+    },
   });
-  cache = loaded.value;
-  loadError = loaded.error;
+  loadError =
+    outcome === 'broken'
+      ? 'reaction-roles.json is not valid and was not moved into the database; a copy was kept beside it. Fix the file and restart.'
+      : null;
+  cache = await readPanels();
 
   return getReactionRoleSettings();
 }
@@ -220,8 +233,7 @@ export async function saveReactionRoleSettings(
   next: ReactionRoleSettings,
 ): Promise<ReactionRoleSettings> {
   const parsed = parseReactionRoleSettings(next);
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(settingsPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+  await savePanels(parsed);
   cache = parsed;
   loadError = null;
   return parsed;
