@@ -22,6 +22,7 @@ Sapphire와 discord.js로 만들었습니다. 음악 소스는 **교체 가능**
 - Node.js 18+, TypeScript, Sapphire
 - discord.js v14, discord-player v7
 - 내장 **pipit-api** (잡 레지스트리, 내부 콜백, 대시보드 API)
+- PostgreSQL 16(drizzle) — 봇이 계속 쌓는 데이터. 설정은 JSON 파일로 남습니다
 - Yarn 4, Docker Compose
 
 ## 환경 변수
@@ -39,6 +40,8 @@ GITHUB_APP_PRIVATE_KEY=
 GITHUB_APP_PRIVATE_KEY_PATH=
 GITHUB_APP_INSTALLATION_ID=
 MUSIC_WORKER_URL=http://music-worker:8080
+# PostgreSQL (필수). 워크스페이스 compose는 자기 postgres 서비스로 설정합니다
+DATABASE_URL=
 PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
 DASHBOARD_DEV_USER=dev
@@ -60,7 +63,16 @@ DASHBOARD_URL=
 
 `OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다: 제공자가 내려주는 `groups` 클레임과 대소문자 구분 없이 전체 일치로 비교합니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 제공자에 연결할 수 없으면 `/api/auth/login`과 콜백은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다.
 
-봇 설정과 길드 이벤트 설정은 `data/` 아래에 저장됩니다 (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, `features.json`, 감사 로그는 `audit/`; gitignore 대상). Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+### 데이터: 데이터베이스와 `data/`
+
+봇이 **만들어 내고 계속 쌓는 것**은 **PostgreSQL**(`DATABASE_URL`, 필수)에 둡니다: 추적 중인 GitHub 메시지, 음악 채널 배너 메시지, 초대 통계. **사람이 열어 고치는 설정**은 `data/` 아래 JSON 파일로 남습니다(`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`; gitignore 대상) — 대시보드에 들어갈 수 없을 때도 편집기로 고칠 수 있게. 감사 로그(`audit/`), 재생목록(`playlists.json`), 리액션 롤 패널(`reaction-roles.json`)은 이번 릴리즈까지 파일이고 다음에 데이터베이스로 옮깁니다. Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+
+- **시작** — 봇은 데이터베이스를 최대 2분까지 기다리고(아직 뜨는 중인 컨테이너도 괜찮습니다) 마이그레이션을 적용합니다. `DATABASE_URL`이 없으면 시작하지 않습니다
+- **데이터베이스가 없던 릴리즈에서 올릴 때** — 첫 시작에서 이제 데이터베이스에 두는 파일을 한 번 옮기고, 파일 이름을 `*.migrated`로 바꿉니다(지우지 않습니다). 무엇을 옮겼는지 로그에 남습니다
+- **이전 이미지로 되돌릴 때** — 봇을 멈추고 `data/`의 `*.migrated` 파일 이름을 되돌린(꼬리를 뗀) 뒤 이전 이미지를 시작합니다. 올린 뒤 데이터베이스에 쌓인 것은 따라가지 않습니다
+- **백업**은 이제 두 곳입니다: 데이터베이스와 `data/`
+
+워크스페이스 루트의 compose 파일은 봇 옆에 `postgres:16-alpine` 서비스를 띄웁니다. 따로 쓰는 PostgreSQL이 있으면 `DATABASE_URL`을 그쪽으로 두세요.
 
 ## GitHub 알림
 
@@ -205,7 +217,9 @@ yarn dashboard:dev
 
 `http://127.0.0.1:5173/`이 열리고 `/api`는 봇으로 프록시됩니다. 프로덕션에서는 `yarn dashboard:build` 후 봇이 `dashboard/dist`를 `GET /`에서 서빙합니다.
 
-전체 스택(봇 + music worker)은 저장소 루트의 워크스페이스 compose를 씁니다:
+`yarn watch:start`에는 `DATABASE_URL`(`.env.development.local`)의 PostgreSQL이 필요합니다 — compose 스택의 것이나 로컬의 아무것이나.
+
+전체 스택(봇 + music worker + PostgreSQL)은 저장소 루트의 워크스페이스 compose를 씁니다:
 
 ```sh
 docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
