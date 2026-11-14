@@ -1,7 +1,8 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { and, count, desc, gte, ilike, inArray, lt, lte, or, type SQL } from 'drizzle-orm';
 
-import { AUDIT_FILE, dayKey, fileForDay, getAuditDir } from './store.js';
-import type { AuditCategory, AuditEntry } from './types.js';
+import { getDb } from '../db/client.js';
+import { auditEntries } from '../db/schema.js';
+import type { AuditCategory, AuditEntry, AuditOutcome } from './types.js';
 
 export interface AuditQuery {
   /** Inclusive, an ISO date or time. */
@@ -13,10 +14,7 @@ export interface AuditQuery {
   limit?: number;
   /** Only entries older than this `at` — the cursor for the next page. */
   before?: string;
-  /**
-   * A numbered page (from 1) of `limit` entries. Reads every day the range touches so the
-   * total is known; without it the query stops once it has `limit`.
-   */
+  /** A numbered page (from 1) of `limit` entries, with the total that matches. */
   page?: number;
 }
 
@@ -33,94 +31,90 @@ export interface AuditPage {
 export const DEFAULT_LIMIT = 100;
 export const MAX_LIMIT = 500;
 
-function parseLines(text: string): AuditEntry[] {
-  const entries: AuditEntry[] = [];
-  for (const line of text.split('\n')) {
-    if (!line.trim()) {
-      continue;
-    }
+type Row = typeof auditEntries.$inferSelect;
 
-    try {
-      entries.push(JSON.parse(line) as AuditEntry);
-    } catch {
-      // A torn line (a crash mid-write) is skipped; the rest of the day still reads.
-    }
+/** An ISO time from a date or time the caller gave, or undefined when it is not one. */
+function time(value: string | undefined, endOfDay = false): string | undefined {
+  if (!value) {
+    return undefined;
   }
 
-  return entries;
+  // WHY: a bare date as `to` means the whole of that day (UTC, as the old day files were).
+  const text = endOfDay && value.length === 10 ? `${value}T23:59:59.999Z` : value;
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 }
 
-function matches(entry: AuditEntry, query: AuditQuery, needle: string): boolean {
-  if (query.categories?.length && !query.categories.includes(entry.category)) {
-    return false;
-  }
+/** `%` and `_` typed into the search box are meant literally. */
+function contains(text: string): string {
+  return `%${text.replaceAll(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
 
-  if ((query.from && entry.at < query.from) || (query.to && entry.at > query.to)) {
-    return false;
-  }
+function toEntry(row: Row): AuditEntry {
+  return {
+    at: new Date(row.at).toISOString(),
+    category: row.category as AuditCategory,
+    action: row.action,
+    ...(row.actorName === null
+      ? {}
+      : { actor: { ...(row.actorId ? { id: row.actorId } : {}), name: row.actorName } }),
+    ...(row.target === null ? {} : { target: row.target }),
+    outcome: row.outcome as AuditOutcome,
+    ...(row.detail === null ? {} : { detail: row.detail }),
+  };
+}
 
-  if (query.before && entry.at >= query.before) {
-    return false;
-  }
-
-  if (!needle) {
-    return true;
-  }
-
-  return [entry.action, entry.actor?.name, entry.target, entry.detail].some((field) =>
-    field?.toLowerCase().includes(needle),
+function where(query: AuditQuery): SQL | undefined {
+  const from = time(query.from);
+  const to = time(query.to, true);
+  const before = time(query.before);
+  const needle = query.search?.trim();
+  return and(
+    query.categories?.length ? inArray(auditEntries.category, query.categories) : undefined,
+    from ? gte(auditEntries.at, from) : undefined,
+    to ? lte(auditEntries.at, to) : undefined,
+    before ? lt(auditEntries.at, before) : undefined,
+    needle
+      ? or(
+          ilike(auditEntries.action, contains(needle)),
+          ilike(auditEntries.actorName, contains(needle)),
+          ilike(auditEntries.target, contains(needle)),
+          ilike(auditEntries.detail, contains(needle)),
+        )
+      : undefined,
   );
 }
 
-/** The newest day a query can reach, from `to` and `before`. */
-function lastDayOf(query: AuditQuery): string {
-  const bounds = [query.to, query.before].filter((value): value is string => Boolean(value));
-  return bounds.length > 0 ? bounds.map((value) => dayKey(value)).toSorted()[0]! : '9999-12-31';
-}
-
-/** Newest first. Reads only the day files the range can touch. */
+/** Newest first: a numbered page with its total, or a page and the cursor to the next. */
 export async function queryAudit(query: AuditQuery = {}): Promise<AuditPage> {
   const limit = Math.min(Math.max(query.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
-  const needle = query.search?.trim().toLowerCase() ?? '';
-  // WHY: a bare date as `to` would sort before every time on that day.
-  const to = query.to?.length === 10 ? `${query.to}T23:59:59.999Z` : query.to;
-  const effective: AuditQuery = { ...query, to };
+  const db = getDb();
+  const filter = where(query);
+  const select = () =>
+    db
+      .select()
+      .from(auditEntries)
+      .where(filter)
+      .orderBy(desc(auditEntries.at), desc(auditEntries.id));
 
-  let names: string[];
-  try {
-    names = await readdir(getAuditDir());
-  } catch {
-    return { entries: [], next: null };
-  }
-
-  const firstDay = query.from ? dayKey(query.from) : '0000-01-01';
-  const lastDay = lastDayOf(effective);
-  const days = names
-    .map((name) => AUDIT_FILE.exec(name)?.[1])
-    .filter((day): day is string => day !== undefined && day >= firstDay && day <= lastDay)
-    .toSorted((a, b) => b.localeCompare(a));
-
-  const entries: AuditEntry[] = [];
-  for (const day of days) {
-    const text = await readFile(fileForDay(day), 'utf8').catch(() => '');
-    entries.push(...parseLines(text).filter((entry) => matches(entry, effective, needle)));
-    if (query.page === undefined && entries.length > limit) {
-      break;
-    }
-  }
-
-  const sorted = entries.toSorted((a, b) => b.at.localeCompare(a.at));
   if (query.page !== undefined) {
-    const start = (Math.max(query.page, 1) - 1) * limit;
+    const page = Math.max(query.page, 1);
+    const [rows, [totals]] = await Promise.all([
+      select()
+        .limit(limit)
+        .offset((page - 1) * limit),
+      db.select({ total: count() }).from(auditEntries).where(filter),
+    ]);
     return {
-      entries: sorted.slice(start, start + limit),
+      entries: rows.map(toEntry),
       next: null,
-      total: sorted.length,
-      page: Math.max(query.page, 1),
+      total: totals?.total ?? 0,
+      page,
       pageSize: limit,
     };
   }
 
-  const page = sorted.slice(0, limit);
-  return { entries: page, next: sorted.length > limit ? page.at(-1)!.at : null };
+  const rows = await select().limit(limit + 1);
+  const entries = rows.slice(0, limit).map(toEntry);
+  return { entries, next: rows.length > limit ? entries.at(-1)!.at : null };
 }

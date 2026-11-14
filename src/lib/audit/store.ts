@@ -2,8 +2,11 @@ import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
 
-/** Days an audit file is kept. */
+/** Days an audit entry is kept. */
 export const AUDIT_RETENTION_DAYS = 90;
+
+// Until v0.8.0 the log was one JSON-lines file per day here; they are moved into the
+// database at start-up (migrate.ts). Nothing writes here any more.
 
 export const AUDIT_FILE = /^(\d{4}-\d{2}-\d{2})\.jsonl$/;
 
@@ -13,7 +16,7 @@ export function getAuditDir(): string {
   return auditDir;
 }
 
-/** Points the log at another directory — for local checks only. */
+/** Points the move-in at another directory — for local checks only. */
 export function setAuditDirForChecks(dir: string): void {
   auditDir = dir;
 }

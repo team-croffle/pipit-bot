@@ -31,6 +31,8 @@ export interface FileMigration<T> {
   /** How the data is called in log lines, e.g. "tracked GitHub messages". */
   label: string;
   parse: (raw: unknown) => T;
+  /** Turns the file's text into what `parse` takes; JSON by default (a line-per-entry file passes its own). */
+  decode?: (text: string) => unknown;
   /** Writes the content inside the transaction; returns how many rows it wrote. */
   insert: (tx: Transaction, value: T) => Promise<number>;
   /**
@@ -78,7 +80,7 @@ export async function migrateFile<T>(migration: FileMigration<T>): Promise<Migra
 
   let value: T;
   try {
-    value = migration.parse(JSON.parse(text) as unknown);
+    value = migration.parse((migration.decode ?? JSON.parse)(text) as unknown);
   } catch (error) {
     const backup = `${migration.path}.broken-${new Date().toISOString().replaceAll(':', '-')}`;
     await copyFile(migration.path, backup).catch(() => undefined);
