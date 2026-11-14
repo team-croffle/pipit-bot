@@ -33,6 +33,7 @@ import { getWorkerStatus } from '../worker-status.js';
 /** Custom ids the button handler routes on (`music:<action>`). */
 export const REMOTE = {
   play: 'music:play',
+  join: 'music:join',
   search: 'music:search',
   playlists: 'music:playlists',
   pause: 'music:pause',
@@ -111,6 +112,7 @@ function idle(container: ContainerBuilder): void {
         button(REMOTE.play, '재생', '▶️', ButtonStyle.Primary).setDisabled(down),
         ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍').setDisabled(down)] : []),
         button(REMOTE.playlists, '재생목록', '📁').setDisabled(down),
+        button(REMOTE.join, '통화방 참여', '🔈'),
       ),
     );
 }
@@ -173,6 +175,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
               ).setDisabled(down),
             ]
           : []),
+        button(REMOTE.join, '통화방 참여', '🔈'),
       ),
     );
 }
