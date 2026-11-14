@@ -26,6 +26,8 @@ const timing = {
   firstRetryMs: 1000,
   maxRetryMs: 15_000,
   giveUpAfterMs: 120_000,
+  /** Seconds an unused connection stays open; 0 keeps it. A check sets a short one to exit. */
+  idleTimeoutS: 0,
 };
 
 let sql: postgres.Sql | undefined;
@@ -64,7 +66,10 @@ export async function connectDatabase(): Promise<Database> {
     throw new Error('DATABASE_URL is required.');
   }
 
-  const client = postgres(url, { onnotice: () => undefined });
+  const client = postgres(url, {
+    onnotice: () => undefined,
+    idle_timeout: timing.idleTimeoutS || undefined,
+  });
   try {
     await reach(client);
     const [row] = await client<{ schema: string }[]>`select current_schema() as schema`;
