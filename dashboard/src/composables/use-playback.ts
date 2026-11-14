@@ -1,6 +1,7 @@
 import { computed, onUnmounted, ref } from 'vue';
 
 import { fetchJson, postJson } from '@/api';
+import { newJobId } from '@/lib/job-id';
 import type { PlaybackActionResult, PlaybackRepeatMode, PlaybackState } from '@/types';
 
 function isRedirect(cause: unknown): boolean {
@@ -156,7 +157,7 @@ export function usePlayback() {
     busy.value = true;
     try {
       await postJson('/api/music/jobs', {
-        jobId: crypto.randomUUID(),
+        jobId: newJobId(),
         query: trimmed,
         ...(next ? { next: true } : {}),
       });
