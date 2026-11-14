@@ -1,4 +1,5 @@
 import { audit } from '../../lib/audit/log.js';
+import { getAuditSettings } from '../../lib/audit/settings.js';
 import { rememberSource } from '../../lib/music/track-source.js';
 
 export type JobStatus = 'pending' | 'ready' | 'failed' | 'cancelled';
@@ -122,9 +123,16 @@ function recordLate(record: JobRecord, late: Omit<NonNullable<JobRecord['lateRes
 
 function settle(record: JobRecord, settleWaiter: (waiter: PendingWaiter) => void): void {
   record.updatedAt = now();
-  // One line per finished job: how it ended and where it came from — never the query
-  // or the track. A cancel is recorded by whoever cancelled it.
+  // One line per finished job: how it ended and where it came from — the query and the
+  // track only when the operator chose to keep them (audit/settings.ts). A cancel is
+  // recorded by whoever cancelled it.
   if (record.status === 'ready' || record.status === 'failed') {
+    const kept = getAuditSettings().musicRequests
+      ? [
+          `request: ${record.query}`,
+          record.track?.title ? `title: ${record.track.title}` : undefined,
+        ]
+      : [];
     void audit({
       category: 'music',
       action: `music.${record.status}`,
@@ -133,7 +141,7 @@ function settle(record: JobRecord, settleWaiter: (waiter: PendingWaiter) => void
       actor: record.origin === 'autoplay' ? { name: 'pipit-bot' } : undefined,
       target: record.jobId,
       outcome: record.status === 'ready' ? 'ok' : 'failed',
-      detail: [record.origin, record.code].filter(Boolean).join(' · ') || undefined,
+      detail: [record.origin, record.code, ...kept].filter(Boolean).join(' · ') || undefined,
     });
   }
 

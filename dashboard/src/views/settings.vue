@@ -2,6 +2,7 @@
   import { onMounted, ref } from 'vue';
   import { RouterLink } from 'vue-router';
 
+  import { fetchJson, putJson } from '@/api';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import { Badge } from '@/components/ui/badge';
@@ -46,10 +47,46 @@
     busy.value = null;
   }
 
+  interface AuditSettingsAnswer {
+    settings: { musicRequests: boolean };
+    loadError: string | null;
+  }
+
+  // Off by default: a music line says only that someone used a feature (decision 018).
+  const auditSettings = ref<AuditSettingsAnswer | null>(null);
+  const auditError = ref('');
+  const auditBusy = ref(false);
+
+  async function loadAuditSettings(): Promise<void> {
+    try {
+      auditSettings.value = await fetchJson<AuditSettingsAnswer>('/api/settings/audit');
+      auditError.value = '';
+    } catch (cause) {
+      auditError.value =
+        cause instanceof Error ? cause.message : '감사 설정을 불러오지 못했습니다.';
+    }
+  }
+
+  async function setMusicRequests(on: boolean): Promise<void> {
+    auditBusy.value = true;
+    try {
+      auditSettings.value = await putJson<AuditSettingsAnswer>('/api/settings/audit', {
+        musicRequests: on,
+      });
+      auditError.value = '';
+    } catch (cause) {
+      auditError.value =
+        cause instanceof Error ? cause.message : '감사 설정을 저장하지 못했습니다.';
+    } finally {
+      auditBusy.value = false;
+    }
+  }
+
   onMounted(() => {
     if (!states.value) {
       void load();
     }
+    void loadAuditSettings();
   });
 </script>
 
@@ -132,6 +169,57 @@
           </StateBlock>
           <p v-if="failure" class="text-destructive mt-3 text-xs" role="alert" data-feature-error>
             {{ failure }}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card data-audit-settings>
+        <CardHeader>
+          <CardTitle class="text-base">감사 로그</CardTitle>
+          <CardDescription>
+            기본으로 음악 기록은 누가 어떤 기능을 썼는지만 남깁니다. 곡 제목도 요청 내용도 남기지
+            않습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent class="flex flex-col">
+          <StateBlock
+            :loading="!auditSettings && !auditError"
+            :error="auditSettings ? '' : auditError"
+          >
+            <div class="flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-sm font-medium">음악 요청 기록</p>
+                <p class="text-muted-foreground mt-0.5 text-xs">
+                  켜면 그때부터 곡 준비 기록에 요청한 내용과 준비된 곡 제목을 함께 남깁니다. 끄면
+                  다시 기능 사용만 남고, 이미 남은 기록은 바뀌지 않습니다.
+                </p>
+                <p
+                  v-if="states && !states.audit"
+                  class="text-warning mt-1 text-xs"
+                  data-audit-off-note
+                >
+                  감사 로깅이 꺼져 있어 지금은 아무것도 남지 않습니다.
+                </p>
+              </div>
+              <Switch
+                data-audit-music-requests
+                aria-label="음악 요청 기록"
+                :model-value="auditSettings?.settings.musicRequests ?? false"
+                :disabled="readOnly || auditBusy"
+                @update:model-value="(value) => setMusicRequests(value === true)"
+              />
+            </div>
+          </StateBlock>
+          <p v-if="auditSettings?.loadError" class="text-destructive mt-3 text-xs" role="alert">
+            {{ auditSettings.loadError }}
+          </p>
+          <p
+            v-else-if="auditSettings && auditError"
+            class="text-destructive mt-3 text-xs"
+            role="alert"
+            data-audit-settings-error
+          >
+            {{ auditError }}
           </p>
         </CardContent>
       </Card>
