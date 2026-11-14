@@ -32,3 +32,11 @@ export const musicBanners = pgTable('music_banners', {
   messageId: text('message_id').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** How many members each invite code brought in (invite-stats.ts). */
+export const inviteStats = pgTable('invite_stats', {
+  code: text('code').primaryKey(),
+  joins: integer('joins').notNull(),
+  inviterId: text('inviter_id'),
+  lastJoinAt: text('last_join_at').notNull(),
+});
