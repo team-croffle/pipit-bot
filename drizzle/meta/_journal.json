@@ -15,6 +15,13 @@
       "when": 1794690698653,
       "tag": "0001_file_migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794690813829,
+      "tag": "0002_tracked_messages",
+      "breakpoints": true
     }
   ]
 }
