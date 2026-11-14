@@ -16,6 +16,7 @@
   } from '@/components/ui/dialog';
   import { Input } from '@/components/ui/input';
   import { playlistFeedback } from '@/composables/use-playlist-saver';
+  import { newJobId } from '@/lib/job-id';
   import type { MusicSearchResponse, MusicSearchResult } from '@/types';
 
   const props = defineProps<{ canEnqueue: boolean }>();
@@ -82,7 +83,7 @@
     addError.value = '';
     try {
       await postJson('/api/music/jobs', {
-        jobId: crypto.randomUUID(),
+        jobId: newJobId(),
         searchId: searchId.value,
         index: result.index,
         ...(next ? { next: true } : {}),
