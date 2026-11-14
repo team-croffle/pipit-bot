@@ -22,6 +22,7 @@ Built with Sapphire and discord.js. Music sources are **pluggable**: pipit-bot r
 - Node.js 18+, TypeScript, Sapphire
 - discord.js v14, discord-player v7
 - Embedded **pipit-api** (job registry, internal callbacks, dashboard API)
+- PostgreSQL 16 (drizzle) for the data the bot keeps adding to; settings stay JSON files
 - Yarn 4, Docker Compose
 
 ## Environment
@@ -39,6 +40,8 @@ GITHUB_APP_PRIVATE_KEY=
 GITHUB_APP_PRIVATE_KEY_PATH=
 GITHUB_APP_INSTALLATION_ID=
 MUSIC_WORKER_URL=http://music-worker:8080
+# PostgreSQL (required)
+DATABASE_URL=postgres://pipit:pipit@postgres:5432/pipit
 PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
 DASHBOARD_DEV_USER=dev
@@ -60,7 +63,16 @@ Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik 
 
 When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
 
-Bot config and guild event settings persist under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `github-messages.json`, `reaction-roles.json`, `invite-stats.json`, `playlists.json`, `playback-options.json`, `features.json`, and the audit log in `audit/`; gitignored). Mount `./pipit-bot/data:/app/data` in Docker.
+### Data: a database and `data/`
+
+What the bot **produces and keeps adding to** lives in **PostgreSQL** (`DATABASE_URL`, required): tracked GitHub messages, the music channels' banner messages and invite counts. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. The audit log (`audit/`), playlists (`playlists.json`) and reaction-role panels (`reaction-roles.json`) are still files in this release and move into the database next. Mount `./pipit-bot/data:/app/data` in Docker.
+
+- **Starting** — the bot waits for the database for up to two minutes (a container that is still starting is fine), then applies its migrations. Without `DATABASE_URL` it does not start
+- **Upgrading from a release without a database** — on its first start the bot moves each file it now keeps in the database into it, once, and renames the file to `*.migrated` (it is not deleted). The log says what was moved
+- **Going back** to an older image: stop the bot, rename each `*.migrated` file in `data/` back (drop the suffix), and start the older image. Anything recorded in the database since the upgrade is not carried back
+- **Backups** cover two places now: the database and `data/`
+
+The compose file at the workspace root runs a `postgres:16-alpine` service next to the bot; point `DATABASE_URL` at your own PostgreSQL instead if you have one.
 
 ## GitHub notifications
 
@@ -210,7 +222,9 @@ yarn dashboard:dev
 
 Opens `http://127.0.0.1:5173/` and proxies `/api` to the bot. For production, `yarn dashboard:build` then the bot serves `dashboard/dist` at `GET /`.
 
-With the full stack (bot + music worker), use the workspace compose at the repo root:
+`yarn watch:start` needs a PostgreSQL in `DATABASE_URL` (`.env.development.local`) — the one in the compose stack, or any local one.
+
+With the full stack (bot + music worker + PostgreSQL), use the workspace compose at the repo root:
 
 ```sh
 docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build

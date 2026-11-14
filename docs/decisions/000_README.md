@@ -73,3 +73,4 @@ Each file has:
 | [021](./021_v0.7.5_playback-options.md) | v0.7.5 | Playback options live with the bot: mono mixed as it streams, autoplay asked of the worker |
 | [022](./022_v0.7.6_feature-switches.md) | v0.7.6 | Features switch off as a whole, commands included |
 | [023](./023_v0.7.7_worker-status.md) | v0.7.7 | The bot knows whether the music worker is up, and says so instead of resending |
+| [024](./024_v0.8.0_database.md) | v0.8.0 | The data the bot keeps adding to moves into PostgreSQL; settings stay files |

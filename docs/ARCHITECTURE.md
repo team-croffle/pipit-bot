@@ -28,7 +28,8 @@ Three ideas shape the design:
 | **pipit-bot** — Discord bot, HTTP API, dashboard | one Node.js process, one container | Discord gateway and REST, GitHub API, the music worker, the OIDC provider |
 | **music worker** | a separate container, any implementation of [the contract](./music-backend.md) | receives jobs from the bot, writes files to the shared volume, calls the bot back |
 | **shared volume** (`STREAM_ROOT`) | a Docker volume mounted in both | prepared PCM files, written by the worker, read by the bot |
-| **`data/`** | a volume on the bot | settings and tracked state as JSON files |
+| **PostgreSQL** | a container in the compose stack, or the operator's own | what the bot produces and keeps adding to ([024](./decisions/024_v0.8.0_database.md)) |
+| **`data/`** | a volume on the bot | settings as JSON files |
 | **OIDC provider** | the team's own | dashboard sign-in, groups for write access |
 | **GitHub App** | installed on the organisation | sends webhooks; lets the bot read pull requests, issues, members |
 
@@ -73,8 +74,13 @@ Inside the process:
   signed-in session; changing settings also requires an admin group. Worker callbacks require the internal token.
 - **In memory** — the music job registry, the player's queue and history, short-lived caches of GitHub lists. All of it
   is rebuilt or forgotten on restart.
-- **On disk** — settings, tracked GitHub messages and invite counts under `data/`, each loaded at start-up and written
-  whole when it changes; the audit log, appended a line at a time to one file per day under `data/audit/`.
+- **In the database** — tracked GitHub messages, the music channels' banner messages and invite counts
+  ([024](./decisions/024_v0.8.0_database.md)). Each store loads its rows into memory at start-up, so the code that reads
+  them stays synchronous, and writes every change straight through. Migrations are applied when the bot starts; a file
+  from before is moved in once and kept as `*.migrated`.
+- **On disk** — settings under `data/`, each loaded at start-up and written whole when it changes (a person can fix them
+  in an editor when the dashboard is locked out). The audit log, playlists and reaction-role panels are still files in
+  v0.8.0-rc.1 and move into the database in the next pre-releases.
 
 **Feature switches** ([022](./decisions/022_v0.7.6_feature-switches.md)) are one entry point, `isEnabled(feature)`, read
 where each feature acts. Switching music or GitHub replaces the bot's slash commands with those of the switched-on
@@ -145,11 +151,12 @@ signs in through the bot's OIDC client ([004](./decisions/004_v0.5.0_dashboard-s
 
 - One image per release, built by the release workflow and published to the container registry
   ([005](./decisions/005_v0.5.0_releases-by-workflow.md)).
-- A compose file runs the bot and a music worker with the shared volume between them; `data/` is a volume on the bot.
+- A compose file runs the bot, a music worker with the shared volume between them, and PostgreSQL; `data/` is a volume
+  on the bot. Backups cover the database and `data/`.
 - Configuration is environment variables for deployment facts and secrets (Discord token, OIDC, GitHub App,
-  `INTERNAL_TOKEN`, `MUSIC_WORKER_URL`, `STREAM_ROOT`); everything else is set on the dashboard.
+  `INTERNAL_TOKEN`, `MUSIC_WORKER_URL`, `STREAM_ROOT`, `DATABASE_URL`); everything else is set on the dashboard.
 
 ## Where it is going
 
-The [roadmap](./ROADMAP.md) has the direction. The next change to this picture is a database (v0.8): it replaces the JSON
-files for data that grows — tracked GitHub messages first — and takes over the audit log's day files.
+The [roadmap](./ROADMAP.md) has the direction. The database (v0.8) arrives in steps: tracked messages, banners and invite
+counts first, then the audit log, then playlists, reaction-role panels and the GitHub-to-Discord account links.
