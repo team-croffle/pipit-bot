@@ -14,3 +14,14 @@ export const fileMigrations = pgTable('file_migrations', {
   items: integer('items').notNull(),
   migratedAt: timestamp('migrated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** The Discord message that announced each pull request or issue (github/message-tracker.ts). */
+export const trackedMessages = pgTable('tracked_messages', {
+  /** Lower-cased `owner/name#number`. */
+  key: text('key').primaryKey(),
+  channelId: text('channel_id').notNull(),
+  messageId: text('message_id').notNull(),
+  toggle: text('toggle').notNull(),
+  at: timestamp('at', { withTimezone: true, mode: 'string' }).notNull(),
+  mentioned: text('mentioned').array().notNull().default([]),
+});

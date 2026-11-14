@@ -6,21 +6,28 @@
  * the announcement stayed stale while a second message carried the news. Knowing
  * which message it was lets a later assignment edit it in place.
  *
- * WHY a file and not memory: a pull request lives for days and the bot restarts in
- * between. WHY a file and not a database: there is no database yet — v0.8.0 brings
- * one, and this store is the first thing scheduled to move into it. Until then the
- * file is capped and drops its oldest entries, so it cannot grow with history.
+ * WHY the database: a pull request lives for days and the bot restarts in between.
+ * It was a capped JSON file until v0.8.0 and was the first thing moved into the
+ * database; the file is moved in once (`*.migrated`). The entries are kept in memory
+ * too, so dispatch reads them without waiting, and every change is written through.
+ * Writes go out one after another — two changes to the same pull request landing
+ * together must not reach the database in the wrong order. A failed write is logged
+ * and costs one future edit, never a notification. The cap stays: only recent pull
+ * requests are worth editing.
  *
  * Only the opening message is tracked. Later messages about the same pull request
  * (an approval, a merge) are news of their own moment and are left as sent.
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { container } from '@sapphire/framework';
+import { eq, inArray } from 'drizzle-orm';
 
 import { dataDir } from '../constants.js';
+import { getDb } from '../db/client.js';
+import { migrateFile } from '../db/migrate-file.js';
+import { trackedMessages } from '../db/schema.js';
 import type { GithubEventToggles } from './settings.js';
 
 export interface TrackedMessage {
@@ -38,20 +45,12 @@ export interface TrackedMessage {
   mentioned: string[];
 }
 
-interface StoredFile {
-  version: 1;
-  entries: Record<string, TrackedMessage>;
-}
-
-const storePath = join(dataDir, 'github-messages.json');
+const legacyPath = join(dataDir, 'github-messages.json');
 const snowflake = /^\d{17,20}$/;
 const MAX_ENTRIES = 500;
 
 let entries = new Map<string, TrackedMessage>();
-// One write at a time, and only the latest state: deliveries landing together mark
-// the store dirty, and whichever write is running picks the newest snapshot up next.
-let dirty = false;
-let writing = false;
+let writes: Promise<void> = Promise.resolve();
 
 function keyFor(repo: string, number: number): string {
   return `${repo.toLowerCase()}#${number}`;
@@ -86,58 +85,75 @@ function parseEntry(value: unknown): TrackedMessage | undefined {
   };
 }
 
-function prune(): void {
+/** Drops the oldest entries past the cap; returns their keys. */
+function prune(): string[] {
   if (entries.size <= MAX_ENTRIES) {
-    return;
+    return [];
   }
 
   const sorted = [...entries.entries()].toSorted(([, a], [, b]) => a.at.localeCompare(b.at));
-  for (const [key] of sorted.slice(0, entries.size - MAX_ENTRIES)) {
+  const dropped = sorted.slice(0, entries.size - MAX_ENTRIES).map(([key]) => key);
+  for (const key of dropped) {
     entries.delete(key);
   }
+
+  return dropped;
 }
 
-async function flush(): Promise<void> {
-  writing = true;
-  try {
-    while (dirty) {
-      dirty = false;
-      const snapshot: StoredFile = { version: 1, entries: Object.fromEntries(entries) };
-      await mkdir(dataDir, { recursive: true });
-      await writeFile(storePath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+function write(change: () => Promise<unknown>): void {
+  writes = writes.then(change).then(
+    () => undefined,
+    (error: unknown) => {
+      container.logger.warn('[github] could not save the message tracker:', error);
+    },
+  );
+}
+
+/** The file used before v0.8.0: `{ version: 1, entries: { key: entry } }`. */
+function parseLegacyFile(raw: unknown): Map<string, TrackedMessage> {
+  const stored = (raw as { entries?: unknown } | null)?.entries;
+  const parsed = new Map<string, TrackedMessage>();
+  if (stored && typeof stored === 'object') {
+    for (const [key, value] of Object.entries(stored)) {
+      const entry = parseEntry(value);
+      if (entry) {
+        parsed.set(key, entry);
+      }
     }
-  } catch (error) {
-    // A failed write costs one future edit, not a notification — so log and go on.
-    container.logger.warn('[github] could not save the message tracker:', error);
-  } finally {
-    writing = false;
   }
-}
 
-function persist(): void {
-  dirty = true;
-  if (!writing) {
-    void flush();
-  }
+  return parsed;
 }
 
 export async function loadTrackedMessages(): Promise<void> {
-  try {
-    const raw = JSON.parse(await readFile(storePath, 'utf8')) as unknown;
-    const stored = (raw as Partial<StoredFile> | null)?.entries;
-    const next = new Map<string, TrackedMessage>();
-    if (stored && typeof stored === 'object') {
-      for (const [key, value] of Object.entries(stored)) {
-        const entry = parseEntry(value);
-        if (entry) {
-          next.set(key, entry);
-        }
+  await migrateFile({
+    name: 'github-messages.json',
+    path: legacyPath,
+    label: 'tracked GitHub messages',
+    parse: parseLegacyFile,
+    insert: async (tx, parsed) => {
+      const rows = [...parsed].map(([key, entry]) => ({ key, ...entry }));
+      if (rows.length > 0) {
+        await tx.insert(trackedMessages).values(rows).onConflictDoNothing();
       }
+      return rows.length;
+    },
+  });
+
+  const next = new Map<string, TrackedMessage>();
+  for (const row of await getDb().select().from(trackedMessages)) {
+    // The database writes times its own way; the cap sorts on ISO strings.
+    const entry = parseEntry({ ...row, at: new Date(row.at).toISOString() });
+    if (entry) {
+      next.set(row.key, entry);
     }
-    entries = next;
-  } catch {
-    entries = new Map();
   }
+  entries = next;
+}
+
+/** Resolves once every change made so far has reached the database — for local checks. */
+export function trackedMessageWritesSettled(): Promise<void> {
+  return writes;
 }
 
 export function findTrackedMessage(repo: string, number: number): TrackedMessage | undefined {
@@ -149,14 +165,26 @@ export function rememberMessage(
   number: number,
   message: Omit<TrackedMessage, 'at'>,
 ): void {
-  entries.set(keyFor(repo, number), { ...message, at: new Date().toISOString() });
-  prune();
-  persist();
+  const key = keyFor(repo, number);
+  const entry = { ...message, at: new Date().toISOString() };
+  entries.set(key, entry);
+  const dropped = prune();
+  write(async () => {
+    const row = { key, ...entry };
+    await getDb()
+      .insert(trackedMessages)
+      .values(row)
+      .onConflictDoUpdate({ target: trackedMessages.key, set: row });
+    if (dropped.length > 0) {
+      await getDb().delete(trackedMessages).where(inArray(trackedMessages.key, dropped));
+    }
+  });
 }
 
 /** For a message that is gone — deleted by hand, or in a channel that no longer exists. */
 export function forgetMessage(repo: string, number: number): void {
-  if (entries.delete(keyFor(repo, number))) {
-    persist();
+  const key = keyFor(repo, number);
+  if (entries.delete(key)) {
+    write(() => getDb().delete(trackedMessages).where(eq(trackedMessages.key, key)));
   }
 }
