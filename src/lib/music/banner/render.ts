@@ -10,6 +10,7 @@ import {
   TextDisplayBuilder,
 } from 'discord.js';
 
+import { getEnv } from '../../env.js';
 import type { PlaybackState } from '../playback.js';
 import { MAX_VOLUME, MIN_VOLUME } from '../volume.js';
 import { hasCapability } from '../worker-capabilities.js';
@@ -76,6 +77,20 @@ function button(id: string, label: string, emoji: string, style = ButtonStyle.Se
   return new ButtonBuilder().setCustomId(id).setLabel(label).setEmoji(emoji).setStyle(style);
 }
 
+/** The remote's link to the dashboard's music page — absent when its address is not known. */
+function dashboardLink(): ButtonBuilder[] {
+  const base = getEnv().dashboardUrl;
+  return base
+    ? [
+        new ButtonBuilder()
+          .setStyle(ButtonStyle.Link)
+          .setURL(`${base}/music`)
+          .setLabel('관제 센터')
+          .setEmoji('🖥️'),
+      ]
+    : [];
+}
+
 function progressBar(progress: number): string {
   const cell = knobCell(progress);
   return `${'▬'.repeat(cell)}🔘${'▬'.repeat(BAR_CELLS - 1 - cell)}`;
@@ -113,6 +128,7 @@ function idle(container: ContainerBuilder): void {
         ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍').setDisabled(down)] : []),
         button(REMOTE.playlists, '재생목록', '📁').setDisabled(down),
         button(REMOTE.join, '통화방 참여', '🔈'),
+        ...dashboardLink(),
       ),
     );
 }
@@ -176,6 +192,7 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
             ]
           : []),
         button(REMOTE.join, '통화방 참여', '🔈'),
+        ...dashboardLink(),
       ),
     );
 }
