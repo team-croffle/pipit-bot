@@ -1,6 +1,7 @@
 import { container } from '@sapphire/framework';
 
 import { startApiServer } from './api/server.js';
+import { loadAccountLinks } from './lib/account-links.js';
 import { startAuditRetention } from './lib/audit/retention.js';
 import { loadAuditSettings } from './lib/audit/settings.js';
 import { CustomClient } from './lib/client.js';
@@ -24,6 +25,7 @@ const main = async () => {
     await connectDatabase();
     await loadGuildEventSettings();
     await loadGithubNotifySettings();
+    await loadAccountLinks();
     // Before login: the command registry, filled at login, leaves out switched-off features.
     await loadFeatures();
     await loadAuditSettings();

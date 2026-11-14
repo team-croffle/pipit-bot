@@ -57,6 +57,13 @@
       "when": 1794693598753,
       "tag": "0007_reaction_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794693779628,
+      "tag": "0008_account_links",
+      "breakpoints": true
     }
   ]
 }

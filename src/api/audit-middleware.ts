@@ -20,6 +20,7 @@ const RULES: ActionRule[] = [
   { method: 'PUT', pattern: /^\/api\/settings\/audit$/, action: 'audit.settings' },
   { method: 'PUT', pattern: /^\/api\/guild-events$/, action: 'member-events.update' },
   { method: 'PUT', pattern: /^\/api\/github-notify$/, action: 'github-notify.update' },
+  { method: 'PUT', pattern: /^\/api\/accounts$/, action: 'accounts.update' },
   { method: 'POST', pattern: /^\/api\/github-notify\/remind$/, action: 'github.remind' },
   { method: 'PUT', pattern: /^\/api\/reaction-roles$/, action: 'reaction-roles.update' },
   {

@@ -219,6 +219,10 @@ export interface GithubNotifySettings {
   events: GithubEventToggles;
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
+  /**
+   * The GitHub ↔ Discord links the page edits alongside the settings. Since v0.8.0 they
+   * are read and saved through `/api/accounts`, not with the notification settings.
+   */
   accounts: GithubAccountMapping[];
   teams: GithubTeamMapping[];
   /** Set when the settings file on disk could not be read; defaults are in use. */

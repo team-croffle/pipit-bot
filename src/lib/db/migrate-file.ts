@@ -37,7 +37,9 @@ export interface FileMigration<T> {
   insert: (tx: Transaction, value: T) => Promise<number>;
   /**
    * Done once the rows are in. By default the file becomes `*.migrated`; a file that
-   * also holds settings (and stays) rewrites itself without the moved part instead.
+   * also holds settings (and stays) rewrites itself without the moved part instead —
+   * and is called again on every later start, with `undefined`, to take out anything
+   * an older image put back.
    */
   finish?: (value: T | undefined) => Promise<void>;
 }
@@ -76,6 +78,12 @@ export async function migrateFile<T>(migration: FileMigration<T>): Promise<Migra
     .select()
     .from(fileMigrations)
     .where(eq(fileMigrations.name, migration.name));
+  if (done && migration.finish) {
+    // A file that stays (settings): every start sees it, and the move is long done.
+    await migration.finish(undefined);
+    return 'finished';
+  }
+
   if (done) {
     // Either a start stopped right after the move, or the file came back later (an older
     // image ran in between). Its content is not moved again: the database is the record.

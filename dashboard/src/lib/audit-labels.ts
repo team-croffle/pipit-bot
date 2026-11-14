@@ -64,6 +64,7 @@ const ACTION_LABEL: Record<string, string> = {
   'audit.settings': '감사 설정 저장',
   'member-events.update': '입장·퇴장 설정 저장',
   'github-notify.update': 'GitHub 알림 설정 저장',
+  'accounts.update': '계정 연결 저장',
   'github.remind': '다시 알리기',
   'reaction-roles.update': '리액션 롤 저장',
   'reaction-roles.publish': '리액션 롤 게시',
