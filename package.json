@@ -39,7 +39,7 @@
     "watch:start": "tsc-watch --onSuccess \"yarn start:dev\"",
     "dashboard:dev": "yarn workspace dashboard dev",
     "dashboard:build": "yarn workspace dashboard build",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "node scripts/db-generate.mjs"
   },
   "workspaces": [
     "dashboard"
