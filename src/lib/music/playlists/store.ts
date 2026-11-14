@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import { container } from '@sapphire/framework';
 
 import { dataDir } from '../../constants.js';
-import { loadSettingsFile } from '../../settings-file.js';
+import { getDb } from '../../db/client.js';
+import { migrateFile } from '../../db/migrate-file.js';
 import { canEdit, canView } from './access.js';
+import { deletePlaylistRow, readPlaylists, writePlaylist } from './storage.js';
 import {
   PLAYLIST_LIMITS,
   type Playlist,
@@ -26,13 +27,21 @@ export class PlaylistError extends Error {
   }
 }
 
-let filePath = join(dataDir, 'playlists.json');
+/**
+ * In the database since v0.8.0 (`playlists`, `playlist_items`; the old
+ * `data/playlists.json` is moved in once). The playlists stay in memory — the commands,
+ * pickers and feeder read them without waiting — and every change writes the one
+ * playlist it touched, one write after another. A failed write is logged, as a failed
+ * file save was.
+ */
+let legacyPath = join(dataDir, 'playlists.json');
 let playlists: Playlist[] = [];
 let loadError: string | null = null;
 let writing: Promise<void> = Promise.resolve();
 
+/** Where an old playlists file is moved in from — for local checks only. */
 export function setPlaylistsPathForChecks(path: string): void {
-  filePath = path;
+  legacyPath = path;
   playlists = [];
 }
 
@@ -52,32 +61,45 @@ function parse(raw: unknown): Playlist[] {
 }
 
 export async function loadPlaylists(): Promise<void> {
-  const loaded = await loadSettingsFile({
-    path: filePath,
-    label: 'Playlists',
+  const outcome = await migrateFile({
+    name: 'playlists.json',
+    path: legacyPath,
+    label: 'playlists',
     parse,
-    empty: () => [],
+    insert: async (tx, parsed) => {
+      for (const playlist of parsed) {
+        await writePlaylist(tx, playlist);
+      }
+      return parsed.length;
+    },
   });
-  playlists = loaded.value;
-  loadError = loaded.error;
+  loadError =
+    outcome === 'broken'
+      ? 'playlists.json is not valid and was not moved into the database; a copy was kept beside it. Fix the file and restart.'
+      : null;
+
+  playlists = await readPlaylists();
 }
 
 export function getPlaylistsLoadError(): string | null {
   return loadError;
 }
 
-function save(): Promise<void> {
-  const snapshot = `${JSON.stringify({ playlists }, null, 2)}\n`;
+function write(change: () => Promise<unknown>): Promise<void> {
   writing = writing
     .then(async () => {
-      await mkdir(dirname(filePath), { recursive: true });
-      await writeFile(filePath, snapshot, 'utf8');
-      loadError = null;
+      await change();
     })
     .catch((error: unknown) => {
       container.logger?.warn('[playlists] could not save:', error);
     });
   return writing;
+}
+
+/** Writes one playlist as it stands now (its tracks in their order). */
+function save(playlist: Playlist): Promise<void> {
+  const snapshot = structuredClone(playlist);
+  return write(() => getDb().transaction((tx) => writePlaylist(tx, snapshot)));
 }
 
 const now = () => new Date().toISOString();
@@ -170,7 +192,7 @@ export async function createPlaylist(
     updatedAt: now(),
   };
   playlists.push(playlist);
-  await save();
+  await save(playlist);
   return playlist;
 }
 
@@ -184,14 +206,14 @@ export async function renamePlaylist(
   assertNameFree(clean, playlist.scope, playlist.ownerId, playlist.id);
   playlist.name = clean;
   playlist.updatedAt = now();
-  await save();
+  await save(playlist);
   return playlist;
 }
 
 export async function deletePlaylist(id: string, viewer: PlaylistViewer): Promise<Playlist> {
   const playlist = editable(id, viewer);
   playlists = playlists.filter((item) => item.id !== id);
-  await save();
+  await write(() => deletePlaylistRow(id));
   return playlist;
 }
 
@@ -210,7 +232,7 @@ export async function addItems(
   const accepted = items.slice(0, room).map((item) => ({ ...item, id: randomUUID().slice(0, 8) }));
   playlist.items.push(...accepted);
   playlist.updatedAt = now();
-  await save();
+  await save(playlist);
   return { playlist, added: accepted.length, skipped: items.length - accepted.length };
 }
 
@@ -226,7 +248,7 @@ export async function removeItem(
   }
   playlist.items.splice(index, 1);
   playlist.updatedAt = now();
-  await save();
+  await save(playlist);
   return playlist;
 }
 
@@ -245,7 +267,7 @@ export async function moveItem(
   const [item] = playlist.items.splice(from, 1);
   playlist.items.splice(Math.max(0, Math.min(Math.floor(to), playlist.items.length)), 0, item!);
   playlist.updatedAt = now();
-  await save();
+  await save(playlist);
   return playlist;
 }
 
@@ -262,5 +284,8 @@ export async function retitleTypedItem(
   }
   item.title = title;
   item.durationSec = durationSec ?? item.durationSec;
-  await save();
+  const playlist = playlists.find((p) => p.id === playlistId);
+  if (playlist) {
+    await save(playlist);
+  }
 }
