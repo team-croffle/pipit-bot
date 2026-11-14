@@ -79,6 +79,26 @@ export async function joinVoiceChannel(
   return { ok: true, message: `Joined ${voiceChannel.name}.` };
 }
 
+/**
+ * The remote's join button: joins like `/join`, but never pulls the music away from
+ * people listening in another channel — anyone in the music channel can press it, and
+ * one press should not cut everyone else off. Moving a session that is playing stays a
+ * deliberate `/join` (or the dashboard's move).
+ */
+export async function joinFromRemote(
+  voiceChannel: VoiceBasedChannel,
+): Promise<PlaybackActionResult> {
+  const queue = useQueue(voiceChannel.guild.id);
+  if (queue?.channel && queue.channel.id !== voiceChannel.id && queue.currentTrack) {
+    return {
+      ok: false,
+      message: `Already playing in ${queue.channel.name} — join that channel to listen.`,
+    };
+  }
+
+  return joinVoiceChannel(voiceChannel);
+}
+
 export function leaveVoiceChannel(guildId: string): PlaybackActionResult {
   const queue = useQueue(guildId);
   const connection = getVoiceConnection(guildId);

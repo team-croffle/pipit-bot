@@ -27,6 +27,7 @@ import { discordViewer } from '../lib/music/playlists/discord.js';
 import { NO_PLAYLISTS, playPlaylistMessage } from '../lib/music/playlists/pickers.js';
 import { setAutoplay, setMono, setVolume } from '../lib/music/queue-actions.js';
 import { queueText } from '../lib/music/queue-view.js';
+import { joinFromRemote } from '../lib/music/voice-connection.js';
 import { clampVolume, REMOTE_VOLUME_STEP } from '../lib/music/volume.js';
 import { isMusicChannel } from '../preconditions/music-channel.js';
 
@@ -119,6 +120,26 @@ export class MusicRemoteButton extends InteractionHandler {
       } else {
         await replyNotice(interaction, { ok: false, message: NO_PLAYLISTS });
       }
+      return;
+    }
+
+    if (interaction.customId === REMOTE.join) {
+      const voiceChannel = interaction.inCachedGuild() ? interaction.member.voice.channel : null;
+      if (!voiceChannel) {
+        await replyNotice(
+          interaction,
+          { ok: false, message: 'Join a voice channel first.' },
+          { seconds: RESULT_SECONDS },
+        );
+        return;
+      }
+
+      // Connecting can take longer than a button's three seconds.
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await replyNotice(interaction, await joinFromRemote(voiceChannel), {
+        seconds: RESULT_SECONDS,
+      });
+      requestBannerRefresh();
       return;
     }
 
