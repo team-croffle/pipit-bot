@@ -31,6 +31,7 @@ import { auditDashboard } from './audit-middleware.js';
 import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
 import { SESSION_COOKIE } from './auth/session.js';
 import type { ApiVariables } from './context.js';
+import { mountAccountRoutes } from './routes/accounts.js';
 import { mountAuditRoutes } from './routes/audit.js';
 import { mountAuthRoutes } from './routes/auth.js';
 import { mountFeatureRoutes } from './routes/features.js';
@@ -208,6 +209,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
     return c.json({ members: await listGuildMembers(guild) });
   });
 
+  mountAccountRoutes(app);
   mountAuditRoutes(app);
   mountFeatureRoutes(app);
   mountGithubNotifyRoutes(app, config);

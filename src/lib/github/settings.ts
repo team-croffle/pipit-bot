@@ -49,10 +49,8 @@ export interface GithubRepoRule {
   events: GithubEventToggles | null;
 }
 
-export interface GithubAccountMapping {
-  githubLogin: string;
-  discordUserId: string;
-}
+/** Moved to account-links.ts in v0.8.0; kept here for the modules that name it. */
+export type { AccountLink as GithubAccountMapping } from '../account-links.js';
 
 /** A missing key means "use the built-in default for that event". */
 export type GithubEventTemplates = Partial<Record<keyof GithubEventToggles, EmbedTemplate>>;
@@ -72,7 +70,6 @@ export interface GithubNotifySettings {
   /** Per-event wording; every event falls back to its own built-in default. */
   eventTemplates: GithubEventTemplates;
   repos: GithubRepoRule[];
-  accounts: GithubAccountMapping[];
   /** Teams asked to review → the Discord role that stands for them. */
   teams: GithubTeamMapping[];
 }
@@ -85,10 +82,6 @@ export interface ResolvedRepoRule {
 const settingsPath = join(dataDir, 'github-notify.json');
 const snowflake = /^\d{17,20}$/;
 const repoName = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
-// WHY: The real GitHub username grammar. Also a security control — it makes a login
-// like `everyone`, or one carrying backticks/`<`/`@`, impossible to persist.
-const githubLogin = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
-
 // Ordered the way the dashboard lists them: a pull request's life, then an issue's.
 export const TOGGLE_KEYS = [
   'pullRequestOpened',
@@ -148,7 +141,6 @@ function emptySettings(): GithubNotifySettings {
     events: emptyToggles(),
     eventTemplates: {},
     repos: [],
-    accounts: [],
     teams: [],
   };
 }
@@ -235,39 +227,6 @@ function asRepoRules(value: unknown): GithubRepoRule[] {
   }
 
   return rules;
-}
-
-function asAccountMappings(value: unknown): GithubAccountMapping[] {
-  if (!Array.isArray(value)) {
-    throw new Error('accounts must be an array');
-  }
-
-  const accounts: GithubAccountMapping[] = [];
-  const seen = new Set<string>();
-  for (const item of value.slice(0, 200)) {
-    if (!item || typeof item !== 'object') {
-      throw new Error('Invalid account mapping');
-    }
-
-    const row = item as Record<string, unknown>;
-    const login = typeof row.githubLogin === 'string' ? row.githubLogin.trim().toLowerCase() : '';
-    if (!githubLogin.test(login)) {
-      throw new Error('Each account needs a valid GitHub login');
-    }
-
-    if (seen.has(login)) {
-      throw new Error(`Duplicate GitHub login: ${login}`);
-    }
-
-    if (!isSnowflake(row.discordUserId)) {
-      throw new Error('Each account needs a Discord user id');
-    }
-
-    seen.add(login);
-    accounts.push({ githubLogin: login, discordUserId: row.discordUserId });
-  }
-
-  return accounts;
 }
 
 /**
@@ -357,7 +316,8 @@ export function parseGithubNotifySettings(raw: unknown): GithubNotifySettings {
     events: asToggles(body.events),
     eventTemplates,
     repos: asRepoRules(body.repos ?? []),
-    accounts: asAccountMappings(body.accounts ?? []),
+    // `accounts` in an older file is moved into the database by account-links.ts and
+    // otherwise ignored here: the GitHub-to-Discord links are not a notification setting.
     teams: asTeamMappings(body.teams ?? []),
   };
 }

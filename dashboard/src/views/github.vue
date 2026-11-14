@@ -193,8 +193,9 @@
 
   onMounted(async () => {
     try {
-      const [loaded, channelBody, defaultsBody] = await Promise.all([
+      const [loaded, accountBody, channelBody, defaultsBody] = await Promise.all([
         fetchJson<GithubNotifySettings>('/api/github-notify'),
+        fetchJson<{ accounts: GithubAccountMapping[] }>('/api/accounts'),
         fetchJson<{ channels: DiscordChannel[] }>('/api/discord/channels'),
         fetchJson<GithubTemplateDefaults>('/api/github-notify/defaults'),
       ]);
@@ -205,7 +206,7 @@
         events: { ...emptyToggles(), ...loaded.events },
         eventTemplates: { ...loaded.eventTemplates },
         repos: loaded.repos ?? [],
-        accounts: loaded.accounts ?? [],
+        accounts: accountBody.accounts ?? [],
         teams: loaded.teams ?? [],
       };
       loadError.value = loaded.loadError ?? '';
@@ -368,31 +369,47 @@
       return;
     }
 
+    let result: GithubNotifySettings;
     try {
-      const result = await putJson<GithubNotifySettings>('/api/github-notify', {
+      result = await putJson<GithubNotifySettings>('/api/github-notify', {
         enabled: settings.value.enabled,
         notifyUnlistedRepos: settings.value.notifyUnlistedRepos,
         channelId: settings.value.channelId,
         events: settings.value.events,
         eventTemplates: settings.value.eventTemplates,
         repos,
-        accounts,
         teams: prepared.teams,
       });
-      settings.value = {
-        ...result,
-        notifyUnlistedRepos: result.notifyUnlistedRepos !== false,
-        events: { ...emptyToggles(), ...result.events },
-        eventTemplates: result.eventTemplates ?? {},
-        repos: result.repos ?? [],
-        accounts: result.accounts ?? [],
-        teams: result.teams ?? [],
-      };
-      saved.value = '저장했습니다.';
-      loadError.value = '';
     } catch (cause) {
       error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
+      return;
     }
+
+    // The account links are their own store since v0.8.0 — a second request, and a
+    // failure there must not read as if nothing was saved.
+    let linked = accounts;
+    try {
+      linked = (await putJson<{ accounts: GithubAccountMapping[] }>('/api/accounts', { accounts }))
+        .accounts;
+    } catch (cause) {
+      error.value = `알림 설정은 저장했지만 계정 연결은 저장하지 못했습니다: ${
+        cause instanceof Error ? cause.message : '알 수 없는 오류'
+      }`;
+    }
+
+    settings.value = {
+      ...result,
+      notifyUnlistedRepos: result.notifyUnlistedRepos !== false,
+      events: { ...emptyToggles(), ...result.events },
+      eventTemplates: result.eventTemplates ?? {},
+      repos: result.repos ?? [],
+      accounts: linked,
+      teams: result.teams ?? [],
+    };
+    if (!error.value) {
+      saved.value = '저장했습니다.';
+    }
+    loadError.value = '';
   }
 </script>
 

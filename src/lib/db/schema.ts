@@ -126,3 +126,13 @@ export const reactionRoleOptions = pgTable(
   },
   (table) => [primaryKey({ columns: [table.panelId, table.position] })],
 );
+
+/**
+ * GitHub login ↔ Discord user (account-links.ts): identity, not a setting — mentions,
+ * personal playlists and the dashboard's own user all ask it.
+ */
+export const accountLinks = pgTable('account_links', {
+  /** Lower-cased. */
+  githubLogin: text('github_login').primaryKey(),
+  discordUserId: text('discord_user_id').notNull(),
+});

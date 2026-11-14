@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 
-import { getGithubNotifySettings } from '../lib/github/settings.js';
+import { getAccountLinks } from '../lib/account-links.js';
 import type { PlaylistViewer } from '../lib/music/playlists/types.js';
 import type { DashboardIdentity } from './auth/dashboard.js';
 
@@ -12,7 +12,7 @@ import type { DashboardIdentity } from './auth/dashboard.js';
  * links GitHub logins to Discord users for mentions. Without a link, the person simply
  * has no Discord identity on the dashboard.
  */
-let accounts = () => getGithubNotifySettings().accounts;
+let accounts = () => getAccountLinks();
 
 /** Replaces the account links read here — for local checks only. */
 export function setAccountLinksForChecks(

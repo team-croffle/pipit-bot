@@ -7,6 +7,7 @@ import {
   type SendableChannels,
 } from 'discord.js';
 
+import { getAccountLinks } from '../account-links.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
@@ -194,7 +195,7 @@ async function updateAnnouncement(
 
   const rendered = formatGithubNotification(
     asAnnouncement(notification, tracked.toggle),
-    settings.accounts,
+    getAccountLinks(),
     resolveTemplateEmojis(resolveTemplate(settings, tracked.toggle), guild),
     settings.teams,
   );
@@ -305,7 +306,7 @@ export async function dispatchGithubNotification(
 
   const message = formatGithubNotification(
     notification,
-    settings.accounts,
+    getAccountLinks(),
     // Shortcodes become real emoji here, before any payload value is substituted in.
     resolveTemplateEmojis(resolveTemplate(settings, notification.toggle), guild),
     settings.teams,
