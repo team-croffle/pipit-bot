@@ -1,13 +1,48 @@
 import type { Hono } from 'hono';
 
 import { MAX_LIMIT, queryAudit } from '../../lib/audit/query.js';
+import {
+  getAuditSettings,
+  getAuditSettingsLoadError,
+  saveAuditSettings,
+} from '../../lib/audit/settings.js';
 import { isAuditCategory, type AuditCategory } from '../../lib/audit/types.js';
-import { dashboardViewer } from '../auth/dashboard.js';
+import { dashboardViewer, dashboardWrite } from '../auth/dashboard.js';
 import type { ApiVariables } from '../context.js';
 
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}(T[\d:.]+Z)?$/;
 
 export function mountAuditRoutes(app: Hono<{ Variables: ApiVariables }>): void {
+  app.get('/api/settings/audit', dashboardViewer, (c) =>
+    c.json({ settings: getAuditSettings(), loadError: getAuditSettingsLoadError() }),
+  );
+
+  // What changed goes on the audit line (the middleware never reads bodies itself).
+  app.put(
+    '/api/settings/audit',
+    dashboardViewer,
+    async (c, next) => {
+      const body = await c.req.json<{ musicRequests?: unknown }>().catch(() => ({}));
+      if (typeof (body as { musicRequests?: unknown }).musicRequests === 'boolean') {
+        c.set('auditNote', {
+          target: 'musicRequests',
+          detail: (body as { musicRequests: boolean }).musicRequests ? 'on' : 'off',
+        });
+      }
+      await next();
+    },
+    dashboardWrite,
+    async (c) => {
+      const body = await c.req.json<{ musicRequests?: unknown }>().catch(() => ({}));
+      const musicRequests = (body as { musicRequests?: unknown }).musicRequests;
+      if (typeof musicRequests !== 'boolean') {
+        return c.json({ error: 'musicRequests must be true or false' }, 400);
+      }
+
+      return c.json({ settings: await saveAuditSettings({ musicRequests }), loadError: null });
+    },
+  );
+
   app.get('/api/audit', dashboardViewer, async (c) => {
     const { from, to, before, q, category, limit, page } = c.req.query();
     for (const [name, value] of Object.entries({ from, to, before })) {

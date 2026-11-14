@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 
 import { startApiServer } from './api/server.js';
 import { startAuditRetention } from './lib/audit/retention.js';
+import { loadAuditSettings } from './lib/audit/settings.js';
 import { CustomClient } from './lib/client.js';
 import { closeDatabase, connectDatabase } from './lib/db/client.js';
 import { loadFeatures } from './lib/features.js';
@@ -25,6 +26,7 @@ const main = async () => {
     await loadGithubNotifySettings();
     // Before login: the command registry, filled at login, leaves out switched-off features.
     await loadFeatures();
+    await loadAuditSettings();
     await loadTrackedMessages();
     await loadReactionRoleSettings();
     await loadInviteStats();

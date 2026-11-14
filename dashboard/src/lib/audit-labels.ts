@@ -61,6 +61,7 @@ const ACTION_LABEL: Record<string, string> = {
   'music.failed': '곡 준비 실패',
   'settings.update': '설정 저장',
   'features.update': '기능 켜고 끄기',
+  'audit.settings': '감사 설정 저장',
   'member-events.update': '입장·퇴장 설정 저장',
   'github-notify.update': 'GitHub 알림 설정 저장',
   'github.remind': '다시 알리기',
@@ -113,11 +114,18 @@ export function targetLabel(entry: AuditEntry): string | undefined {
     return FEATURE_LABEL[entry.target] ?? entry.target;
   }
 
+  if (entry.action === 'audit.settings' && entry.target === 'musicRequests') {
+    return '음악 요청 기록';
+  }
+
   return entry.target;
 }
 
 export function detailLabel(entry: AuditEntry): string | undefined {
-  if (entry.action === 'features.update' && (entry.detail === 'on' || entry.detail === 'off')) {
+  if (
+    (entry.action === 'features.update' || entry.action === 'audit.settings') &&
+    (entry.detail === 'on' || entry.detail === 'off')
+  ) {
     return entry.detail === 'on' ? '켬' : '끔';
   }
 
