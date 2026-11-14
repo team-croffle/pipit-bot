@@ -74,13 +74,14 @@ Inside the process:
   signed-in session; changing settings also requires an admin group. Worker callbacks require the internal token.
 - **In memory** — the music job registry, the player's queue and history, short-lived caches of GitHub lists. All of it
   is rebuilt or forgotten on restart.
-- **In the database** — tracked GitHub messages, the music channels' banner messages and invite counts
+- **In the database** — tracked GitHub messages, the music channels' banner messages, invite counts and the audit log
   ([024](./decisions/024_v0.8.0_database.md)). Each store loads its rows into memory at start-up, so the code that reads
-  them stays synchronous, and writes every change straight through. Migrations are applied when the bot starts; a file
+  them stays synchronous, and writes every change straight through; the audit log alone is queried in SQL, by period,
+  category and text. Migrations are applied when the bot starts; a file
   from before is moved in once and kept as `*.migrated`.
 - **On disk** — settings under `data/`, each loaded at start-up and written whole when it changes (a person can fix them
-  in an editor when the dashboard is locked out). The audit log, playlists and reaction-role panels are still files in
-  v0.8.0-rc.1 and move into the database in the next pre-releases.
+  in an editor when the dashboard is locked out). Playlists and reaction-role panels are still files in v0.8.0-rc.2 and
+  move into the database in the next pre-release.
 
 **Feature switches** ([022](./decisions/022_v0.7.6_feature-switches.md)) are one entry point, `isEnabled(feature)`, read
 where each feature acts. Switching music or GitHub replaces the bot's slash commands with those of the switched-on
