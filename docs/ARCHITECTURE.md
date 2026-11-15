@@ -75,7 +75,8 @@ Inside the process:
 - **In memory** — the music job registry, the player's queue and history, short-lived caches of GitHub lists. All of it
   is rebuilt or forgotten on restart.
 - **In the database** — tracked GitHub messages, the music channels' banner messages, invite counts, the audit log,
-  playlists, reaction-role panels and the GitHub ↔ Discord account links ([024](./decisions/024_v0.8.0_database.md)). Each store loads its rows into memory at start-up, so the code that reads
+  playlists, reaction-role panels, the GitHub ↔ Discord account links ([024](./decisions/024_v0.8.0_database.md)) and the
+  music play history, which the recaps count in SQL ([025](./decisions/025_v0.8.1_music-recap.md)). Each store loads its rows into memory at start-up, so the code that reads
   them stays synchronous, and writes every change straight through; the audit log alone is queried in SQL, by period,
   category and text. Migrations are applied when the bot starts; a file
   from before is moved in once and kept as `*.migrated`.
