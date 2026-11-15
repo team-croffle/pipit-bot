@@ -66,13 +66,13 @@
     return repoCount > 0 ? `저장소 ${repoCount}곳 개별 설정` : '기본 설정 사용';
   });
 
-  const features = computed(() => [
+  const features = computed<{ label: string; on: boolean; to: string; planned?: string }[]>(() => [
     { label: '음악 오케스트레이션', on: true, to: '/music' },
     { label: 'GitHub PR 리마인더', on: github.value?.enabled ?? false, to: '/github' },
     { label: '초대 로거', on: true, to: '/invites' },
     { label: '리액션 롤', on: true, to: '/reaction-roles' },
     { label: '감사 로깅', on: true, to: '/logs' },
-    { label: '음악 결산', on: false, to: '/settlement', planned: 'v0.8.1' },
+    { label: '음악 결산', on: true, to: '/settlement' },
   ]);
 
   function outcomeVariant(

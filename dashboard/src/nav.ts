@@ -46,7 +46,7 @@ export const navSections: NavSection[] = [
   {
     title: '운영',
     items: [
-      { to: '/settlement', label: '음악 결산', icon: BarChart3, planned: 'v0.8.1' },
+      { to: '/settlement', label: '음악 결산', icon: BarChart3 },
       { to: '/logs', label: '로깅', icon: ScrollText },
     ],
   },

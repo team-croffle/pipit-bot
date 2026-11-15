@@ -9,7 +9,6 @@ import Overview from './views/overview.vue';
 import Polls from './views/polls.vue';
 import ReactionRoles from './views/reaction-roles.vue';
 import Settings from './views/settings.vue';
-import Settlement from './views/settlement.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -22,7 +21,12 @@ export const router = createRouter({
     { path: '/settings', name: 'settings', component: Settings },
     // Planned features (ROADMAP.md). They render a preview so the navigation shows
     // where the work lands instead of growing a new shape later.
-    { path: '/settlement', name: 'settlement', component: Settlement },
+    {
+      path: '/settlement',
+      name: 'settlement',
+      // The chart library is large; only this page needs it.
+      component: () => import('./views/settlement.vue'),
+    },
     { path: '/logs', name: 'logs', component: Logs },
     { path: '/calendar', name: 'calendar', component: Calendar },
     { path: '/polls', name: 'polls', component: Polls },
