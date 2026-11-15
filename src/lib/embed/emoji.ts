@@ -1,5 +1,6 @@
 /**
- * Resolves `:name:` shortcodes to the guild's custom emoji at send time.
+ * Resolves `:name:` shortcodes at send time: the guild's custom emoji first, then the
+ * bot's own, then the standard emoji of that name (`:tada:` → 🎉).
  *
  * WHY templates store the shortcode rather than `<:name:id>`, which is what Discord
  * actually renders: the raw form is unreadable in the editor, and making the input's
@@ -7,34 +8,56 @@
  * the operator sees is the same bargain Discord's own message box makes.
  *
  * An unknown name is left exactly as typed. An emoji deleted from the server should
- * cost a notification its picture, not its delivery.
+ * cost a notification its picture, not its delivery. Code and links are left alone:
+ * `:x:` inside backticks or a URL is not an emoji.
  */
 
 import { container } from '@sapphire/framework';
 import type { Guild } from 'discord.js';
 
 import type { EmbedTemplate } from './template.js';
+import { unicodeEmoji } from './unicode-emoji.js';
 
-// Discord's own grammar for a custom emoji name.
-const SHORTCODE = /:([a-z\d_]{2,32}):/gi;
+// Wide enough for the standard names (`+1`, `-1`, `100`); a custom emoji's name follows
+// Discord's own grammar and is checked separately.
+const SHORTCODE = /:([a-z\d_+-]{1,40}):/gi;
+const CUSTOM_NAME = /^[a-z\d_]{2,32}$/i;
+// Code blocks, inline code, links and Discord's own markup (`<:name:id>`, `<t:…:R>`),
+// kept as they are.
+const UNTOUCHED = /(```[\s\S]*?```|`[^`\n]*`|<[^\s<>]+>|https?:\/\/\S+)/g;
 
-export function resolveEmojiShortcodes(text: string, guild: Guild | undefined): string {
-  if (!guild || !text.includes(':')) {
-    return text;
+function customEmoji(name: string, guild: Guild | undefined): string | undefined {
+  if (!CUSTOM_NAME.test(name)) {
+    return undefined;
   }
 
   // Both sources the picker offers. The guild's own wins a name collision, since that
   // is the one an operator browsing this server would have meant.
-  const application = container.client?.application;
+  const wanted = name.toLowerCase();
+  const emoji =
+    guild?.emojis.cache.find((candidate) => candidate.name?.toLowerCase() === wanted) ??
+    container.client?.application?.emojis.cache.find(
+      (candidate) => candidate.name?.toLowerCase() === wanted,
+    );
+  return emoji?.toString();
+}
 
-  return text.replaceAll(SHORTCODE, (whole, name: string) => {
-    const wanted = name.toLowerCase();
-    const emoji =
-      guild.emojis.cache.find((candidate) => candidate.name?.toLowerCase() === wanted) ??
-      application?.emojis.cache.find((candidate) => candidate.name?.toLowerCase() === wanted);
+function resolvePlain(text: string, guild: Guild | undefined): string {
+  return text.replaceAll(
+    SHORTCODE,
+    (whole, name: string) => customEmoji(name, guild) ?? unicodeEmoji(name) ?? whole,
+  );
+}
 
-    return emoji ? emoji.toString() : whole;
-  });
+export function resolveEmojiShortcodes(text: string, guild: Guild | undefined): string {
+  if (!text.includes(':')) {
+    return text;
+  }
+
+  return text
+    .split(UNTOUCHED)
+    .map((part, index) => (index % 2 === 1 ? part : resolvePlain(part, guild)))
+    .join('');
 }
 
 /**
@@ -48,10 +71,6 @@ export function resolveTemplateEmojis(
   template: EmbedTemplate,
   guild: Guild | undefined,
 ): EmbedTemplate {
-  if (!guild) {
-    return template;
-  }
-
   const fill = (text: string): string => resolveEmojiShortcodes(text, guild);
 
   return {
