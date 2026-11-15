@@ -147,7 +147,7 @@ OIDC 클라이언트로 로그인하고([004](./decisions/004_v0.5.0_dashboard-s
 - compose 파일이 봇과, 공유 볼륨으로 이어진 music worker, PostgreSQL을 실행하고, `data/`는 봇의 볼륨입니다.
   백업은 데이터베이스와 `data/` 두 곳입니다.
 - 환경 변수에는 배포 사실과 비밀만 둡니다(디스코드 토큰, OIDC, GitHub App, `INTERNAL_TOKEN`, `MUSIC_WORKER_URL`,
-  `STREAM_ROOT`, `DATABASE_URL`). 나머지는 모두 대시보드에서 설정합니다.
+  `STREAM_ROOT`, `DATABASE_HOST` 등 또는 `DATABASE_URL`). 나머지는 모두 대시보드에서 설정합니다.
 
 ## 앞으로
 

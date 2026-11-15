@@ -41,6 +41,12 @@ GITHUB_APP_PRIVATE_KEY_PATH=
 GITHUB_APP_INSTALLATION_ID=
 MUSIC_WORKER_URL=http://music-worker:8080
 # PostgreSQL (필수). 워크스페이스 compose는 자기 postgres 서비스로 설정합니다
+DATABASE_HOST=
+DATABASE_PORT=5432
+DATABASE_USERNAME=
+DATABASE_PASSWORD=
+DATABASE_NAME=
+# 또는 URL 하나로(설정돼 있으면 이쪽을 씁니다)
 DATABASE_URL=
 PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
@@ -65,14 +71,16 @@ DASHBOARD_URL=
 
 ### 데이터: 데이터베이스와 `data/`
 
-봇이 **만들어 내고 계속 쌓는 것**은 **PostgreSQL**(`DATABASE_URL`, 필수)에 둡니다: 추적 중인 GitHub 메시지, 음악 채널 배너 메시지, 초대 통계, 감사 로그, 재생목록, 리액션 롤 패널, GitHub ↔ 디스코드 계정 연결. **사람이 열어 고치는 설정**은 `data/` 아래 JSON 파일로 남습니다(`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`; gitignore 대상) — 대시보드에 들어갈 수 없을 때도 편집기로 고칠 수 있게.json`)은 이번 릴리즈까지 파일이고 다음에 데이터베이스로 옮깁니다. Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+봇이 **만들어 내고 계속 쌓는 것**은 **PostgreSQL**(필수)에 둡니다: 추적 중인 GitHub 메시지, 음악 채널 배너 메시지, 초대 통계, 감사 로그, 재생목록, 리액션 롤 패널, GitHub ↔ 디스코드 계정 연결. **사람이 열어 고치는 설정**은 `data/` 아래 JSON 파일로 남습니다(`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`; gitignore 대상) — 대시보드에 들어갈 수 없을 때도 편집기로 고칠 수 있게.json`)은 이번 릴리즈까지 파일이고 다음에 데이터베이스로 옮깁니다. Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
 
-- **시작** — 봇은 데이터베이스를 최대 2분까지 기다리고(아직 뜨는 중인 컨테이너도 괜찮습니다) 마이그레이션을 적용합니다. `DATABASE_URL`이 없으면 시작하지 않습니다
+- **시작** — 봇은 데이터베이스를 최대 2분까지 기다리고(아직 뜨는 중인 컨테이너도 괜찮습니다) 마이그레이션을 적용합니다. 붙을 데이터베이스가 없으면 시작하지 않습니다
 - **데이터베이스가 없던 릴리즈에서 올릴 때** — 첫 시작에서 이제 데이터베이스에 두는 파일을 한 번 옮기고, 파일 이름을 `*.migrated`로 바꿉니다(지우지 않습니다). 무엇을 옮겼는지 로그에 남습니다
 - **이전 이미지로 되돌릴 때** — 봇을 멈추고 `data/`의 `*.migrated` 파일 이름을 되돌린(꼬리를 뗀) 뒤 이전 이미지를 시작합니다. 올린 뒤 데이터베이스에 쌓인 것은 따라가지 않습니다 — 그리고 다시 올릴 때 이전 이미지에서 바꾼 것도 따라오지 않습니다: 다시 나타난 파일은 시각 붙은 이름으로 치워 두고(로그에 남습니다), `github-notify.json`에 되살아난 계정 연결은 다시 뺍니다. 그런 변경은 대시보드에서 다시 넣으세요
 - **백업**은 이제 두 곳입니다: 데이터베이스와 `data/`
 
-워크스페이스 루트의 compose 파일은 봇 옆에 `postgres:16-alpine` 서비스를 띄웁니다. 따로 쓰는 PostgreSQL이 있으면 `DATABASE_URL`을 그쪽으로 두세요.
+워크스페이스 루트의 compose 파일은 봇 옆에 `postgres:16-alpine` 서비스를 띄웁니다. 따로 쓰는 PostgreSQL이 있으면 봇을 그쪽으로 두세요.
+
+봇은 `DATABASE_HOST`, `DATABASE_PORT`(기본 5432), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_NAME`으로 PostgreSQL에 붙습니다 — 이렇게 하면 비밀번호를 인코딩할 필요가 없습니다. `DATABASE_URL`도 쓸 수 있고, 설정돼 있으면 그쪽을 씁니다(URL만 주는 관리형 DB나 `sslmode` 같은 옵션). 둘 다 있으면 로그에 그렇다고 남깁니다. 로그에는 붙은 호스트와 데이터베이스만 남고 비밀번호는 남지 않습니다.
 
 ## GitHub 알림
 
@@ -217,7 +225,7 @@ yarn dashboard:dev
 
 `http://127.0.0.1:5173/`이 열리고 `/api`는 봇으로 프록시됩니다. 프로덕션에서는 `yarn dashboard:build` 후 봇이 `dashboard/dist`를 `GET /`에서 서빙합니다.
 
-`yarn watch:start`에는 `DATABASE_URL`(`.env.development.local`)의 PostgreSQL이 필요합니다 — compose 스택의 것이나 로컬의 아무것이나.
+`yarn watch:start`에는 `DATABASE_HOST` 등(`.env.development.local`)으로 가리킨 PostgreSQL이 필요합니다 — compose 스택의 것이나 로컬의 아무것이나.
 
 전체 스택(봇 + music worker + PostgreSQL)은 저장소 루트의 워크스페이스 compose를 씁니다:
 
