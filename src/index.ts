@@ -13,6 +13,7 @@ import { loadGuildEventSettings } from './lib/guild-event-settings.js';
 import { loadInviteStats } from './lib/invite-stats.js';
 import { loadPlaybackOptions } from './lib/music/playback-options.js';
 import { loadPlaylists } from './lib/music/playlists/store.js';
+import { startPlayRetention } from './lib/music/recap/recorder.js';
 import { startWorkerWatch } from './lib/music/worker-status.js';
 import { loadReactionRoleSettings } from './lib/reaction-roles/settings.js';
 import { env } from './lib/setup.js';
@@ -36,6 +37,7 @@ const main = async () => {
     await loadPlaybackOptions();
     startWorkerWatch();
     startAuditRetention();
+    startPlayRetention();
     startApiServer(env, {
       info(message: string) {
         container.logger.info(message);
