@@ -5,6 +5,7 @@
   import { fetchJson, putJson } from '@/api';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
+  import RecapSettingsCard from '@/components/music/recap-settings-card.vue';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import {
@@ -36,7 +37,6 @@
 
   /** Not built yet — shown so the list reads as the whole plan. */
   const planned = [
-    { label: '음악 결산', to: '/settlement', version: 'v0.8.1' },
     { label: '캘린더 연동', to: '/calendar', version: 'v0.9' },
     { label: '투표 연동', to: '/polls', version: 'v0.10' },
   ];
@@ -223,6 +223,8 @@
           </p>
         </CardContent>
       </Card>
+
+      <RecapSettingsCard :read-only="readOnly" />
 
       <Card>
         <CardHeader>
