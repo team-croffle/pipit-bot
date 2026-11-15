@@ -8,6 +8,7 @@ import { LocalFileExtractor } from './music/local-file-extractor.js';
 import { watchMissingFiles } from './music/missing-file.js';
 import { watchMusicSwitch } from './music/music-switch.js';
 import { watchPlaylistFeed } from './music/playlists/feeder.js';
+import { watchPlays } from './music/recap/recorder.js';
 import { watchRepeatDefault } from './music/repeat-default.js';
 
 export class CustomClient extends SapphireClient {
@@ -54,6 +55,7 @@ export class CustomClient extends SapphireClient {
     watchMissingFiles(this.player);
     watchPlaylistFeed(this.player);
     watchAutoplay(this.player);
+    watchPlays(this.player);
     watchMusicSwitch();
     watchRepeatDefault(this.player);
   }

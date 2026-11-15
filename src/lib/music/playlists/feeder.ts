@@ -8,6 +8,7 @@ import type { Notice } from '../../discord/notice.js';
 import { raisePlaybackNotice } from '../missing-file.js';
 import { getGuildQueue } from '../playback.js';
 import { playPreparedTrack, rememberTrackMeta, submitMusicJob } from '../prepare-track.js';
+import { notePlaylistFile } from '../recap/recorder.js';
 import { fileOfTrack } from '../track-source.js';
 import { beginFeed, isCurrentFeed, setFeedStatus, stopFeed } from './feed-state.js';
 import { retitleTypedItem } from './store.js';
@@ -107,6 +108,7 @@ async function flush(current: Feed): Promise<void> {
 
         rememberTrackMeta(done.track);
         current.files.add(done.track.file);
+        notePlaylistFile(done.track.file);
         await playPreparedTrack(done.track, false, current.requestedBy);
         if (done.item.typed) {
           void retitleTypedItem(
