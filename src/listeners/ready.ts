@@ -5,6 +5,7 @@ import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colore
 
 import { refreshGuildInvites, watchInviteSwitch } from '../lib/invite-cache.js';
 import { startBanners } from '../lib/music/banner/manager.js';
+import { startRecapSchedule } from '../lib/music/recap/scheduler.js';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -36,6 +37,8 @@ export class UserEvent extends Listener {
     } catch (error) {
       this.container.logger.warn('[music-banner] could not start:', error);
     }
+
+    startRecapSchedule();
   }
 
   private printBanner() {
