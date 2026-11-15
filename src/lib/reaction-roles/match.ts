@@ -12,8 +12,10 @@
 import { container } from '@sapphire/framework';
 import type { EmojiIdentifierResolvable, Guild, MessageReaction } from 'discord.js';
 
+import { unicodeEmoji } from '../embed/unicode-emoji.js';
+
 const MARKUP = /^<a?:(\w+):(\d{17,20})>$/;
-const SHORTCODE = /^:([a-z\d_]{2,32}):$/i;
+const SHORTCODE = /^:([a-z\d_+-]{1,40}):$/i;
 
 interface WantedEmoji {
   /** Set when the operator picked a custom emoji we could identify. */
@@ -43,7 +45,11 @@ function wanted(emoji: string, guild?: Guild): WantedEmoji {
       container.client?.application?.emojis.cache.find(
         (candidate) => candidate.name?.toLowerCase() === wantedName,
       );
-    return custom ? { id: custom.id, name } : { name };
+    if (custom) {
+      return { id: custom.id, name };
+    }
+    // A standard emoji typed by hand (`:tada:`) reacts as its character.
+    return { name: unicodeEmoji(name) ?? name };
   }
 
   return { name: trimmed };

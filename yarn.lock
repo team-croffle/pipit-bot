@@ -3899,6 +3899,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"gemoji@npm:^8.1.0":
+  version: 8.1.0
+  resolution: "gemoji@npm:8.1.0"
+  checksum: 10c0/7d70bb3c3f5fa0e8ceef0934d45b03353de54474963092b1859732e43f4b2187eb70c7798af60a5373fb4099829ec1100cf9240182a3676ea74e8cb9e3b1942b
+  languageName: node
+  linkType: hard
+
 "get-stream@npm:^8.0.1":
   version: 8.0.1
   resolution: "get-stream@npm:8.0.1"
@@ -5271,6 +5278,7 @@ __metadata:
     drizzle-kit: "npm:0.31.11"
     drizzle-orm: "npm:0.45.4"
     ffmpeg-static: "npm:^5.3.0"
+    gemoji: "npm:^8.1.0"
     hono: "npm:^4.13.3"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^17.3.0"
