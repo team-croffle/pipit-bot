@@ -14,6 +14,7 @@ import { loadInviteStats } from './lib/invite-stats.js';
 import { loadPlaybackOptions } from './lib/music/playback-options.js';
 import { loadPlaylists } from './lib/music/playlists/store.js';
 import { startPlayRetention } from './lib/music/recap/recorder.js';
+import { loadRecapSettings } from './lib/music/recap/settings.js';
 import { startWorkerWatch } from './lib/music/worker-status.js';
 import { loadReactionRoleSettings } from './lib/reaction-roles/settings.js';
 import { env } from './lib/setup.js';
@@ -30,6 +31,7 @@ const main = async () => {
     // Before login: the command registry, filled at login, leaves out switched-off features.
     await loadFeatures();
     await loadAuditSettings();
+    await loadRecapSettings();
     await loadTrackedMessages();
     await loadReactionRoleSettings();
     await loadInviteStats();
