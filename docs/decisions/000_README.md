@@ -74,3 +74,4 @@ Each file has:
 | [022](./022_v0.7.6_feature-switches.md) | v0.7.6 | Features switch off as a whole, commands included |
 | [023](./023_v0.7.7_worker-status.md) | v0.7.7 | The bot knows whether the music worker is up, and says so instead of resending |
 | [024](./024_v0.8.0_database.md) | v0.8.0 | The data the bot keeps adding to moves into PostgreSQL; settings stay files |
+| [025](./025_v0.8.1_music-recap.md) | v0.8.1 | Music recaps count a play history of their own, and never show who asked for what |

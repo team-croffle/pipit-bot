@@ -57,18 +57,40 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
   music worker supports it
 - A music worker can state its optional features, and the bot shows only those controls
 
+### v0.7.5 — playback options
+
+- Mono for one earphone, autoplay that keeps going with tracks the music worker picks, and a volume from 0 to 200 in
+  steps of one
+- Progress bars on the remote and the dashboard that follow the track; a polished dashboard (icons, paged logs and
+  music jobs)
+
+### v0.7.6 — switching features off
+
+- Features switch on and off as a whole; a feature switched off takes its Discord commands with it
+- A polished audit log
+
+### v0.7.7 — the music worker's status
+
+- When the music worker is down, the music channel's banner, command replies and the dashboard say so, and recover on their own when it is back
+
+### v0.8.0 — a database
+
+- The data that accumulates moves into PostgreSQL — tracked GitHub messages, the audit log, invite statistics, playlists, reaction-role panels and account links
+- Settings files stay as they are, so they can still be fixed in an editor when the dashboard is out of reach
+- Operators need one more database. It ships in the compose file, and it can point at a PostgreSQL you already run
+
 ## In progress
 
-### v0.7.x — music management
+### v0.8.1 — music recaps
 
-- Playback options; switching features on and off
+- Monthly and yearly music summaries — play history is recorded, posted to Discord, and past and personal summaries can be browsed on the dashboard. Each year ends with a playlist of that year. Who asked for which track is never shown
+- Emoji shortcodes typed by hand, such as `:tada:`, turn into the emoji
 
 ## Planned
 
-### v0.8 — a database
+### v0.8.2 — dashboard sign-in
 
-- Move what lives in JSON files today — starting with the tracked GitHub messages — and the audit log into a database
-- Monthly and yearly music summaries
+- A dashboard sign-in page — username and password, OIDC, or Discord and GitHub sign-in, showing only the methods that are switched on, with at least one always on
 
 ### v0.9 — calendars
 

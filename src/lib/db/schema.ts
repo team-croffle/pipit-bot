@@ -142,7 +142,8 @@ export const accountLinks = pgTable('account_links', {
  * yearly recaps count. Kept 400 days, long enough for a year's recap.
  *
  * WHY the requester is here but never leaves: a recap may count people, and a person may
- * see their own recap, but no screen shows who asked for which track.
+ * see their own recap, but no screen shows who asked for which track
+ * (docs/decisions/025_v0.8.1_music-recap.md).
  * What was asked for is not kept here at all.
  */
 export const musicPlays = pgTable(

@@ -71,7 +71,7 @@ When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DE
 
 ### Data: a database and `data/`
 
-What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels and the GitHub ↔ Discord account links. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
+What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels, the GitHub ↔ Discord account links and the music play history. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
 
 - **Starting** — the bot waits for the database for up to two minutes (a container that is still starting is fine), then applies its migrations. Without a database to connect to it does not start
 - **Upgrading from a release without a database** — on its first start the bot moves each file it now keeps in the database into it, once, and renames the file to `*.migrated` (it is not deleted). The log says what was moved
@@ -102,7 +102,7 @@ Routing lives in `data/github-notify.json`: a default channel plus per-repositor
 
 A review can be requested from a **team** as well as a person. The "팀 → 역할" card on the GitHub page maps a team (`org/slug`, where the org is the repository owner) to a Discord role, and from then on a review request for that team — from the webhook or from `/remind` — mentions the role (`<@&role>`). A team without a mapping is named but not mentioned, as before. For the ping to actually reach anyone the role must allow anyone to mention it ("Allow anyone to @mention this role"), or the bot must hold **Mention Everyone** in that channel; the card warns on each row where neither holds, and the delivery record says so when a role could not be mentioned. The mappings are stored as `teams` (`[{ githubTeam, discordRoleId }]`) in `data/github-notify.json`; a file written before this key existed loads as it did.
 
-Each event sends an **embed** composed on the same page — a plain line, a title, a description, fields, a footer, a colour and an optional timestamp. Every part is a template: `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignee}`, `{assignees}`, `{reviewers}` and `{mentions}` are substituted, and `{name|when set|when empty}` picks between two wordings depending on whether the value exists. A part that renders empty is left out.
+Each event sends an **embed** composed on the same page — a plain line, a title, a description, fields, a footer, a colour and an optional timestamp. Every part is a template: `{repo}`, `{pr_number}`, `{pr_url}`, `{pr_title}`, `{event}`, `{actor}`, `{author}`, `{assignee}`, `{assignees}`, `{reviewers}` and `{mentions}` are substituted, and `{name|when set|when empty}` picks between two wordings depending on whether the value exists. A part that renders empty is left out. Emoji typed as `:name:` become the server's custom emoji of that name, or else the standard one (`:tada:`, `:+1:`, `:white_check_mark:`); code and links are left alone.
 
 A pull request or issue that has gone quiet can be **reminded about by hand** — `/remind` in Discord, or the "다시 알리기" card on the GitHub page. The card picks the repository from the installed ones and then the number from that repository's open pull requests and issues (`#12 · title`, marked PR, Issue or 초안); a closed item, or a repository whose list cannot be read, is entered by typing the number ("직접 입력…"), and without the App credentials every picker offers typed entry. The repository may be given by its name alone (`pipit-bot #12`) when exactly one installed repository has that name, and a pull request or issue link works too. The bot reads the item through the App (this is where `GITHUB_APP_ID` and the private key become necessary) and learns from GitHub which of the two the number is. A pull request gets a `PR Reminder` mentioning everyone still asked to review plus the assignees; an issue gets an `Issue Reminder` mentioning its assignees; the author is never mentioned. Teams asked to review are mentioned through their mapped role (see above) and otherwise named without a mention; the reply counts both, as "Reminded N people or teams". Drafts and items with nobody waiting are not reminded about; for a merged or closed item nothing new is posted, but its announcement is brought up to date. The reason is answered in Discord and recorded in the recent deliveries. One reminder per item per five minutes. The `PR Reminder` and `Issue Reminder` event toggles are permission switches for this — on by default, and switching one off for a repository blocks that kind of reminder there.
 
@@ -191,6 +191,17 @@ Each request is a **job** the music worker prepares before the bot can play it. 
 - a failure shows its reason — the worker may send a short code with it (see [docs/music-backend.md](./docs/music-backend.md)) — and a job that takes too long fails as a timeout instead of waiting forever
 - a queued track whose prepared file has gone is skipped, and the skip is announced in the music channel and on the dashboard
 
+### Music recaps
+
+Every track that plays is recorded — the track, how long it actually played, how it ended and whether it was asked for, came from a playlist or from autoplay — and kept for **400 days**. **No screen shows who asked for which track**: who asked is kept only for a person's own recap ([decision 025](./docs/decisions/025_v0.8.1_music-recap.md)). What was asked for is not part of the history.
+
+- **The recap** — time played, plays, tracks, how many people listened, the most played tracks, plays by weekday and by hour, the autoplay share, and for a year its months. A play counts as listened to when it played to the end, or for half the track (a minute when the length is unknown)
+- **Discord** — with posting switched on, each month's recap goes to the recap channel on the 1st, and the year's on the 1st of January. A month or year missed while the bot was down is posted when it starts; a period with no plays is not posted
+- **The year's playlist** — with the year's recap comes a shared playlist, "2026 결산", of its most played tracks
+- **Dashboard** — the **음악 결산** page shows any month or year, the running one so far, and **내 결산** (your own plays, through your GitHub ↔ Discord link). An admin can post a finished period again
+- **`/recap [period]`** — your own recap, shown only to you
+- **Settings** — the settings page's 음악 결산 card, kept in `data/music-recap.json`: recording (on), posting (off), the channel, the time zone periods follow (`Asia/Seoul`) and how many tracks a recap lists (10). Recaps start with the plays recorded from v0.8.1 on
+
 ## Feature switches
 
 The **설정** page switches seven features on and off: music, GitHub notifications, the audit log, invite tracking, join and leave messages, join roles and reaction roles. A missing `data/features.json` means everything is on, as before; the GitHub switch is the same as the master switch on the GitHub page.
@@ -258,6 +269,7 @@ Usable in a music channel (or anywhere, when none is configured):
 - Playback: `/pause`, `/resume`, `/skip [to]`, `/stop`, `/back`, `/loop mode`, `/volume [0–200]`
 - Options: `/options [mono] [autoplay] [repeat]` — switch mono or autoplay, set the repeat mode new sessions start with, or show the playback options
 - Queue: `/queue`, `/remove position`, `/move from to`, `/shuffle`, `/clear`
+- `/recap [period]` — your own music recap (this month, last month, this year, last year); works outside the music channel too
 
 The dashboard's Music page and the music channel's banner do the same (see [Music](#music)). The bot does not validate or parse the query string.
 
