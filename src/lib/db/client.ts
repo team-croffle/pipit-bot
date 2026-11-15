@@ -4,7 +4,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 
 import { rootDir } from '../constants.js';
-import { getEnv } from '../env.js';
+import { getEnv, type DatabaseConfig } from '../env.js';
 import * as schema from './schema.js';
 
 /**
@@ -59,17 +59,47 @@ async function reach(client: postgres.Sql): Promise<void> {
   }
 }
 
-/** Connects (waiting for the database if it is still coming up) and applies migrations. */
-export async function connectDatabase(): Promise<Database> {
-  const url = getEnv().databaseUrl;
-  if (!url) {
-    throw new Error('DATABASE_URL is required.');
+/** Host, port and database for the log — never the password. */
+function target(config: DatabaseConfig): string {
+  if ('url' in config) {
+    try {
+      const url = new URL(config.url);
+      return `${url.host}${url.pathname}`;
+    } catch {
+      return 'DATABASE_URL';
+    }
   }
 
-  const client = postgres(url, {
-    onnotice: () => undefined,
-    idle_timeout: timing.idleTimeoutS || undefined,
-  });
+  return `${config.host}:${config.port}/${config.name ?? config.username ?? ''}`;
+}
+
+/** Connects (waiting for the database if it is still coming up) and applies migrations. */
+export async function connectDatabase(): Promise<Database> {
+  const config = getEnv().database;
+  if (!config) {
+    throw new Error(
+      'Set DATABASE_HOST (with DATABASE_USERNAME, DATABASE_PASSWORD and DATABASE_NAME), or DATABASE_URL.',
+    );
+  }
+
+  if ('url' in config && process.env.DATABASE_HOST?.trim()) {
+    container.logger.info(
+      '[db] DATABASE_URL is set, so DATABASE_HOST and the other parts are not used',
+    );
+  }
+
+  const options = { onnotice: () => undefined, idle_timeout: timing.idleTimeoutS || undefined };
+  const client =
+    'url' in config
+      ? postgres(config.url, options)
+      : postgres({
+          ...options,
+          host: config.host,
+          port: config.port,
+          username: config.username,
+          password: config.password,
+          database: config.name,
+        });
   try {
     await reach(client);
     const [row] = await client<{ schema: string }[]>`select current_schema() as schema`;
@@ -80,7 +110,9 @@ export async function connectDatabase(): Promise<Database> {
     });
     sql = client;
     db = connected;
-    container.logger.info(`[db] connected, schema ${row?.schema ?? 'public'} up to date`);
+    container.logger.info(
+      `[db] connected to ${target(config)}, schema ${row?.schema ?? 'public'} up to date`,
+    );
     return connected;
   } catch (error) {
     await client.end({ timeout: 5 });

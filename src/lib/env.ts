@@ -41,8 +41,60 @@ export interface EnvConfig {
   /** The dashboard's public address, without a trailing slash; null when it is not known. */
   dashboardUrl: string | null;
   /** PostgreSQL; required to run, checked when connecting (src/lib/db/client.ts). */
-  databaseUrl: string | null;
+  database: DatabaseConfig | null;
   nodeEnv: string;
+}
+
+/**
+ * Where PostgreSQL is: its parts (`DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME`,
+ * `DATABASE_PASSWORD`, `DATABASE_NAME`), or one `DATABASE_URL`.
+ *
+ * WHY parts first in the docs: a password with `@`, `:` or `/` in it needs no escaping
+ * this way. WHY the URL still wins when it is set: a managed database often hands out
+ * only a URL, and options such as `sslmode` ride along in it.
+ */
+export type DatabaseConfig =
+  | { url: string }
+  | { host: string; port: number; username?: string; password?: string; name?: string };
+
+function parseDatabase(): DatabaseConfig | null {
+  const url = process.env.DATABASE_URL?.trim();
+  if (url) {
+    return { url };
+  }
+
+  const value = (key: string) => process.env[key]?.trim() || undefined;
+  const host = value('DATABASE_HOST');
+  if (!host) {
+    const given = [
+      'DATABASE_PORT',
+      'DATABASE_USERNAME',
+      'DATABASE_PASSWORD',
+      'DATABASE_NAME',
+    ].filter((key) => value(key) !== undefined);
+    if (given.length > 0) {
+      throw new Error(
+        `DATABASE_HOST is required when ${given.join(', ')} ${given.length === 1 ? 'is' : 'are'} set.`,
+      );
+    }
+
+    return null;
+  }
+
+  const portText = value('DATABASE_PORT');
+  const port = portText === undefined ? 5432 : Number(portText);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error(`Invalid DATABASE_PORT="${portText}". Expected a port number.`);
+  }
+
+  return {
+    host,
+    port,
+    username: value('DATABASE_USERNAME'),
+    // Not trimmed: spaces at either end may be part of a password.
+    password: process.env.DATABASE_PASSWORD || undefined,
+    name: value('DATABASE_NAME'),
+  };
 }
 
 function parsePort(raw: string | undefined, fallback: number): number {
@@ -238,7 +290,7 @@ export function loadEnv(): EnvConfig {
     dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
     oidc,
     dashboardUrl: parseDashboardUrl(oidc),
-    databaseUrl: process.env.DATABASE_URL?.trim() || null,
+    database: parseDatabase(),
     nodeEnv,
   };
 }
