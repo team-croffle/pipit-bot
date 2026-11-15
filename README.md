@@ -40,7 +40,13 @@ GITHUB_APP_PRIVATE_KEY=
 GITHUB_APP_PRIVATE_KEY_PATH=
 GITHUB_APP_INSTALLATION_ID=
 MUSIC_WORKER_URL=http://music-worker:8080
-# PostgreSQL (required); the workspace compose sets it for its postgres service
+# PostgreSQL (required); the workspace compose sets these for its postgres service
+DATABASE_HOST=
+DATABASE_PORT=5432
+DATABASE_USERNAME=
+DATABASE_PASSWORD=
+DATABASE_NAME=
+# or one URL instead, which wins when set
 DATABASE_URL=
 PIPIT_API_URL=http://127.0.0.1:3000
 DASHBOARD_ADMIN_GROUPS=pipit-admins
@@ -65,14 +71,16 @@ When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DE
 
 ### Data: a database and `data/`
 
-What the bot **produces and keeps adding to** lives in **PostgreSQL** (`DATABASE_URL`, required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels and the GitHub ↔ Discord account links. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
+What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels and the GitHub ↔ Discord account links. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
 
-- **Starting** — the bot waits for the database for up to two minutes (a container that is still starting is fine), then applies its migrations. Without `DATABASE_URL` it does not start
+- **Starting** — the bot waits for the database for up to two minutes (a container that is still starting is fine), then applies its migrations. Without a database to connect to it does not start
 - **Upgrading from a release without a database** — on its first start the bot moves each file it now keeps in the database into it, once, and renames the file to `*.migrated` (it is not deleted). The log says what was moved
 - **Going back** to an older image: stop the bot, rename each `*.migrated` file in `data/` back (drop the suffix), and start the older image. Anything recorded in the database since the upgrade is not carried back — and upgrading again does not carry forward what changed on the older image: a file that turns up again is set aside under a timestamped name (the log says so), and links put back into `github-notify.json` are taken out again. Re-enter such changes on the dashboard
 - **Backups** cover two places now: the database and `data/`
 
-The compose file at the workspace root runs a `postgres:16-alpine` service next to the bot; point `DATABASE_URL` at your own PostgreSQL instead if you have one.
+The compose file at the workspace root runs a `postgres:16-alpine` service next to the bot; point the bot at your own PostgreSQL instead if you have one.
+
+The bot reaches PostgreSQL through `DATABASE_HOST`, `DATABASE_PORT` (default 5432), `DATABASE_USERNAME`, `DATABASE_PASSWORD` and `DATABASE_NAME` — a password needs no escaping this way. `DATABASE_URL` works too and wins when it is set, for a managed database that hands out a URL or options such as `sslmode`; the log says so when both are set. The log names the host and database it connected to, never the password.
 
 ## GitHub notifications
 
@@ -222,7 +230,7 @@ yarn dashboard:dev
 
 Opens `http://127.0.0.1:5173/` and proxies `/api` to the bot. For production, `yarn dashboard:build` then the bot serves `dashboard/dist` at `GET /`.
 
-`yarn watch:start` needs a PostgreSQL in `DATABASE_URL` (`.env.development.local`) — the one in the compose stack, or any local one.
+`yarn watch:start` needs a PostgreSQL in `DATABASE_HOST` and the rest (`.env.development.local`) — the one in the compose stack, or any local one.
 
 With the full stack (bot + music worker + PostgreSQL), use the workspace compose at the repo root:
 

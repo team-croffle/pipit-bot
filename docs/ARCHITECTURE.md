@@ -154,7 +154,7 @@ signs in through the bot's OIDC client ([004](./decisions/004_v0.5.0_dashboard-s
 - A compose file runs the bot, a music worker with the shared volume between them, and PostgreSQL; `data/` is a volume
   on the bot. Backups cover the database and `data/`.
 - Configuration is environment variables for deployment facts and secrets (Discord token, OIDC, GitHub App,
-  `INTERNAL_TOKEN`, `MUSIC_WORKER_URL`, `STREAM_ROOT`, `DATABASE_URL`); everything else is set on the dashboard.
+  `INTERNAL_TOKEN`, `MUSIC_WORKER_URL`, `STREAM_ROOT`, `DATABASE_HOST` and the rest or `DATABASE_URL`); everything else is set on the dashboard.
 
 ## Where it is going
 

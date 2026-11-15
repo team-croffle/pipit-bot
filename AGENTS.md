@@ -54,7 +54,7 @@ Discussion of a specific worker implementation does not belong in this repositor
   app is the client. `OIDC_SCOPES` sets the requested scopes (default `openid profile email groups`; must include
   `openid`). With `OIDC_ISSUER` unset, the dev identity `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` applies. Write access
   maps from `DASHBOARD_ADMIN_GROUPS`, matched against the `groups` claim. An unreachable provider is a `502`, not a `500`.
-- Data the bot produces and keeps adding to lives in **PostgreSQL** (`DATABASE_URL`, drizzle; schema in
+- Data the bot produces and keeps adding to lives in **PostgreSQL** (`DATABASE_HOST`/`PORT`/`USERNAME`/`PASSWORD`/`NAME`, or `DATABASE_URL`; drizzle; schema in
   `src/lib/db/schema.ts`, migrations in `drizzle/` via `yarn db:generate`, applied at start): tracked GitHub messages,
   music channel banners, invite counts, the audit log, playlists, reaction-role panels, GitHub ↔ Discord account links
   (`account-links.ts`, `/api/accounts`). Storage modules keep their rows in memory and write through; feature code never
