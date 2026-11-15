@@ -136,3 +136,66 @@ export const accountLinks = pgTable('account_links', {
   githubLogin: text('github_login').primaryKey(),
   discordUserId: text('discord_user_id').notNull(),
 });
+
+/**
+ * One row per track that started playing (music/recap/recorder.ts) — what the monthly and
+ * yearly recaps count. Kept 400 days, long enough for a year's recap.
+ *
+ * WHY the requester is here but never leaves: a recap may count people, and a person may
+ * see their own recap, but no screen shows who asked for which track.
+ * What was asked for is not kept here at all.
+ */
+export const musicPlays = pgTable(
+  'music_plays',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    startedAt: timestamp('started_at', { withTimezone: true, mode: 'string' }).notNull(),
+    guildId: text('guild_id').notNull(),
+    /** The file key the music worker named; what the recap counts by. */
+    fileKey: text('file_key').notNull(),
+    title: text('title').notNull(),
+    durationSec: integer('duration_sec'),
+    playedSec: integer('played_sec').notNull().default(0),
+    /** `finished` · `skipped` · `stopped` · `error`; null while it plays. */
+    endReason: text('end_reason'),
+    /** `request` · `playlist` · `autoplay`. */
+    origin: text('origin').notNull(),
+    requesterId: text('requester_id'),
+  },
+  (table) => [
+    index('music_plays_guild_started').on(table.guildId, table.startedAt),
+    index('music_plays_requester_started').on(table.requesterId, table.startedAt),
+  ],
+);
+
+/**
+ * File key → what to send the music worker to prepare it again (music/recap/tracks-store.ts),
+ * for the year's playlist. No person in it. Swept 400 days after a key last played.
+ */
+export const musicTracks = pgTable('music_tracks', {
+  fileKey: text('file_key').primaryKey(),
+  title: text('title').notNull(),
+  durationSec: integer('duration_sec'),
+  /** Opaque, like a playlist item's request: never shown or logged. */
+  request: text('request'),
+  lastPlayedAt: timestamp('last_played_at', { withTimezone: true, mode: 'string' }).notNull(),
+});
+
+/** A recap that was built for posting (music/recap/recaps-store.ts). `summary` holds no person. */
+export const musicRecaps = pgTable(
+  'music_recaps',
+  {
+    guildId: text('guild_id').notNull(),
+    /** `2026-11` for a month, `2026` for a year. */
+    period: text('period').notNull(),
+    kind: text('kind').notNull(),
+    summary: jsonb('summary').notNull(),
+    channelId: text('channel_id'),
+    messageId: text('message_id'),
+    postedAt: timestamp('posted_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.guildId, table.period] })],
+);
