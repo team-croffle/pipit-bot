@@ -50,9 +50,20 @@
       name: `${periodLabel(period)}${period.open ? ' (진행 중)' : ''}`,
     })),
   );
-  const canPost = computed(
-    () => me.canWriteSettings && current.value !== undefined && !current.value.open,
-  );
+  const canPost = computed(() => me.canWriteSettings && current.value !== undefined);
+  /** Why a running period cannot be posted, and when it will be. */
+  const openHint = computed(() => {
+    const period = current.value;
+    if (!period?.open) {
+      return '';
+    }
+    const [year, month] = period.id.split('-').map(Number);
+    const due =
+      period.kind === 'year' || month === 12
+        ? `${(year ?? 0) + 1}년 1월 1일`
+        : `${month! + 1}월 1일`;
+    return `끝난 기간만 게시할 수 있습니다 — ${periodLabel(period)} 결산은 ${due}에 게시됩니다.`;
+  });
 
   async function loadPeriods(): Promise<void> {
     try {
@@ -170,11 +181,15 @@
           size="sm"
           class="sm:ml-auto"
           data-recap-repost
+          :disabled="current?.open"
           @click="confirming = true"
         >
           디스코드에 다시 게시
         </Button>
       </div>
+      <p v-if="canPost && openHint" class="text-muted-foreground text-xs" data-recap-open-hint>
+        {{ openHint }}
+      </p>
       <p v-if="postNotice" class="text-muted-foreground text-xs" role="status">{{ postNotice }}</p>
 
       <Tabs v-model="tab" class="gap-5">
