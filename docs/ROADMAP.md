@@ -79,8 +79,6 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
 - Settings files stay as they are, so they can still be fixed in an editor when the dashboard is out of reach
 - Operators need one more database. It ships in the compose file, and it can point at a PostgreSQL you already run
 
-## In progress
-
 ### v0.8.1 — music recaps
 
 - Monthly and yearly music summaries — play history is recorded, posted to Discord, and past and personal summaries can be browsed on the dashboard. Each year ends with a playlist of that year. Who asked for which track is never shown
