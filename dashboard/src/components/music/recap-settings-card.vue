@@ -22,6 +22,7 @@
     channelId: string | null;
     timeZone: string;
     topN: number;
+    language: 'en' | 'ko';
   }
 
   interface Answer {
@@ -39,6 +40,11 @@
     'Europe/Berlin',
     'America/New_York',
     'America/Los_Angeles',
+  ];
+
+  const LANGUAGES = [
+    { id: 'ko', name: '한국어' },
+    { id: 'en', name: 'English' },
   ];
 
   const saved = ref<Answer | null>(null);
@@ -141,7 +147,7 @@
               :disabled="readOnly || busy"
             />
           </div>
-          <div class="grid gap-4 pt-3 sm:grid-cols-3">
+          <div class="grid gap-4 pt-3 sm:grid-cols-2">
             <div class="flex min-w-0 flex-col gap-1.5">
               <Label for="recap-channel">게시 채널</Label>
               <ChannelSelect
@@ -173,6 +179,21 @@
                 max="25"
                 :disabled="readOnly || busy"
               />
+            </div>
+            <div class="flex min-w-0 flex-col gap-1.5">
+              <Label for="recap-language">결산 언어</Label>
+              <OptionSelect
+                id="recap-language"
+                :model-value="draft.language"
+                :options="LANGUAGES"
+                placeholder="언어"
+                :disabled="readOnly || busy"
+                @update:model-value="(value) => draft && (draft.language = value as 'en' | 'ko')"
+              />
+              <p class="text-muted-foreground text-xs">
+                채널에 올리는 결산의 언어입니다. <code>/recap</code>은 각자의 디스코드 언어를
+                따릅니다.
+              </p>
             </div>
           </div>
           <p v-if="needsChannel" class="text-warning mt-3 text-xs" data-recap-needs-channel>
