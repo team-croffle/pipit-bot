@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import { dataDir } from '../../constants.js';
+import { isLanguage, type Language } from '../../i18n/index.js';
 import { loadSettingsFile } from '../../settings-file.js';
 import { setRecordingGate } from './recorder.js';
 
@@ -11,7 +12,8 @@ import { setRecordingGate } from './recorder.js';
  *
  * `record` keeps the play history (on by default); `post` sends each month's and year's
  * recap to `channelId` (off until a channel is chosen). Period boundaries follow
- * `timeZone`. `topN` is how many tracks a recap lists.
+ * `timeZone`. `topN` is how many tracks a recap lists. `language` is what the posted
+ * recap is written in; `/recap` answers in each person's own Discord language instead.
  */
 
 export interface RecapSettings {
@@ -20,6 +22,7 @@ export interface RecapSettings {
   channelId: string | null;
   timeZone: string;
   topN: number;
+  language: Language;
 }
 
 export const TOP_N_RANGE = { min: 3, max: 25 } as const;
@@ -29,6 +32,7 @@ const DEFAULTS: RecapSettings = {
   channelId: null,
   timeZone: 'Asia/Seoul',
   topN: 10,
+  language: 'en',
 };
 const SNOWFLAKE = /^\d{17,20}$/;
 
@@ -80,6 +84,9 @@ export function validateRecapSettings(raw: unknown): RecapSettings | string {
   ) {
     return `topN must be a whole number from ${TOP_N_RANGE.min} to ${TOP_N_RANGE.max}`;
   }
+  if (!isLanguage(value.language)) {
+    return 'language must be en or ko';
+  }
 
   return {
     record: value.record,
@@ -87,6 +94,7 @@ export function validateRecapSettings(raw: unknown): RecapSettings | string {
     channelId: value.channelId ?? null,
     timeZone: value.timeZone,
     topN: value.topN,
+    language: value.language,
   };
 }
 

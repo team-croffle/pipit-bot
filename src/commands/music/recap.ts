@@ -3,6 +3,7 @@ import { Command } from '@sapphire/framework';
 import { MessageFlags } from 'discord.js';
 
 import { guildOnly } from '../../lib/discord/slash.js';
+import { languageOfLocale, translator } from '../../lib/i18n/index.js';
 import { buildRecap } from '../../lib/music/recap/aggregate.js';
 import {
   currentPeriods,
@@ -19,11 +20,11 @@ import { getRecapSettings } from '../../lib/music/recap/settings.js';
  */
 
 const CHOICES = [
-  { name: 'This month', value: 'month' },
-  { name: 'Last month', value: 'last-month' },
-  { name: 'This year', value: 'year' },
-  { name: 'Last year', value: 'last-year' },
-] as const;
+  { name: 'This month', name_localizations: { ko: '이번 달' }, value: 'month' },
+  { name: 'Last month', name_localizations: { ko: '지난달' }, value: 'last-month' },
+  { name: 'This year', name_localizations: { ko: '올해' }, value: 'year' },
+  { name: 'Last year', name_localizations: { ko: '작년' }, value: 'last-year' },
+];
 
 function periodFor(choice: string, timeZone: string): Period {
   const now = currentPeriods(new Date(), timeZone);
@@ -49,10 +50,12 @@ export class UserCommand extends Command {
         builder
           .setName(this.name)
           .setDescription(this.description)
+          .setDescriptionLocalizations({ ko: '내 음악 결산 보기 (나에게만 보입니다)' })
           .addStringOption((option) =>
             option
               .setName('period')
               .setDescription('Which period (this month by default)')
+              .setDescriptionLocalizations({ ko: '기간 (기본: 이번 달)' })
               .addChoices(...CHOICES),
           ),
       ),
@@ -61,8 +64,10 @@ export class UserCommand extends Command {
 
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const language = languageOfLocale(interaction.locale);
+    const t = translator(language, 'recap');
     if (!interaction.guildId) {
-      await interaction.editReply('Use this in the server.');
+      await interaction.editReply(t('serverOnly'));
       return;
     }
 
@@ -76,10 +81,12 @@ export class UserCommand extends Command {
         topN,
         personId: interaction.user.id,
       });
-      await interaction.editReply({ embeds: [renderRecap(summary, { personal: true })] });
+      await interaction.editReply({
+        embeds: [renderRecap(summary, { personal: true, language })],
+      });
     } catch (error) {
       this.container.logger.warn('[recap] could not build a personal recap:', error);
-      await interaction.editReply('Your recap could not be built right now.');
+      await interaction.editReply(t('failed'));
     }
   }
 }

@@ -67,7 +67,7 @@ export async function postRecap(guildId: string, period: Period): Promise<PostOu
   await saveRecap(guildId, period.id, period.kind, summary);
   try {
     const messageId = await send(settings.channelId, {
-      embeds: [renderRecap(summary, { playlistName }).toJSON()],
+      embeds: [renderRecap(summary, { playlistName, language: settings.language }).toJSON()],
     });
     await markPosted(guildId, period.id, settings.channelId, messageId);
     void audit({ category: 'music', action: 'recap.post', target: period.id, outcome: 'ok' });

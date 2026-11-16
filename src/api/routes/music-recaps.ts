@@ -47,7 +47,7 @@ export function mountMusicRecapRoutes(app: Hono<{ Variables: ApiVariables }>): v
       if (typeof checked !== 'string') {
         c.set('auditNote', {
           target: 'music-recap',
-          detail: `record ${checked.record ? 'on' : 'off'} · post ${checked.post ? 'on' : 'off'} · ${checked.timeZone} · top ${checked.topN}`,
+          detail: `record ${checked.record ? 'on' : 'off'} · post ${checked.post ? 'on' : 'off'} · ${checked.timeZone} · top ${checked.topN} · ${checked.language}`,
         });
       }
       await next();
