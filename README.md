@@ -199,8 +199,8 @@ Every track that plays is recorded — the track, how long it actually played, h
 - **Discord** — with posting switched on, each month's recap goes to the recap channel on the 1st, and the year's on the 1st of January. A month or year missed while the bot was down is posted when it starts; a period with no plays is not posted
 - **The year's playlist** — with the year's recap comes a shared playlist, "2026 결산", of its most played tracks
 - **Dashboard** — the **음악 결산** page shows any month or year, the running one so far, and **내 결산** (your own plays, through your GitHub ↔ Discord link). An admin can post a finished period again
-- **`/recap [period]`** — your own recap, shown only to you
-- **Settings** — the settings page's 음악 결산 card, kept in `data/music-recap.json`: recording (on), posting (off), the channel, the time zone periods follow (`Asia/Seoul`) and how many tracks a recap lists (10). Recaps start with the plays recorded from v0.8.1 on
+- **`/recap [period]`** — your own recap, shown only to you, in your Discord language (Korean or English)
+- **Settings** — the settings page's 음악 결산 card, kept in `data/music-recap.json`: recording (on), posting (off), the channel, the time zone periods follow (`Asia/Seoul`), how many tracks a recap lists (10) and the language a posted recap is written in (`en` or `ko`, `en` by default). Recaps start with the plays recorded from v0.8.1 on
 
 ## Feature switches
 

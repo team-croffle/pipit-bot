@@ -85,12 +85,17 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
 
 - Monthly and yearly music summaries — play history is recorded, posted to Discord, and past and personal summaries can be browsed on the dashboard. Each year ends with a playlist of that year. Who asked for which track is never shown
 - Emoji shortcodes typed by hand, such as `:tada:`, turn into the emoji
+- A choice of language for the recap messages (Korean, English)
 
 ## Planned
 
 ### v0.8.2 — dashboard sign-in
 
 - A dashboard sign-in page — username and password, OIDC, or Discord and GitHub sign-in, showing only the methods that are switched on, with at least one always on
+
+### v0.8.3 — languages
+
+- The dashboard's language is chosen in the settings, and each feature's Discord messages in that feature's settings (Korean, English)
 
 ### v0.9 — calendars
 
