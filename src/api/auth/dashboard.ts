@@ -1,75 +1,84 @@
-import { getCookie } from 'hono/cookie';
+import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
+import { getAuth } from '../../lib/auth/instance.js';
 import type { EnvConfig } from '../../lib/env.js';
-import { parseSessionToken } from './session.js';
+import { findUserById, reloadUser, type UserRow } from '../../lib/users/store.js';
 
 export interface DashboardIdentity {
-  /** The `users` row, once signed in through Better Auth. */
+  /** The `users` row. */
   userId?: string;
   user: string | null;
+  /** Every group the person is in: the identity provider's and the dashboard's. */
   groups: string[];
+  /** Given by the identity provider at the last OIDC sign-in; only the provider changes them. */
+  idpGroups: string[];
+  /** Given on the dashboard's users page. */
+  localGroups: string[];
   canWriteSettings: boolean;
   canControlPlayback: boolean;
 }
 
-function isAdminGroup(groups: string[], adminGroups: string[]): boolean {
+/**
+ * WHY admin is a group for everyone (2026-11-18, the team): the team already gives admin
+ * through a GitHub team that the identity provider passes on as a group. Password,
+ * Discord and GitHub users get the same group on the users page, so one rule —
+ * `DASHBOARD_ADMIN_GROUPS` — decides for every way of signing in.
+ */
+export function isAdminGroup(groups: string[], adminGroups: string[]): boolean {
   const allowed = new Set(adminGroups.map((group) => group.toLowerCase()));
   return groups.some((group) => allowed.has(group.toLowerCase()));
 }
 
-function withCapabilities(
-  user: string | null,
-  groups: string[],
-  isAdmin: boolean,
-): DashboardIdentity {
+export function identityOf(user: UserRow, config: EnvConfig): DashboardIdentity {
+  const groups = [...new Set([...user.idpGroups, ...user.groups])];
   return {
-    user,
+    userId: user.id,
+    user: user.username ?? user.name,
     groups,
-    canWriteSettings: isAdmin,
+    idpGroups: user.idpGroups,
+    localGroups: user.groups,
+    canWriteSettings: isAdminGroup(groups, config.dashboardAdminGroups),
     canControlPlayback: true,
   };
 }
 
-function devIdentity(config: EnvConfig): DashboardIdentity {
-  const isAdmin = config.dashboardDevRole === 'admin';
-  return withCapabilities(config.dashboardDevUser, isAdmin ? ['pipit-admins'] : [], isAdmin);
+type Resolver = (config: EnvConfig, headers: Headers) => Promise<DashboardIdentity | null>;
+
+async function fromSession(config: EnvConfig, headers: Headers): Promise<DashboardIdentity | null> {
+  const auth = await getAuth(config);
+  const session = await auth.api.getSession({ headers }).catch(() => null);
+  if (!session) {
+    return null;
+  }
+
+  const user = findUserById(session.user.id) ?? (await reloadUser(session.user.id));
+  return user ? identityOf(user, config) : null;
 }
+
+let resolve: Resolver = fromSession;
 
 export function resolveDashboardIdentity(
   config: EnvConfig,
-  sessionCookie: string | undefined,
-): DashboardIdentity | null {
-  if (config.oidc) {
-    const session = parseSessionToken(sessionCookie, config.oidc.sessionSecret);
-    if (!session) {
-      return null;
-    }
-
-    const isAdmin = isAdminGroup(session.groups, config.dashboardAdminGroups);
-    return withCapabilities(session.user, session.groups, isAdmin);
-  }
-
-  if (config.nodeEnv !== 'production') {
-    return devIdentity(config);
-  }
-
-  return null;
+  headers: Headers,
+): Promise<DashboardIdentity | null> {
+  return resolve(config, headers);
 }
 
-function isIdentified(identity: DashboardIdentity): boolean {
-  return Boolean(identity.user) || identity.groups.length > 0;
+/** Replaces how a request's identity is found — for local checks only. */
+export function setIdentityResolverForChecks(next: Resolver | null): void {
+  resolve = next ?? fromSession;
 }
 
-export const dashboardViewer = createMiddleware<{
-  Variables: {
-    config: EnvConfig;
-    identity: DashboardIdentity;
-  };
-}>(async (c, next) => {
-  const config = c.get('config');
-  const identity = resolveDashboardIdentity(config, getCookie(c, 'pipit_session'));
-  if (!identity || !isIdentified(identity)) {
+type IdentityVariables = { Variables: { config: EnvConfig; identity: DashboardIdentity } };
+
+export async function identityFromContext(c: Context): Promise<DashboardIdentity | null> {
+  return resolveDashboardIdentity(c.get('config') as EnvConfig, c.req.raw.headers);
+}
+
+export const dashboardViewer = createMiddleware<IdentityVariables>(async (c, next) => {
+  const identity = await identityFromContext(c);
+  if (!identity) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
@@ -77,12 +86,7 @@ export const dashboardViewer = createMiddleware<{
   return next();
 });
 
-export const dashboardWrite = createMiddleware<{
-  Variables: {
-    config: EnvConfig;
-    identity: DashboardIdentity;
-  };
-}>(async (c, next) => {
+export const dashboardWrite = createMiddleware<IdentityVariables>(async (c, next) => {
   const identity = c.get('identity');
   if (!identity.canWriteSettings) {
     return c.json({ error: 'Read-only: this action requires dashboard admin.' }, 403);
