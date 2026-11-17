@@ -4,7 +4,7 @@ import { startApiServer } from './api/server.js';
 import { loadAccountLinks } from './lib/account-links.js';
 import { startAuditRetention } from './lib/audit/retention.js';
 import { loadAuditSettings } from './lib/audit/settings.js';
-import { loadAuthMethods } from './lib/auth/methods.js';
+import { startAuth } from './lib/auth/start.js';
 import { CustomClient } from './lib/client.js';
 import { closeDatabase, connectDatabase } from './lib/db/client.js';
 import { loadFeatures } from './lib/features.js';
@@ -31,7 +31,8 @@ const main = async () => {
     await loadGithubNotifySettings();
     await loadUsers();
     await loadAccountLinks();
-    await loadAuthMethods(env.auth);
+    // After users: the first admin and the development accounts are users.
+    await startAuth(env);
     // Before login: the command registry, filled at login, leaves out switched-off features.
     await loadFeatures();
     await loadAuditSettings();
