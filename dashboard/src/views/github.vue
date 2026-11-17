@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ChevronDown, ChevronUp, Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
+  import { RouterLink } from 'vue-router';
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
@@ -654,7 +655,9 @@
             <CardDescription>
               연결한 멤버는 담당자 배정·리뷰 요청 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은
               일반 텍스트로 표시됩니다. GitHub App 자격증명이 설정되어 있으면 조직 멤버를 목록에서
-              고를 수 있고, 목록에 없는 계정은 "직접 입력"으로 넣습니다.
+              고를 수 있고, 목록에 없는 계정은 "직접 입력"으로 넣습니다. 이 연결은 대시보드
+              <RouterLink to="/users" class="underline underline-offset-2">사용자</RouterLink>
+              의 일부이기도 합니다 — 로그인 수단·권한은 그쪽에서 봅니다.
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
