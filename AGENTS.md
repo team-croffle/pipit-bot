@@ -7,11 +7,11 @@ Working rules for agents and collaborators in this repository. `CLAUDE.md` only 
 **Pipit** is a Discord bot for small development teams — GitHub reminders, reaction roles, invite logging and shared
 music, configured from one dashboard. This repository is one product made of three parts:
 
-| Part         | Where                                                           | Stack                                                                                             |
-| ------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Discord bot  | `src/commands`, `src/listeners`, `src/preconditions`, `src/lib` | Sapphire, discord.js v14, discord-player v7                                                       |
-| Embedded API | `src/api` (Hono)                                                | `/api/*` for the dashboard (OIDC), `/internal/*` for the music worker (token), `/webhooks/github` |
-| Dashboard    | `dashboard/` (Yarn workspace)                                   | Vue 3, Vite, shadcn-vue, Tailwind — built to `dashboard/dist` and served at `GET /`               |
+| Part         | Where                                                           | Stack                                                                                                  |
+| ------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Discord bot  | `src/commands`, `src/listeners`, `src/preconditions`, `src/lib` | Sapphire, discord.js v14, discord-player v7                                                            |
+| Embedded API | `src/api` (Hono)                                                | `/api/*` for the dashboard (signed in), `/internal/*` for the music worker (token), `/webhooks/github` |
+| Dashboard    | `dashboard/` (Yarn workspace)                                   | Vue 3, Vite, shadcn-vue, Tailwind — built to `dashboard/dist` and served at `GET /`                    |
 
 Node.js 18+, TypeScript (ESM), Yarn 4. Quality: `tsc`, oxlint, oxfmt, husky + lint-staged. Remote: GitHub
 `team-croffle/pipit-bot` (`origin`), **public**.
@@ -50,18 +50,21 @@ Discussion of a specific worker implementation does not belong in this repositor
 - `/internal/*` is never exposed publicly; callback auth requires `INTERNAL_TOKEN`.
 - There is **no main/edge role split** and no edge-node concept. Do not reintroduce `ROLE`, `MainOnly`/`EdgeOnly`
   preconditions or similar.
-- Dashboard auth: OIDC (Authorization Code + PKCE; Authentik and Dex are known to work — never assume one provider), this
-  app is the client. `OIDC_SCOPES` sets the requested scopes (default `openid profile email groups`; must include
-  `openid`). With `OIDC_ISSUER` unset, the dev identity `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` applies. Write access
-  maps from `DASHBOARD_ADMIN_GROUPS`, matched against the `groups` claim. An unreachable provider is a `502`, not a `500`.
+- Dashboard auth: Better Auth (`src/lib/auth/`) behind the dashboard's own `/login` page — password accounts (no
+  sign-up; the first admin from `DASHBOARD_BOOTSTRAP_*`) and OIDC (Authorization Code + PKCE; Authentik and Dex are known
+  to work — never assume one provider; callback `/api/auth/callback/oidc`). Which methods are on is
+  `data/auth-settings.json`; secrets stay in the environment. Only the Better Auth endpoints the dashboard needs are
+  reachable (`routes/auth.ts`). Write access is a group: `DASHBOARD_ADMIN_GROUPS` against the provider's `groups` plus the
+  groups given on the dashboard. `NODE_ENV=development` seeds `admin` / `member`; production never does. An unreachable
+  provider is a `502`, not a `500`.
 - Data the bot produces and keeps adding to lives in **PostgreSQL** (`DATABASE_HOST`/`PORT`/`USERNAME`/`PASSWORD`/`NAME`, or `DATABASE_URL`; drizzle; schema in
   `src/lib/db/schema.ts`, migrations in `drizzle/` via `yarn db:generate`, applied at start): tracked GitHub messages,
-  music channel banners, invite counts, the audit log, playlists, reaction-role panels, GitHub ↔ Discord account links
-  (`account-links.ts`, `/api/accounts`), and the music play history the recaps count (`music/recap/`; who asked for which
+  music channel banners, invite counts, the audit log, playlists, reaction-role panels, the dashboard's users and sessions
+  (`auth-schema.ts`, `users/store.ts`) with the GitHub ↔ Discord account links on them (`account-links.ts`, `/api/accounts`), and the music play history the recaps count (`music/recap/`; who asked for which
   track is never shown — decision 025). Storage modules keep their rows in memory and write through; feature code never
   touches the driver. A file from before is moved in once with `migrateFile` and kept as `*.migrated`.
 - Runtime settings persist as JSON under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json` —
-  routing and the `teams` team-to-role map —, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`). No hard-coded settings in source; every loader tolerates a missing file
+  routing and the `teams` team-to-role map —, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`). No hard-coded settings in source; every loader tolerates a missing file
   and reports a damaged one (`loadSettingsFile`).
 - GitHub notifications: one public route `POST /webhooks/github` with `X-Hub-Signature-256` verification; everything
   substituted into a message is sanitized (`sanitizeGithubText`), only mapped Discord ids may ping, embeds carry the

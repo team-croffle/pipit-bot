@@ -13,7 +13,7 @@
 - **Invite logger** — join and leave messages, arrivals counted per invite, a record channel, roles on join
 - **Audit log** — who did what from the dashboard and in Discord, GitHub deliveries and member arrivals, kept for 90 days
 - **Music** — shared playback for the voice channel, backed by a pluggable music worker
-- **Dashboard** — every setting above, light and dark, behind your own OIDC login
+- **Dashboard** — every setting above, light and dark, behind its own sign-in page: password accounts and your OIDC provider
 
 Built with Sapphire and discord.js. Music sources are **pluggable**: pipit-bot requests a separate music worker and streams prepared files from a shared volume. See [docs/music-backend.md](./docs/music-backend.md).
 
@@ -49,29 +49,55 @@ DATABASE_NAME=
 # or one URL instead, which wins when set
 DATABASE_URL=
 PIPIT_API_URL=http://127.0.0.1:3000
+# where people open the dashboard: sign-in callbacks and the music channel remote's link
+DASHBOARD_URL=
+# signs the session cookie; required in production
+DASHBOARD_SESSION_SECRET=
 DASHBOARD_ADMIN_GROUPS=pipit-admins
-DASHBOARD_DEV_USER=dev
-DASHBOARD_DEV_ROLE=admin
+# the first admin, created once when no password account exists
+DASHBOARD_BOOTSTRAP_USERNAME=
+DASHBOARD_BOOTSTRAP_PASSWORD=
 OIDC_ISSUER=
 OIDC_CLIENT_ID=
 OIDC_CLIENT_SECRET=
-OIDC_REDIRECT_URI=
 # default: openid profile email groups
 OIDC_SCOPES=
-DASHBOARD_SESSION_SECRET=
-# the dashboard's address for the music channel remote's link; default: the origin of OIDC_REDIRECT_URI
-DASHBOARD_URL=
+# the button on the sign-in page; default: SSO
+OIDC_DISPLAY_NAME=
 ```
 
-Production dashboard auth is **OIDC** (Authorization Code + PKCE) — Authentik and Dex are known to work, and any provider that supports the flow should. The bot is the OIDC client — no auth proxy container in this compose. Set `OIDC_*` and `DASHBOARD_SESSION_SECRET` in production. Do not expose `/internal/*` on the public host. Music worker callbacks use `INTERNAL_TOKEN`.
+Do not expose `/internal/*` on the public host. Music worker callbacks use `INTERNAL_TOKEN`.
 
-`DASHBOARD_URL` is where people open the dashboard; the music channel's remote links to its Music page. Without it the bot uses the origin of `OIDC_REDIRECT_URI` — set it when the dashboard lives under a path, or when OIDC is not used. With neither, the remote has no link. Only `http` and `https` addresses are accepted; anything else stops the bot at start.
+### Dashboard sign-in
 
-When `OIDC_ISSUER` is unset, local/dev uses `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE` instead of login. `DASHBOARD_ADMIN_GROUPS` maps IdP groups to write access (bot config, guild events, playback): it is matched, case-insensitively and in full, against the `groups` claim the provider releases. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. When the provider cannot be reached, `/api/auth/login` and the callback answer `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause.
+Signing in starts at the dashboard's own **sign-in page** (`/login`); after it, people return to the page they asked for. The page offers only the methods that are switched on:
+
+- **Password** — accounts made on the dashboard by an admin; there is no public sign-up. A password has at least 8 characters and mixes at least two of upper-case letters, lower-case letters, digits and symbols. The first admin comes from `DASHBOARD_BOOTSTRAP_USERNAME` / `DASHBOARD_BOOTSTRAP_PASSWORD`: created once, when no password account exists, and never overwritten after — change the password on the dashboard
+- **OIDC** (Authorization Code + PKCE) — Authentik and Dex are known to work, and any provider that supports the flow should. Set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and register **`<DASHBOARD_URL>/api/auth/callback/oidc`** as the redirect URI. `OIDC_DISPLAY_NAME` names the button (default `SSO`)
+
+The bot does the sign-in itself (with [Better Auth](https://www.better-auth.com)); there is no auth proxy container in this compose. Sessions last seven days and are kept in the database; sign-in attempts are rate-limited per address. Sign-ins, failed attempts and sign-outs are written to the audit log, never with a password.
+
+**Which methods are on** is `data/auth-settings.json` (`{"password": true, "oidc": true}`), switched on the settings page. A method whose environment is missing cannot be switched on, and the last method that is on cannot be switched off. Locked out? Fix the file in an editor and restart: a file that is damaged, or switches everything off, is ignored, and the bot starts with every configured method on and says so in the log. Secrets are only ever environment variables.
+
+**Who may write** is a group: `DASHBOARD_ADMIN_GROUPS` is matched, case-insensitively and in full, against a person's groups — those the OIDC provider releases in its `groups` claim, and those given on the dashboard. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. The first admin, and the development `admin`, are in the first group listed.
+
+An OIDC sign-in whose user name is a GitHub login the dashboard already knows (the account links on the GitHub page) signs in as that person, with their Discord account and personal playlists; anyone else becomes a new user. When the provider cannot be reached, signing in through it answers `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause; the next attempt tries again.
+
+`DASHBOARD_URL` is where people open the dashboard: the sign-in callbacks are built on it, and the music channel's remote links to its Music page. Only `http` and `https` addresses are accepted; anything else stops the bot at start. Without it, sign-in takes the address from each request and the remote has no link.
+
+With `NODE_ENV=development` the bot creates two fixed accounts, `admin` / `admin1234!` (admin) and `member` / `member1234!`. Production never creates them, and refuses to start when its database holds one. `DASHBOARD_SESSION_SECRET` is required in production.
+
+#### Upgrading to v0.8.2
+
+1. **Back up the database.** The GitHub ↔ Discord account links become dashboard users and their old table is dropped, so going back to an older image means restoring that backup
+2. In the identity provider, register `<DASHBOARD_URL>/api/auth/callback/oidc` as the redirect URI (it was `/api/auth/callback`)
+3. Set `DASHBOARD_URL`. `OIDC_REDIRECT_URI` is no longer used; for one release its origin stands in for a missing `DASHBOARD_URL`, with a warning. `DASHBOARD_DEV_USER` and `DASHBOARD_DEV_ROLE` are gone
+4. For password sign-in, set `DASHBOARD_BOOTSTRAP_USERNAME` and `DASHBOARD_BOOTSTRAP_PASSWORD` once
+5. Everyone signs in again
 
 ### Data: a database and `data/`
 
-What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels, the GitHub ↔ Discord account links and the music play history. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
+What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels, the dashboard's users and their sessions (with the GitHub ↔ Discord account links) and the music play history. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
 
 - **Starting** — the bot waits for the database for up to two minutes (a container that is still starting is fine), then applies its migrations. Without a database to connect to it does not start
 - **Upgrading from a release without a database** — on its first start the bot moves each file it now keeps in the database into it, once, and renames the file to `*.migrated` (it is not deleted). The log says what was moved
@@ -98,7 +124,7 @@ PR and issue activity is delivered by a **GitHub App**. Register one app, instal
 
 `GITHUB_APP_ID` plus a private key let the dashboard offer the installed repositories and the organisation members instead of asking you to type them. Give the key as `GITHUB_APP_PRIVATE_KEY_PATH` (a file, which is how a mounted secret usually arrives) or as `GITHUB_APP_PRIVATE_KEY` (the PEM itself, raw or base64-encoded); the path wins when both are set. `GITHUB_APP_INSTALLATION_ID` is optional — without it the first installation is used. None of this is required: reminders work on the webhook secret alone, and the pickers fall back to plain text fields. The account list reads organisation members, which needs the App's **Organization › Members (read)** permission; without it, the assignable users of each installed repository are offered instead, and the dashboard says which list it is showing.
 
-Routing lives in `data/github-notify.json`: a default channel plus per-repository overrides for the channel and which event types to report, and a GitHub-team-to-Discord-role map (`teams`). The GitHub-login-to-Discord-user links used for mentions are edited on the same page but kept in the database (`/api/accounts`), since personal playlists and the dashboard's own user rely on them too; the `accounts` of an older file are moved there on the first start. Unmapped logins appear as plain text. A repository with no rule of its own posts to the default channel unless `notifyUnlistedRepos` is switched off, in which case only the listed repositories report. The feature ships disabled (`enabled: false`).
+Routing lives in `data/github-notify.json`: a default channel plus per-repository overrides for the channel and which event types to report, and a GitHub-team-to-Discord-role map (`teams`). The GitHub-login-to-Discord-user links used for mentions are edited on the same page but kept in the database as part of the dashboard's users (`/api/accounts`), since personal playlists and the signed-in user rely on them too; the `accounts` of an older file are moved there on the first start. Unmapped logins appear as plain text. A repository with no rule of its own posts to the default channel unless `notifyUnlistedRepos` is switched off, in which case only the listed repositories report. The feature ships disabled (`enabled: false`).
 
 A review can be requested from a **team** as well as a person. The "팀 → 역할" card on the GitHub page maps a team (`org/slug`, where the org is the repository owner) to a Discord role, and from then on a review request for that team — from the webhook or from `/remind` — mentions the role (`<@&role>`). A team without a mapping is named but not mentioned, as before. For the ping to actually reach anyone the role must allow anyone to mention it ("Allow anyone to @mention this role"), or the bot must hold **Mention Everyone** in that channel; the card warns on each row where neither holds, and the delivery record says so when a role could not be mentioned. The mappings are stored as `teams` (`[{ githubTeam, discordRoleId }]`) in `data/github-notify.json`; a file written before this key existed loads as it did.
 

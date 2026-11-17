@@ -13,7 +13,7 @@
 - **초대 로거** — 입장·퇴장 메시지, 초대 코드별 유입 수, 기록 채널, 입장 시 자동 역할
 - **감사 로그** — 대시보드·디스코드에서 누가 무엇을 했는지, GitHub 발송과 멤버 입장·퇴장. 90일 보관
 - **음악** — 음성 채널에서 함께 듣는 재생. 교체 가능한 music worker가 뒤에서 처리합니다
-- **대시보드** — 위 설정 전부를 라이트/다크 테마로, 자체 OIDC 로그인 뒤에서
+- **대시보드** — 위 설정 전부를 라이트/다크 테마로, 자체 로그인 화면 뒤에서: 비밀번호 계정과 사용 중인 OIDC 제공자
 
 Sapphire와 discord.js로 만들었습니다. 음악 소스는 **교체 가능**합니다: pipit-bot은 별도의 music worker에 요청하고, 공유 볼륨에 준비된 파일을 스트리밍합니다. [docs/music-backend.md](./docs/music-backend.md)를 참고하세요.
 
@@ -49,29 +49,55 @@ DATABASE_NAME=
 # 또는 URL 하나로(설정돼 있으면 이쪽을 씁니다)
 DATABASE_URL=
 PIPIT_API_URL=http://127.0.0.1:3000
+# 대시보드를 여는 주소: 로그인 콜백과 음악 채널 리모컨의 링크
+DASHBOARD_URL=
+# 세션 쿠키 서명. 프로덕션에서 필수
+DASHBOARD_SESSION_SECRET=
 DASHBOARD_ADMIN_GROUPS=pipit-admins
-DASHBOARD_DEV_USER=dev
-DASHBOARD_DEV_ROLE=admin
+# 첫 관리자. 비밀번호 계정이 하나도 없을 때 한 번 만듭니다
+DASHBOARD_BOOTSTRAP_USERNAME=
+DASHBOARD_BOOTSTRAP_PASSWORD=
 OIDC_ISSUER=
 OIDC_CLIENT_ID=
 OIDC_CLIENT_SECRET=
-OIDC_REDIRECT_URI=
 # 기본값: openid profile email groups
 OIDC_SCOPES=
-DASHBOARD_SESSION_SECRET=
-# 음악 채널 리모컨의 관제 센터 링크 주소. 기본값: OIDC_REDIRECT_URI의 출처
-DASHBOARD_URL=
+# 로그인 화면의 버튼 이름. 기본값: SSO
+OIDC_DISPLAY_NAME=
 ```
 
-프로덕션 대시보드 인증은 **OIDC**(Authorization Code + PKCE)입니다 — Authentik과 Dex는 동작이 확인됐고, 이 플로우를 지원하는 다른 제공자도 쓸 수 있습니다. 봇이 OIDC 클라이언트이며, 이 compose에 인증 프록시 컨테이너는 없습니다. 프로덕션에서는 `OIDC_*`와 `DASHBOARD_SESSION_SECRET`을 설정하세요. `/internal/*`은 공개 호스트에 노출하지 않습니다. music worker 콜백은 `INTERNAL_TOKEN`을 씁니다.
+`/internal/*`은 공개 호스트에 노출하지 않습니다. music worker 콜백은 `INTERNAL_TOKEN`을 씁니다.
 
-`DASHBOARD_URL`은 대시보드를 여는 주소로, 음악 채널 리모컨이 그 음악 페이지로 연결합니다. 없으면 `OIDC_REDIRECT_URI`의 출처(호스트)를 씁니다 — 대시보드를 하위 경로에 두었거나 OIDC를 쓰지 않으면 설정하세요. 둘 다 없으면 리모컨에 링크가 없습니다. `http`·`https` 주소만 받으며, 그 밖의 값이면 봇이 시작하지 않습니다.
+### 대시보드 로그인
 
-`OIDC_ISSUER`가 비어 있으면 로컬/개발 환경은 로그인 대신 `DASHBOARD_DEV_USER` / `DASHBOARD_DEV_ROLE`을 씁니다. `DASHBOARD_ADMIN_GROUPS`는 IdP 그룹을 쓰기 권한(봇 설정, 길드 이벤트, 재생)에 매핑합니다: 제공자가 내려주는 `groups` 클레임과 대소문자 구분 없이 전체 일치로 비교합니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 제공자에 연결할 수 없으면 `/api/auth/login`과 콜백은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다.
+로그인은 대시보드의 **로그인 화면**(`/login`)에서 시작하고, 끝나면 원래 가려던 페이지로 돌아갑니다. 화면에는 켜진 방법만 나옵니다:
+
+- **비밀번호** — 관리자가 대시보드에서 만든 계정입니다. 공개 가입은 없습니다. 비밀번호는 8자 이상이고 대문자·소문자·숫자·기호 중 두 종류 이상을 섞어야 합니다. 첫 관리자는 `DASHBOARD_BOOTSTRAP_USERNAME` / `DASHBOARD_BOOTSTRAP_PASSWORD`로 만듭니다: 비밀번호 계정이 하나도 없을 때 한 번 만들고, 그 뒤로는 덮어쓰지 않습니다 — 비밀번호는 대시보드에서 바꾸세요
+- **OIDC**(Authorization Code + PKCE) — Authentik과 Dex는 동작이 확인됐고, 이 플로우를 지원하는 다른 제공자도 쓸 수 있습니다. `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`을 설정하고 redirect URI로 **`<DASHBOARD_URL>/api/auth/callback/oidc`** 를 등록하세요. `OIDC_DISPLAY_NAME`이 버튼 이름입니다(기본 `SSO`)
+
+로그인은 봇이 직접 처리합니다([Better Auth](https://www.better-auth.com)). 이 compose에 인증 프록시 컨테이너는 없습니다. 세션은 7일이며 데이터베이스에 둡니다. 로그인 시도는 주소별로 횟수를 제한합니다. 로그인·실패한 시도·로그아웃은 감사 로그에 남고, 비밀번호는 절대 남기지 않습니다.
+
+**어떤 방법을 켤지**는 `data/auth-settings.json`(`{"password": true, "oidc": true}`)이며, 설정 페이지에서 바꿉니다. 필요한 환경 변수가 없는 방법은 켤 수 없고, 마지막으로 켜진 방법은 끌 수 없습니다. 잠겼다면 편집기로 파일을 고치고 다시 시작하세요: 손상됐거나 전부 끈 파일은 무시하고, 설정된 방법을 모두 켠 채 시작하며 로그에 남깁니다. 비밀은 언제나 환경 변수에만 둡니다.
+
+**쓰기 권한**은 그룹으로 정합니다: `DASHBOARD_ADMIN_GROUPS`를 사람의 그룹과 대소문자 구분 없이 전체 일치로 비교합니다 — OIDC 제공자가 `groups` 클레임으로 내려주는 그룹과, 대시보드에서 준 그룹 둘 다입니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 첫 관리자와 개발용 `admin`은 목록의 첫 그룹에 들어갑니다.
+
+OIDC 사용자 이름이 대시보드가 이미 아는 GitHub 로그인(GitHub 페이지의 계정 연결)이면 그 사람으로 로그인합니다 — 디스코드 계정과 개인 재생목록도 그대로. 그 밖의 사람은 새 사용자가 됩니다. 제공자에 연결할 수 없으면 그 방법의 로그인은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다. 다음 시도에서 다시 연결합니다.
+
+`DASHBOARD_URL`은 대시보드를 여는 주소입니다: 로그인 콜백 주소를 이것으로 만들고, 음악 채널 리모컨이 그 음악 페이지로 연결합니다. `http`·`https` 주소만 받으며, 그 밖의 값이면 봇이 시작하지 않습니다. 없으면 로그인은 요청마다 주소를 읽고, 리모컨에는 링크가 없습니다.
+
+`NODE_ENV=development`에서는 고정 계정 둘, `admin` / `admin1234!`(admin)과 `member` / `member1234!`를 만듭니다. 프로덕션에서는 절대 만들지 않고, 데이터베이스에 그런 계정이 있으면 시작하지 않습니다. 프로덕션에서는 `DASHBOARD_SESSION_SECRET`이 필수입니다.
+
+#### v0.8.2로 올릴 때
+
+1. **데이터베이스를 백업하세요.** GitHub ↔ 디스코드 계정 연결이 대시보드 사용자로 옮겨지고 옛 표는 삭제되므로, 이전 이미지로 되돌리려면 그 백업을 복원해야 합니다
+2. ID 제공자에 redirect URI `<DASHBOARD_URL>/api/auth/callback/oidc`를 등록하세요(전에는 `/api/auth/callback`)
+3. `DASHBOARD_URL`을 설정하세요. `OIDC_REDIRECT_URI`는 더 쓰지 않습니다 — 한 릴리즈 동안은 `DASHBOARD_URL`이 없을 때 그 출처를 대신 쓰고 경고를 남깁니다. `DASHBOARD_DEV_USER`·`DASHBOARD_DEV_ROLE`은 없어졌습니다
+4. 비밀번호 로그인을 쓰려면 `DASHBOARD_BOOTSTRAP_USERNAME`·`DASHBOARD_BOOTSTRAP_PASSWORD`를 한 번 설정하세요
+5. 모두 다시 로그인합니다
 
 ### 데이터: 데이터베이스와 `data/`
 
-봇이 **만들어 내고 계속 쌓는 것**은 **PostgreSQL**(필수)에 둡니다: 추적 중인 GitHub 메시지, 음악 채널 배너 메시지, 초대 통계, 감사 로그, 재생목록, 리액션 롤 패널, GitHub ↔ 디스코드 계정 연결, 음악 재생 기록. **사람이 열어 고치는 설정**은 `data/` 아래 JSON 파일로 남습니다(`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`; gitignore 대상) — 대시보드에 들어갈 수 없을 때도 편집기로 고칠 수 있게. Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
+봇이 **만들어 내고 계속 쌓는 것**은 **PostgreSQL**(필수)에 둡니다: 추적 중인 GitHub 메시지, 음악 채널 배너 메시지, 초대 통계, 감사 로그, 재생목록, 리액션 롤 패널, 대시보드 사용자와 세션(GitHub ↔ 디스코드 계정 연결 포함), 음악 재생 기록. **사람이 열어 고치는 설정**은 `data/` 아래 JSON 파일로 남습니다(`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`; gitignore 대상) — 대시보드에 들어갈 수 없을 때도 편집기로 고칠 수 있게. Docker에서는 `./pipit-bot/data:/app/data`를 마운트하세요.
 
 - **시작** — 봇은 데이터베이스를 최대 2분까지 기다리고(아직 뜨는 중인 컨테이너도 괜찮습니다) 마이그레이션을 적용합니다. 붙을 데이터베이스가 없으면 시작하지 않습니다
 - **데이터베이스가 없던 릴리즈에서 올릴 때** — 첫 시작에서 이제 데이터베이스에 두는 파일을 한 번 옮기고, 파일 이름을 `*.migrated`로 바꿉니다(지우지 않습니다). 무엇을 옮겼는지 로그에 남습니다
@@ -98,7 +124,7 @@ PR·이슈 활동은 **GitHub App**이 전달합니다. App 하나를 등록해 
 
 `GITHUB_APP_ID`와 개인 키가 있으면 대시보드가 설치된 저장소와 조직 멤버를 직접 입력하는 대신 제안합니다. 키는 `GITHUB_APP_PRIVATE_KEY_PATH`(파일 — 마운트된 시크릿이 보통 오는 형태)나 `GITHUB_APP_PRIVATE_KEY`(PEM 자체, 원문 또는 base64)로 주고, 둘 다 있으면 경로가 우선합니다. `GITHUB_APP_INSTALLATION_ID`는 선택 사항이며, 없으면 첫 번째 설치를 씁니다. 어느 것도 필수는 아닙니다: 리마인더는 webhook secret만으로 동작하고, 피커는 일반 텍스트 입력으로 되돌아갑니다. 계정 목록은 조직 멤버를 읽는데, 이는 App의 **Organization › Members (read)** 권한이 필요합니다. 없으면 설치된 각 저장소의 assignable 사용자를 대신 제안하고, 대시보드는 어느 목록을 보여주는지 표시합니다.
 
-라우팅은 `data/github-notify.json`에 있습니다: 기본 채널, 저장소별 채널·이벤트 종류 override, GitHub 팀→디스코드 역할 매핑(`teams`). 멘션에 쓰는 GitHub 로그인→디스코드 사용자 연결은 같은 페이지에서 고치지만 데이터베이스에 둡니다(`/api/accounts`) — 개인 재생목록과 대시보드 사용자도 이것을 쓰기 때문입니다. 옛 파일의 `accounts`는 첫 시작에서 그쪽으로 옮깁니다. 매핑되지 않은 로그인은 일반 텍스트로 나갑니다. 자기 규칙이 없는 저장소는 기본 채널로 보내되, `notifyUnlistedRepos`를 끄면 목록에 있는 저장소만 보고합니다. 이 기능은 기본 비활성(`enabled: false`)으로 출하됩니다.
+라우팅은 `data/github-notify.json`에 있습니다: 기본 채널, 저장소별 채널·이벤트 종류 override, GitHub 팀→디스코드 역할 매핑(`teams`). 멘션에 쓰는 GitHub 로그인→디스코드 사용자 연결은 같은 페이지에서 고치지만 대시보드 사용자의 일부로 데이터베이스에 둡니다(`/api/accounts`) — 개인 재생목록과 로그인한 사용자도 이것을 쓰기 때문입니다. 옛 파일의 `accounts`는 첫 시작에서 그쪽으로 옮깁니다. 매핑되지 않은 로그인은 일반 텍스트로 나갑니다. 자기 규칙이 없는 저장소는 기본 채널로 보내되, `notifyUnlistedRepos`를 끄면 목록에 있는 저장소만 보고합니다. 이 기능은 기본 비활성(`enabled: false`)으로 출하됩니다.
 
 리뷰는 사람뿐 아니라 **팀**에도 요청될 수 있습니다. GitHub 페이지의 "팀 → 역할" 카드에서 팀(`org/slug`, org는 저장소 소유자)을 디스코드 역할에 매핑하면, 그 팀에 대한 리뷰 요청은 — webhook으로 오든 `/remind`로 오든 — 역할을 멘션합니다(`<@&role>`). 매핑이 없는 팀은 지금까지처럼 이름만 적고 멘션하지 않습니다. 핑이 실제로 사람들에게 닿으려면 역할이 누구나 멘션할 수 있어야 하거나("Allow anyone to @mention this role"), 봇이 그 채널에서 **Mention Everyone** 권한을 가져야 합니다. 둘 다 아니면 카드가 해당 행에 경고를 띄우고, 역할을 멘션하지 못한 경우 발송 기록에도 그렇게 남습니다. 매핑은 `data/github-notify.json`의 `teams`(`[{ githubTeam, discordRoleId }]`)에 저장되며, 이 키가 생기기 전에 쓰인 파일도 그대로 읽힙니다.
 
