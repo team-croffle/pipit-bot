@@ -18,6 +18,7 @@ import { loadRecapSettings } from './lib/music/recap/settings.js';
 import { startWorkerWatch } from './lib/music/worker-status.js';
 import { loadReactionRoleSettings } from './lib/reaction-roles/settings.js';
 import { env } from './lib/setup.js';
+import { loadUsers } from './lib/users/store.js';
 
 const client = new CustomClient(env);
 
@@ -27,6 +28,7 @@ const main = async () => {
     await connectDatabase();
     await loadGuildEventSettings();
     await loadGithubNotifySettings();
+    await loadUsers();
     await loadAccountLinks();
     // Before login: the command registry, filled at login, leaves out switched-off features.
     await loadFeatures();

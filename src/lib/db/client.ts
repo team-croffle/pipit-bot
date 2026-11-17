@@ -5,7 +5,8 @@ import postgres from 'postgres';
 
 import { rootDir } from '../constants.js';
 import { getEnv, type DatabaseConfig } from '../env.js';
-import * as schema from './schema.js';
+import * as authSchema from './auth-schema.js';
+import * as tables from './schema.js';
 
 /**
  * The bot's one PostgreSQL connection pool.
@@ -19,6 +20,8 @@ import * as schema from './schema.js';
  * bookkeeping table lives in the connection's own schema rather than drizzle's default
  * `drizzle` schema, so a database pointed at another schema (search_path) keeps its own.
  */
+
+const schema = { ...tables, ...authSchema };
 
 export type Database = PostgresJsDatabase<typeof schema>;
 

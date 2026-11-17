@@ -4,6 +4,6 @@ import { defineConfig } from 'drizzle-kit';
 // starts (src/lib/db/client.ts). Generating needs no database.
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/lib/db/schema.ts',
+  schema: ['./src/lib/db/schema.ts', './src/lib/db/auth-schema.ts'],
   out: './drizzle',
 });
