@@ -4,8 +4,7 @@ import { join } from 'node:path';
 import { setup } from '@skyra/env-utilities';
 
 import { rootDir } from './constants.js';
-
-export type DashboardDevRole = 'viewer' | 'admin';
+import { parseAuthEnv, type AuthEnvConfig } from './env-auth.js';
 
 export interface GithubAppConfig {
   appId: string;
@@ -13,16 +12,6 @@ export interface GithubAppConfig {
   privateKey: string;
   /** null asks the API which installation this is, and remembers the answer. */
   installationId: number | null;
-}
-
-export interface OidcConfig {
-  issuer: string;
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  sessionSecret: string;
-  /** Requested at sign-in, space-separated in the request; always contains `openid`. */
-  scopes: string[];
 }
 
 export interface EnvConfig {
@@ -35,9 +24,8 @@ export interface EnvConfig {
   githubWebhookSecret: string | null;
   githubApp: GithubAppConfig | null;
   dashboardAdminGroups: string[];
-  dashboardDevUser: string;
-  dashboardDevRole: DashboardDevRole;
-  oidc: OidcConfig | null;
+  /** Dashboard sign-in (env-auth.ts). */
+  auth: AuthEnvConfig;
   /** The dashboard's public address, without a trailing slash; null when it is not known. */
   dashboardUrl: string | null;
   /** PostgreSQL; required to run, checked when connecting (src/lib/db/client.ts). */
@@ -117,15 +105,6 @@ function parseGroupList(raw: string | undefined, fallback: string[]): string[] {
     .filter((group) => group.length > 0);
 }
 
-function parseDashboardDevRole(raw: string | undefined): DashboardDevRole {
-  const value = (raw ?? 'admin').toLowerCase();
-  if (value === 'viewer' || value === 'admin') {
-    return value;
-  }
-
-  throw new Error(`Invalid DASHBOARD_DEV_ROLE="${raw}". Expected "viewer" or "admin".`);
-}
-
 /**
  * Reads the App credentials used to list repositories and organisation members.
  *
@@ -186,64 +165,6 @@ function parseGithubApp(): GithubAppConfig | null {
   };
 }
 
-function parseOidc(nodeEnv: string): OidcConfig | null {
-  const issuer = process.env.OIDC_ISSUER?.trim();
-  if (!issuer) {
-    return null;
-  }
-
-  const normalizedIssuer = issuer.endsWith('/') ? issuer : `${issuer}/`;
-
-  const clientId = process.env.OIDC_CLIENT_ID?.trim();
-  const clientSecret = process.env.OIDC_CLIENT_SECRET?.trim();
-  const redirectUri = process.env.OIDC_REDIRECT_URI?.trim();
-  const sessionSecret = process.env.DASHBOARD_SESSION_SECRET?.trim();
-
-  if (!clientId) {
-    throw new Error('OIDC_CLIENT_ID is required when OIDC_ISSUER is set');
-  }
-  if (!clientSecret) {
-    throw new Error('OIDC_CLIENT_SECRET is required when OIDC_ISSUER is set');
-  }
-  if (!redirectUri) {
-    throw new Error('OIDC_REDIRECT_URI is required when OIDC_ISSUER is set');
-  }
-  if (!sessionSecret) {
-    if (nodeEnv === 'production') {
-      throw new Error('DASHBOARD_SESSION_SECRET is required when OIDC is enabled in production');
-    }
-    throw new Error('DASHBOARD_SESSION_SECRET is required when OIDC_ISSUER is set');
-  }
-
-  return {
-    issuer: normalizedIssuer,
-    clientId,
-    clientSecret,
-    redirectUri,
-    sessionSecret,
-    scopes: parseOidcScopes(process.env.OIDC_SCOPES),
-  };
-}
-
-// WHY a setting: providers differ in what they release without being asked. Some
-// only put `groups` into the token when that scope is requested, and the dashboard's
-// admin check depends on it — so `groups` is in the default, and an operator whose
-// provider names things differently can say so.
-const DEFAULT_OIDC_SCOPES = ['openid', 'profile', 'email', 'groups'];
-
-function parseOidcScopes(raw: string | undefined): string[] {
-  const scopes = [...new Set((raw ?? '').split(/[\s,]+/).filter(Boolean))];
-  if (scopes.length === 0) {
-    return DEFAULT_OIDC_SCOPES;
-  }
-
-  if (!scopes.includes('openid')) {
-    throw new Error('OIDC_SCOPES must include openid');
-  }
-
-  return scopes;
-}
-
 export function loadEnv(): EnvConfig {
   setup({ path: join(rootDir, '.env') });
 
@@ -274,7 +195,6 @@ export function loadEnv(): EnvConfig {
   );
 
   const nodeEnv = process.env.NODE_ENV ?? 'development';
-  const oidc = parseOidc(nodeEnv);
 
   return {
     botToken,
@@ -286,24 +206,24 @@ export function loadEnv(): EnvConfig {
     githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET?.trim() || null,
     githubApp: parseGithubApp(),
     dashboardAdminGroups: parseGroupList(process.env.DASHBOARD_ADMIN_GROUPS, ['pipit-admins']),
-    dashboardDevUser: process.env.DASHBOARD_DEV_USER?.trim() || 'dev',
-    dashboardDevRole: parseDashboardDevRole(process.env.DASHBOARD_DEV_ROLE),
-    oidc,
-    dashboardUrl: parseDashboardUrl(oidc),
+    auth: parseAuthEnv(nodeEnv),
+    dashboardUrl: parseDashboardUrl(),
     database: parseDatabase(),
     nodeEnv,
   };
 }
 
 /**
- * Where people open the dashboard — for the music channel remote's link. DASHBOARD_URL
- * when set; otherwise the origin of the OIDC redirect, which already names the
- * dashboard's public address; otherwise unknown, and the link is left out.
+ * Where people open the dashboard — for the music channel remote's link and the sign-in
+ * callbacks. DASHBOARD_URL when set; otherwise the origin of the retired
+ * OIDC_REDIRECT_URI, which named the dashboard's public address before v0.8.2 (a warning
+ * says so at start); otherwise unknown: the remote has no link and sign-in takes the
+ * address from each request.
  *
  * Only http(s): Discord refuses a link button with any other scheme, and with it the
  * whole banner message.
  */
-function parseDashboardUrl(oidc: OidcConfig | null): string | null {
+function parseDashboardUrl(): string | null {
   const raw = process.env.DASHBOARD_URL?.trim();
   if (raw) {
     const url = parseHttpUrl(raw);
@@ -314,7 +234,8 @@ function parseDashboardUrl(oidc: OidcConfig | null): string | null {
     return url.href.replace(/\/$/, '');
   }
 
-  return oidc ? (parseHttpUrl(oidc.redirectUri)?.origin ?? null) : null;
+  const legacy = process.env.OIDC_REDIRECT_URI?.trim();
+  return legacy ? (parseHttpUrl(legacy)?.origin ?? null) : null;
 }
 
 /** An http(s) URL, or null — `URL.canParse` is not in every Node this runs on. */
@@ -336,6 +257,8 @@ export function getEnv(): EnvConfig {
 
   return cached;
 }
+
+export type { AuthEnvConfig, OidcConfig } from './env-auth.js';
 
 declare module '@sapphire/pieces' {
   interface Container {

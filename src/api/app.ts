@@ -4,7 +4,6 @@ import { Readable } from 'node:stream';
 
 import { container } from '@sapphire/framework';
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
-import { getCookie } from 'hono/cookie';
 import { stream } from 'hono/streaming';
 
 import { rootDir } from '../lib/constants.js';
@@ -28,11 +27,11 @@ import {
 import { syncBanners } from '../lib/music/banner/manager.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
 import { auditDashboard } from './audit-middleware.js';
-import { dashboardViewer, dashboardWrite, resolveDashboardIdentity } from './auth/dashboard.js';
-import { SESSION_COOKIE } from './auth/session.js';
+import { dashboardViewer, dashboardWrite, identityFromContext } from './auth/dashboard.js';
 import type { ApiVariables } from './context.js';
 import { mountAccountRoutes } from './routes/accounts.js';
 import { mountAuditRoutes } from './routes/audit.js';
+import { mountAuthMethodRoutes } from './routes/auth-methods.js';
 import { mountAuthRoutes } from './routes/auth.js';
 import { mountFeatureRoutes } from './routes/features.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
@@ -120,10 +119,11 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
 
   app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
+  mountAuthMethodRoutes(app, config);
   mountAuthRoutes(app, config);
 
-  app.get('/api/me', (c) => {
-    const identity = resolveDashboardIdentity(config, getCookie(c, SESSION_COOKIE));
+  app.get('/api/me', async (c) => {
+    const identity = await identityFromContext(c);
     if (!identity) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
