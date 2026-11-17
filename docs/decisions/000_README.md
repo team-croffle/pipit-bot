@@ -75,3 +75,4 @@ Each file has:
 | [023](./023_v0.7.7_worker-status.md) | v0.7.7 | The bot knows whether the music worker is up, and says so instead of resending |
 | [024](./024_v0.8.0_database.md) | v0.8.0 | The data the bot keeps adding to moves into PostgreSQL; settings stay files |
 | [025](./025_v0.8.1_music-recap.md) | v0.8.1 | Music recaps count a play history of their own, and never show who asked for what |
+| [026](./026_v0.8.2_dashboard-login.md) | v0.8.2 | The dashboard signs people in itself, and admin is a group |

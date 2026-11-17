@@ -51,7 +51,7 @@ Discussion of a specific worker implementation does not belong in this repositor
 - There is **no main/edge role split** and no edge-node concept. Do not reintroduce `ROLE`, `MainOnly`/`EdgeOnly`
   preconditions or similar.
 - Dashboard auth: Better Auth (`src/lib/auth/`) behind the dashboard's own `/login` page — password accounts (no
-  sign-up; the first admin from `DASHBOARD_BOOTSTRAP_*`) and OIDC (Authorization Code + PKCE; Authentik and Dex are known
+  sign-up; the first admin from `DASHBOARD_BOOTSTRAP_*`), Discord (server members) and GitHub (known logins) sign-in, and OIDC (Authorization Code + PKCE; Authentik and Dex are known
   to work — never assume one provider; callback `/api/auth/callback/oidc`). Which methods are on is
   `data/auth-settings.json`; secrets stay in the environment. Only the Better Auth endpoints the dashboard needs are
   reachable (`routes/auth.ts`). Write access is a group: `DASHBOARD_ADMIN_GROUPS` against the provider's `groups` plus the
