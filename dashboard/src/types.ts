@@ -1,6 +1,11 @@
 export interface DashboardIdentity {
+  userId?: string;
   user: string | null;
   groups: string[];
+  /** From the identity provider at the last OIDC sign-in. */
+  idpGroups?: string[];
+  /** Given on the dashboard. */
+  localGroups?: string[];
   canWriteSettings: boolean;
   canControlPlayback: boolean;
   /** The linked Discord account (GitHub page → accounts), for personal playlists. */

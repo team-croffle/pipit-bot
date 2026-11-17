@@ -30,6 +30,8 @@
   const mobileNavOpen = ref(false);
 
   const route = useRoute();
+  // The sign-in page draws itself, without the shell or a signed-in user.
+  const bare = computed(() => route.meta.bare === true);
 
   const healthLabel = computed(() => {
     if (health.value === 'ok') {
@@ -50,6 +52,9 @@
   const { load: loadFeatures } = useFeatures();
 
   onMounted(async () => {
+    if (bare.value) {
+      return;
+    }
     void loadFeatures();
     try {
       me.value = await fetchJson<DashboardIdentity>('/api/me');
@@ -72,7 +77,8 @@
 </script>
 
 <template>
-  <div class="bg-background flex min-h-dvh">
+  <RouterView v-if="bare" />
+  <div v-else class="bg-background flex min-h-dvh">
     <aside
       class="border-sidebar-border bg-sidebar sticky top-0 hidden h-dvh w-60 shrink-0 border-r lg:block"
     >

@@ -1,3 +1,5 @@
+import { redirectToLogin } from './lib/sign-in';
+
 /**
  * The message the server meant for the operator.
  *
@@ -26,7 +28,7 @@ async function failureMessage(response: Response): Promise<string> {
 export async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(path, { credentials: 'include' });
   if (response.status === 401) {
-    window.location.assign('/api/auth/login');
+    redirectToLogin();
     throw new Error('Redirecting to login…');
   }
   if (!response.ok) {
@@ -44,7 +46,7 @@ export async function putJson<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (response.status === 401) {
-    window.location.assign('/api/auth/login');
+    redirectToLogin();
     throw new Error('Redirecting to login…');
   }
   if (!response.ok) {
@@ -62,7 +64,7 @@ export async function postJson<T>(path: string, body?: unknown): Promise<T> {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (response.status === 401) {
-    window.location.assign('/api/auth/login');
+    redirectToLogin();
     throw new Error('Redirecting to login…');
   }
   if (!response.ok) {
@@ -84,7 +86,7 @@ async function sendJson<T>(method: 'PATCH' | 'DELETE', path: string, body?: unkn
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (response.status === 401) {
-    window.location.assign('/api/auth/login');
+    redirectToLogin();
     throw new Error('Redirecting to login…');
   }
   if (!response.ok) {
