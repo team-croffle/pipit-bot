@@ -90,6 +90,7 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
 ### v0.8.2 — dashboard sign-in
 
 - A dashboard sign-in page — username and password, OIDC, or Discord and GitHub sign-in, showing only the methods that are switched on, with at least one always on
+- A users page — accounts and admin rights are managed on the dashboard. Each way of signing in leads to the same person, and admin is a group
 
 ### v0.8.3 — languages
 

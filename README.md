@@ -13,7 +13,7 @@
 - **Invite logger** — join and leave messages, arrivals counted per invite, a record channel, roles on join
 - **Audit log** — who did what from the dashboard and in Discord, GitHub deliveries and member arrivals, kept for 90 days
 - **Music** — shared playback for the voice channel, backed by a pluggable music worker
-- **Dashboard** — every setting above, light and dark, behind its own sign-in page: password accounts and your OIDC provider
+- **Dashboard** — every setting above, light and dark, behind its own sign-in page: password accounts, your OIDC provider, Discord or GitHub
 
 Built with Sapphire and discord.js. Music sources are **pluggable**: pipit-bot requests a separate music worker and streams prepared files from a shared volume. See [docs/music-backend.md](./docs/music-backend.md).
 
@@ -64,6 +64,11 @@ OIDC_CLIENT_SECRET=
 OIDC_SCOPES=
 # the button on the sign-in page; default: SSO
 OIDC_DISPLAY_NAME=
+# Discord and GitHub sign-in (OAuth apps of their own, not the bot token or the GitHub App)
+DISCORD_OAUTH_CLIENT_ID=
+DISCORD_OAUTH_CLIENT_SECRET=
+GITHUB_OAUTH_CLIENT_ID=
+GITHUB_OAUTH_CLIENT_SECRET=
 ```
 
 Do not expose `/internal/*` on the public host. Music worker callbacks use `INTERNAL_TOKEN`.
@@ -74,6 +79,8 @@ Signing in starts at the dashboard's own **sign-in page** (`/login`); after it, 
 
 - **Password** — accounts made on the dashboard by an admin; there is no public sign-up. A password has at least 8 characters and mixes at least two of upper-case letters, lower-case letters, digits and symbols. The first admin comes from `DASHBOARD_BOOTSTRAP_USERNAME` / `DASHBOARD_BOOTSTRAP_PASSWORD`: created once, when no password account exists, and never overwritten after — change the password on the dashboard
 - **OIDC** (Authorization Code + PKCE) — Authentik and Dex are known to work, and any provider that supports the flow should. Set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and register **`<DASHBOARD_URL>/api/auth/callback/oidc`** as the redirect URI. `OIDC_DISPLAY_NAME` names the button (default `SSO`)
+- **Discord** — an OAuth2 app in the Discord Developer Portal (`DISCORD_OAUTH_CLIENT_ID`/`_SECRET`, redirect `<DASHBOARD_URL>/api/auth/callback/discord`, scope `identify`). Only members of the bot's server get in; someone new becomes a user without admin
+- **GitHub** — a GitHub OAuth app (`GITHUB_OAUTH_CLIENT_ID`/`_SECRET`, callback `<DASHBOARD_URL>/api/auth/callback/github`). Only a GitHub login a user already has gets in — add it on the users page first
 
 The bot does the sign-in itself (with [Better Auth](https://www.better-auth.com)); there is no auth proxy container in this compose. Sessions last seven days and are kept in the database; sign-in attempts are rate-limited per address. Sign-ins, failed attempts and sign-outs are written to the audit log, never with a password.
 
@@ -81,7 +88,7 @@ The bot does the sign-in itself (with [Better Auth](https://www.better-auth.com)
 
 **Who may write** is a group: `DASHBOARD_ADMIN_GROUPS` is matched, case-insensitively and in full, against a person's groups — those the OIDC provider releases in its `groups` claim, and those given on the dashboard. Some providers only release that claim when the `groups` scope is requested (Dex is one), so it is part of the default `OIDC_SCOPES`; the value is space- or comma-separated and must include `openid`. Write the group names exactly as the provider names them — Dex's GitHub connector, for instance, names them `org:team` (`org:team-slug` with `teamNameField: slug`), so an operator would set `DASHBOARD_ADMIN_GROUPS=my-org:admins`. The first admin, and the development `admin`, are in the first group listed.
 
-An OIDC sign-in whose user name is a GitHub login the dashboard already knows (the account links on the GitHub page) signs in as that person, with their Discord account and personal playlists; anyone else becomes a new user. When the provider cannot be reached, signing in through it answers `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause; the next attempt tries again.
+Sign-ins are linked to people by identifier, never by a provider's e-mail: Discord by Discord id, GitHub and an OIDC user name by GitHub login (the account links on the GitHub page). So the same person signs in as themselves — with their Discord account, personal playlists and recap — whichever way they come in; an OIDC sign-in that matches nobody becomes a new user. When a sign-in cannot be linked on its own, an admin enters the GitHub login or Discord account on the **users page** (`/users`), which also adds password accounts, sets passwords (ending that person's sessions), gives or takes admin and removes users. An admin given by the identity provider is changed there; an admin cannot be deleted — take admin away first. When the provider cannot be reached, signing in through it answers `502` with `{"error":"The identity provider could not be reached."}` and the bot logs the cause; the next attempt tries again.
 
 `DASHBOARD_URL` is where people open the dashboard: the sign-in callbacks are built on it, and the music channel's remote links to its Music page. Only `http` and `https` addresses are accepted; anything else stops the bot at start. Without it, sign-in takes the address from each request and the remote has no link.
 

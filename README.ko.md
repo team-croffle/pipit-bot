@@ -13,7 +13,7 @@
 - **초대 로거** — 입장·퇴장 메시지, 초대 코드별 유입 수, 기록 채널, 입장 시 자동 역할
 - **감사 로그** — 대시보드·디스코드에서 누가 무엇을 했는지, GitHub 발송과 멤버 입장·퇴장. 90일 보관
 - **음악** — 음성 채널에서 함께 듣는 재생. 교체 가능한 music worker가 뒤에서 처리합니다
-- **대시보드** — 위 설정 전부를 라이트/다크 테마로, 자체 로그인 화면 뒤에서: 비밀번호 계정과 사용 중인 OIDC 제공자
+- **대시보드** — 위 설정 전부를 라이트/다크 테마로, 자체 로그인 화면 뒤에서: 비밀번호 계정, 사용 중인 OIDC 제공자, Discord 또는 GitHub
 
 Sapphire와 discord.js로 만들었습니다. 음악 소스는 **교체 가능**합니다: pipit-bot은 별도의 music worker에 요청하고, 공유 볼륨에 준비된 파일을 스트리밍합니다. [docs/music-backend.md](./docs/music-backend.md)를 참고하세요.
 
@@ -64,6 +64,11 @@ OIDC_CLIENT_SECRET=
 OIDC_SCOPES=
 # 로그인 화면의 버튼 이름. 기본값: SSO
 OIDC_DISPLAY_NAME=
+# Discord·GitHub 로그인(봇 토큰·GitHub App과 별개인 OAuth 앱)
+DISCORD_OAUTH_CLIENT_ID=
+DISCORD_OAUTH_CLIENT_SECRET=
+GITHUB_OAUTH_CLIENT_ID=
+GITHUB_OAUTH_CLIENT_SECRET=
 ```
 
 `/internal/*`은 공개 호스트에 노출하지 않습니다. music worker 콜백은 `INTERNAL_TOKEN`을 씁니다.
@@ -74,6 +79,8 @@ OIDC_DISPLAY_NAME=
 
 - **비밀번호** — 관리자가 대시보드에서 만든 계정입니다. 공개 가입은 없습니다. 비밀번호는 8자 이상이고 대문자·소문자·숫자·기호 중 두 종류 이상을 섞어야 합니다. 첫 관리자는 `DASHBOARD_BOOTSTRAP_USERNAME` / `DASHBOARD_BOOTSTRAP_PASSWORD`로 만듭니다: 비밀번호 계정이 하나도 없을 때 한 번 만들고, 그 뒤로는 덮어쓰지 않습니다 — 비밀번호는 대시보드에서 바꾸세요
 - **OIDC**(Authorization Code + PKCE) — Authentik과 Dex는 동작이 확인됐고, 이 플로우를 지원하는 다른 제공자도 쓸 수 있습니다. `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`을 설정하고 redirect URI로 **`<DASHBOARD_URL>/api/auth/callback/oidc`** 를 등록하세요. `OIDC_DISPLAY_NAME`이 버튼 이름입니다(기본 `SSO`)
+- **Discord** — Discord Developer Portal의 OAuth2 앱(`DISCORD_OAUTH_CLIENT_ID`/`_SECRET`, redirect `<DASHBOARD_URL>/api/auth/callback/discord`, 스코프 `identify`). 봇이 있는 서버의 멤버만 들어오고, 처음 온 사람은 관리자가 아닌 사용자가 됩니다
+- **GitHub** — GitHub OAuth 앱(`GITHUB_OAUTH_CLIENT_ID`/`_SECRET`, callback `<DASHBOARD_URL>/api/auth/callback/github`). 사용자에 이미 등록된 GitHub 로그인만 들어옵니다 — 사용자 페이지에서 먼저 넣으세요
 
 로그인은 봇이 직접 처리합니다([Better Auth](https://www.better-auth.com)). 이 compose에 인증 프록시 컨테이너는 없습니다. 세션은 7일이며 데이터베이스에 둡니다. 로그인 시도는 주소별로 횟수를 제한합니다. 로그인·실패한 시도·로그아웃은 감사 로그에 남고, 비밀번호는 절대 남기지 않습니다.
 
@@ -81,7 +88,7 @@ OIDC_DISPLAY_NAME=
 
 **쓰기 권한**은 그룹으로 정합니다: `DASHBOARD_ADMIN_GROUPS`를 사람의 그룹과 대소문자 구분 없이 전체 일치로 비교합니다 — OIDC 제공자가 `groups` 클레임으로 내려주는 그룹과, 대시보드에서 준 그룹 둘 다입니다. 일부 제공자는 `groups` 스코프를 요청해야만 그 클레임을 내려주므로(Dex가 그렇습니다) 기본 `OIDC_SCOPES`에 포함돼 있습니다. 값은 공백 또는 쉼표로 구분하며 `openid`를 반드시 포함해야 합니다. 그룹 이름은 제공자가 부르는 그대로 적으세요 — 예를 들어 Dex의 GitHub 커넥터는 그룹을 `org:team`(`teamNameField: slug`이면 `org:team-slug`)으로 부르므로 `DASHBOARD_ADMIN_GROUPS=my-org:admins`처럼 씁니다. 첫 관리자와 개발용 `admin`은 목록의 첫 그룹에 들어갑니다.
 
-OIDC 사용자 이름이 대시보드가 이미 아는 GitHub 로그인(GitHub 페이지의 계정 연결)이면 그 사람으로 로그인합니다 — 디스코드 계정과 개인 재생목록도 그대로. 그 밖의 사람은 새 사용자가 됩니다. 제공자에 연결할 수 없으면 그 방법의 로그인은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다. 다음 시도에서 다시 연결합니다.
+로그인은 제공자의 이메일이 아니라 식별자로 사람에게 이어집니다: Discord는 디스코드 ID로, GitHub와 OIDC 사용자 이름은 GitHub 로그인(GitHub 페이지의 계정 연결)으로. 그래서 어느 방법으로 들어와도 같은 사람입니다 — 디스코드 계정·개인 재생목록·결산도 그대로. 아무와도 이어지지 않는 OIDC 로그인은 새 사용자가 됩니다. 저절로 이어지지 않으면 관리자가 **사용자 페이지**(`/users`)에서 GitHub 로그인이나 디스코드 계정을 넣습니다. 이 페이지에서 비밀번호 계정 추가, 비밀번호 설정(그 사람의 세션은 모두 끊김), 관리자 권한 주기·빼기, 사용자 삭제도 합니다. ID 제공자가 준 관리자 권한은 제공자에서 바꾸고, 관리자는 삭제할 수 없습니다 — 먼저 권한을 빼세요. 제공자에 연결할 수 없으면 그 방법의 로그인은 `502`와 `{"error":"The identity provider could not be reached."}`로 응답하고 봇이 원인을 로그에 남깁니다. 다음 시도에서 다시 연결합니다.
 
 `DASHBOARD_URL`은 대시보드를 여는 주소입니다: 로그인 콜백 주소를 이것으로 만들고, 음악 채널 리모컨이 그 음악 페이지로 연결합니다. `http`·`https` 주소만 받으며, 그 밖의 값이면 봇이 시작하지 않습니다. 없으면 로그인은 요청마다 주소를 읽고, 리모컨에는 링크가 없습니다.
 
