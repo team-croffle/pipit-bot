@@ -43,6 +43,7 @@ import { mountMusicSearchRoutes } from './routes/music-search.js';
 import { mountMusicRoutes } from './routes/music.js';
 import { mountPlaylistRoutes } from './routes/playlists.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
+import { mountUserRoutes } from './routes/users.js';
 import { discordIdOf } from './viewer.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
@@ -121,6 +122,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
 
   mountAuthMethodRoutes(app, config);
   mountAuthRoutes(app, config);
+  mountUserRoutes(app, config);
 
   app.get('/api/me', async (c) => {
     const identity = await identityFromContext(c);
