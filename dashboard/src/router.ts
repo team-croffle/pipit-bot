@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Calendar from './views/calendar.vue';
 import Github from './views/github.vue';
 import Invites from './views/invites.vue';
+import Login from './views/login.vue';
 import Logs from './views/logs.vue';
 import Music from './views/music.vue';
 import Overview from './views/overview.vue';
@@ -13,6 +14,8 @@ import Settings from './views/settings.vue';
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
+    // The sign-in page stands alone: no shell, no /api/me (app.vue reads `bare`).
+    { path: '/login', name: 'login', component: Login, meta: { bare: true } },
     { path: '/', name: 'overview', component: Overview },
     { path: '/music', name: 'music', component: Music },
     { path: '/github', name: 'github', component: Github },
