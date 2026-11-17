@@ -12,8 +12,9 @@ import {
 
 /**
  * The tables. Only data the bot produces and keeps adding to lives here — tracked
- * messages, banners, counters, logs, playlists, panels, account links. Settings a person
- * opens and edits stay JSON files under data/ (docs/decisions/024_v0.8.0_database.md).
+ * messages, banners, counters, logs, playlists, panels. Users and sign-ins are in
+ * auth-schema.ts. Settings a person opens and edits stay JSON files under data/
+ * (docs/decisions/024_v0.8.0_database.md).
  *
  * Generate a migration after changing this file:  yarn db:generate --name <what>
  */
@@ -126,16 +127,6 @@ export const reactionRoleOptions = pgTable(
   },
   (table) => [primaryKey({ columns: [table.panelId, table.position] })],
 );
-
-/**
- * GitHub login ↔ Discord user (account-links.ts): identity, not a setting — mentions,
- * personal playlists and the dashboard's own user all ask it.
- */
-export const accountLinks = pgTable('account_links', {
-  /** Lower-cased. */
-  githubLogin: text('github_login').primaryKey(),
-  discordUserId: text('discord_user_id').notNull(),
-});
 
 /**
  * One row per track that started playing (music/recap/recorder.ts) — what the monthly and

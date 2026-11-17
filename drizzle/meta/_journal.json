@@ -71,6 +71,20 @@
       "when": 1794757537612,
       "tag": "0009_music_recap",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794953356332,
+      "tag": "0010_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794953357586,
+      "tag": "0011_drop_account_links",
+      "breakpoints": true
     }
   ]
 }

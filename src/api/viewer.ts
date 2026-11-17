@@ -2,15 +2,17 @@ import type { Context } from 'hono';
 
 import { getAccountLinks } from '../lib/account-links.js';
 import type { PlaylistViewer } from '../lib/music/playlists/types.js';
+import { findUserById } from '../lib/users/store.js';
 import type { DashboardIdentity } from './auth/dashboard.js';
 
 /**
- * The Discord user behind a dashboard user, through the GitHub page's account links.
+ * The Discord user behind a dashboard user.
  *
- * WHY there: the dashboard signs in through the identity provider, whose user name is
- * the person's GitHub login (Dex with the GitHub connector), and the GitHub page already
- * links GitHub logins to Discord users for mentions. Without a link, the person simply
- * has no Discord identity on the dashboard.
+ * WHY two ways: a signed-in user is a row in `users`, whose Discord id an admin or a
+ * Discord sign-in set. The name match is what came before users (the identity provider's
+ * user name is the person's GitHub login with Dex's GitHub connector) and still finds the
+ * person when only a name is known. Without either, the person has no Discord identity on
+ * the dashboard.
  */
 let accounts = () => getAccountLinks();
 
@@ -22,6 +24,11 @@ export function setAccountLinksForChecks(
 }
 
 export function discordIdOf(identity: DashboardIdentity | undefined | null): string | undefined {
+  const own = findUserById(identity?.userId)?.discordUserId;
+  if (own) {
+    return own;
+  }
+
   const user = identity?.user?.toLowerCase();
   if (!user) {
     return undefined;

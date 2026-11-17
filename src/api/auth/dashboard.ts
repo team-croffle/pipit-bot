@@ -5,6 +5,8 @@ import type { EnvConfig } from '../../lib/env.js';
 import { parseSessionToken } from './session.js';
 
 export interface DashboardIdentity {
+  /** The `users` row, once signed in through Better Auth. */
+  userId?: string;
   user: string | null;
   groups: string[];
   canWriteSettings: boolean;

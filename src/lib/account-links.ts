@@ -5,20 +5,27 @@ import { container } from '@sapphire/framework';
 
 import { dataDir } from './constants.js';
 import { getDb } from './db/client.js';
-import { migrateFile } from './db/migrate-file.js';
-import { accountLinks } from './db/schema.js';
+import { migrateFile, type Transaction } from './db/migrate-file.js';
+import {
+  createLinkedUser,
+  findUserByDiscordId,
+  findUserByGithubLogin,
+  getUsers,
+  loadUsers,
+  updateUser,
+} from './users/store.js';
 
 /**
  * Which Discord user each GitHub login is.
  *
- * WHY its own store (since v0.8.0): it started as part of the GitHub notification
- * settings, for mentions, but it is identity rather than a setting — personal playlists
- * and the dashboard's own user ask it too, and polls and schedules will. It lives in the
- * database (`account_links`); the `accounts` of an older `data/github-notify.json` are
- * moved in once and taken out of that file, which stays as the notification settings.
+ * WHY on top of users (since v0.8.2): the links started in the GitHub notification
+ * settings, moved to their own table in v0.8.0, and are now two columns of the dashboard's
+ * users (users/store.ts) — a person who signs in is the same person a mention pings. The
+ * `account_links` table was moved into `users` by migration 0010 and dropped by 0011.
+ * This module keeps the old shape for the GitHub page and the mention code.
  *
- * Kept in memory for mentions and the dashboard, which read it without waiting. A save
- * replaces the links whole, reaches the database first, and a failure reaches the caller.
+ * The `accounts` of an older `data/github-notify.json` are still moved in once (a server
+ * coming from before v0.8.0) and taken out of that file, which stays as the settings.
  */
 
 export interface AccountLink {
@@ -33,8 +40,6 @@ const snowflake = /^\d{17,20}$/;
 // like `everyone`, or one carrying backticks/`<`/`@`, impossible to persist.
 const githubLogin = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
 const notifySettingsPath = join(dataDir, 'github-notify.json');
-
-let links: AccountLink[] = [];
 
 export function parseAccountLinks(value: unknown): AccountLink[] {
   if (!Array.isArray(value)) {
@@ -92,6 +97,22 @@ async function dropAccountsFromNotifySettings(afterMove: boolean): Promise<void>
   }
 }
 
+/** Writes one link into `users`: the user with that login gets the Discord id, or is created. */
+async function writeLink(tx: Transaction, link: AccountLink): Promise<void> {
+  const holder = findUserByDiscordId(link.discordUserId);
+  if (holder && holder.githubLogin !== link.githubLogin) {
+    await updateUser(holder.id, { discordUserId: null }, tx);
+  }
+
+  const user = findUserByGithubLogin(link.githubLogin);
+  if (user) {
+    await updateUser(user.id, { discordUserId: link.discordUserId }, tx);
+  } else {
+    await createLinkedUser(link.githubLogin, link.discordUserId, tx);
+  }
+}
+
+/** Moves the links of an older github-notify.json in; call after `loadUsers`. */
 export async function loadAccountLinks(): Promise<AccountLink[]> {
   await migrateFile({
     name: 'github-notify.json#accounts',
@@ -99,8 +120,10 @@ export async function loadAccountLinks(): Promise<AccountLink[]> {
     label: 'GitHub ↔ Discord account links',
     parse: (raw) => parseAccountLinks((raw as { accounts?: unknown } | null)?.accounts ?? []),
     insert: async (tx, parsed) => {
-      if (parsed.length > 0) {
-        await tx.insert(accountLinks).values(parsed).onConflictDoNothing();
+      for (const link of parsed) {
+        if (!findUserByGithubLogin(link.githubLogin)) {
+          await writeLink(tx, link);
+        }
       }
       return parsed.length;
     },
@@ -108,25 +131,39 @@ export async function loadAccountLinks(): Promise<AccountLink[]> {
     finish: (moved) => dropAccountsFromNotifySettings(moved !== undefined),
   });
 
-  links = (await getDb().select().from(accountLinks)).toSorted((a, b) =>
-    a.githubLogin.localeCompare(b.githubLogin),
-  );
-  return links;
+  return getAccountLinks();
 }
 
+/** Users with both a GitHub login and a Discord id, by login. */
 export function getAccountLinks(): AccountLink[] {
-  return links;
+  return getUsers()
+    .filter((user) => user.githubLogin && user.discordUserId)
+    .map((user) => ({ githubLogin: user.githubLogin!, discordUserId: user.discordUserId! }))
+    .toSorted((a, b) => a.githubLogin.localeCompare(b.githubLogin));
 }
 
-/** Replaces every link; the database first, then memory. */
+/**
+ * Replaces every link. A login left out keeps its user (who may sign in) and loses only
+ * the Discord id; a new login becomes a user.
+ */
 export async function saveAccountLinks(next: unknown): Promise<AccountLink[]> {
   const parsed = parseAccountLinks(next);
-  await getDb().transaction(async (tx) => {
-    await tx.delete(accountLinks);
-    if (parsed.length > 0) {
-      await tx.insert(accountLinks).values(parsed);
-    }
-  });
-  links = parsed.toSorted((a, b) => a.githubLogin.localeCompare(b.githubLogin));
-  return links;
+  const kept = new Set(parsed.map((link) => link.githubLogin));
+  try {
+    await getDb().transaction(async (tx) => {
+      for (const user of getUsers()) {
+        if (user.githubLogin && user.discordUserId && !kept.has(user.githubLogin)) {
+          await updateUser(user.id, { discordUserId: null }, tx);
+        }
+      }
+      for (const link of parsed) {
+        await writeLink(tx, link);
+      }
+    });
+  } catch (error) {
+    // The copy in memory followed writes the rollback undid.
+    await loadUsers();
+    throw error;
+  }
+  return getAccountLinks();
 }
