@@ -22,6 +22,15 @@ const RULES: ActionRule[] = [
   { method: 'PUT', pattern: /^\/api\/guild-events$/, action: 'member-events.update' },
   { method: 'PUT', pattern: /^\/api\/github-notify$/, action: 'github-notify.update' },
   { method: 'PUT', pattern: /^\/api\/accounts$/, action: 'accounts.update' },
+  { method: 'POST', pattern: /^\/api\/users$/, action: 'users.create' },
+  { method: 'PATCH', pattern: /^\/api\/users\/([^/]+)$/, action: 'users.update', target: 1 },
+  {
+    method: 'POST',
+    pattern: /^\/api\/users\/([^/]+)\/password$/,
+    action: 'users.password',
+    target: 1,
+  },
+  { method: 'DELETE', pattern: /^\/api\/users\/([^/]+)$/, action: 'users.delete', target: 1 },
   { method: 'POST', pattern: /^\/api\/github-notify\/remind$/, action: 'github.remind' },
   { method: 'PUT', pattern: /^\/api\/reaction-roles$/, action: 'reaction-roles.update' },
   {
