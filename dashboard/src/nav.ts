@@ -9,6 +9,7 @@ import {
   Settings,
   Smile,
   UserPlus,
+  Users,
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
 
@@ -52,7 +53,10 @@ export const navSections: NavSection[] = [
   },
   {
     title: '시스템',
-    items: [{ to: '/settings', label: '설정', icon: Settings }],
+    items: [
+      { to: '/users', label: '사용자', icon: Users },
+      { to: '/settings', label: '설정', icon: Settings },
+    ],
   },
 ];
 

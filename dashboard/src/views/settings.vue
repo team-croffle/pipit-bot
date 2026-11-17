@@ -6,6 +6,7 @@
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import RecapSettingsCard from '@/components/music/recap-settings-card.vue';
+  import SignInMethodsCard from '@/components/settings/sign-in-methods-card.vue';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import {
@@ -172,6 +173,8 @@
           </p>
         </CardContent>
       </Card>
+
+      <SignInMethodsCard :read-only="readOnly" />
 
       <Card data-audit-settings>
         <CardHeader>

@@ -10,6 +10,7 @@ import Overview from './views/overview.vue';
 import Polls from './views/polls.vue';
 import ReactionRoles from './views/reaction-roles.vue';
 import Settings from './views/settings.vue';
+import Users from './views/users.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -22,6 +23,7 @@ export const router = createRouter({
     { path: '/invites', name: 'invites', component: Invites },
     { path: '/reaction-roles', name: 'reaction-roles', component: ReactionRoles },
     { path: '/settings', name: 'settings', component: Settings },
+    { path: '/users', name: 'users', component: Users },
     // Planned features (ROADMAP.md). They render a preview so the navigation shows
     // where the work lands instead of growing a new shape later.
     {
