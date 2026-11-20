@@ -85,12 +85,12 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
 - Emoji shortcodes typed by hand, such as `:tada:`, turn into the emoji
 - A choice of language for the recap messages (Korean, English)
 
-## Planned
-
 ### v0.8.2 — dashboard sign-in
 
 - A dashboard sign-in page — username and password, OIDC, or Discord and GitHub sign-in, showing only the methods that are switched on, with at least one always on
 - A users page — accounts and admin rights are managed on the dashboard. Each way of signing in leads to the same person, and admin is a group
+
+## Planned
 
 ### v0.8.3 — languages
 
