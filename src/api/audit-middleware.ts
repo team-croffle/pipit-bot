@@ -19,6 +19,7 @@ const RULES: ActionRule[] = [
   { method: 'PUT', pattern: /^\/api\/settings\/features$/, action: 'features.update' },
   { method: 'PUT', pattern: /^\/api\/settings\/audit$/, action: 'audit.settings' },
   { method: 'PUT', pattern: /^\/api\/settings\/auth-methods$/, action: 'auth.methods.update' },
+  { method: 'PUT', pattern: /^\/api\/settings\/language$/, action: 'language.update' },
   { method: 'PUT', pattern: /^\/api\/guild-events$/, action: 'member-events.update' },
   { method: 'PUT', pattern: /^\/api\/github-notify$/, action: 'github-notify.update' },
   { method: 'PUT', pattern: /^\/api\/accounts$/, action: 'accounts.update' },

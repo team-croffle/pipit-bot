@@ -12,8 +12,9 @@ import { setRecordingGate } from './recorder.js';
  *
  * `record` keeps the play history (on by default); `post` sends each month's and year's
  * recap to `channelId` (off until a channel is chosen). Period boundaries follow
- * `timeZone`. `topN` is how many tracks a recap lists. `language` is what the posted
- * recap is written in; `/recap` answers in each person's own Discord language instead.
+ * `timeZone`. `topN` is how many tracks a recap lists. `language` is no longer read (since
+ * v0.8.3 the recap's language is i18n/settings.ts `messageLanguage('recap')`, which carried
+ * this value over once); it is kept so an older file still loads.
  */
 
 export interface RecapSettings {

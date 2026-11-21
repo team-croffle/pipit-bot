@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 
 import { audit } from '../../audit/log.js';
 import { getConfiguredGuild } from '../../discord-guild.js';
+import { messageLanguage } from '../../i18n/settings.js';
 import { buildRecap, type RecapSummary } from './aggregate.js';
 import type { Period } from './periods.js';
 import { getRecap, markPosted, saveRecap } from './recaps-store.js';
@@ -67,7 +68,7 @@ export async function postRecap(guildId: string, period: Period): Promise<PostOu
   await saveRecap(guildId, period.id, period.kind, summary);
   try {
     const messageId = await send(settings.channelId, {
-      embeds: [renderRecap(summary, { playlistName, language: settings.language }).toJSON()],
+      embeds: [renderRecap(summary, { playlistName, language: messageLanguage('recap') }).toJSON()],
     });
     await markPosted(guildId, period.id, settings.channelId, messageId);
     void audit({ category: 'music', action: 'recap.post', target: period.id, outcome: 'ok' });
