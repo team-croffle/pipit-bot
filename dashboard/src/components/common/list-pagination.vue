@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import {
     Pagination,
@@ -22,6 +23,7 @@
    * Numbered pages under a list, with an optional choice of how many rows a page holds.
    * The list itself does the slicing or the fetching; this only says which page.
    */
+  const { t } = useI18n();
   const props = defineProps<{
     total: number;
     /** Rows per page; with `sizes`, the choice offered beside the pages. */
@@ -49,9 +51,9 @@
     :data-pagination="label ?? 'list'"
   >
     <div v-if="sizes?.length" class="text-muted-foreground flex items-center gap-2 text-sm">
-      <span>줄 수</span>
+      <span>{{ t('common.rows') }}</span>
       <Select :model-value="String(pageSize)" @update:model-value="setSize">
-        <SelectTrigger size="sm" class="w-20" aria-label="한 페이지 줄 수" data-page-size>
+        <SelectTrigger size="sm" class="w-20" :aria-label="t('common.rowsPerPage')" data-page-size>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -65,7 +67,7 @@
           </SelectItem>
         </SelectContent>
       </Select>
-      <span class="tnum">· 전체 {{ total }}</span>
+      <span class="tnum">{{ t('common.total', { total }) }}</span>
     </div>
     <Pagination
       v-if="pageCount > 1"
@@ -79,9 +81,9 @@
       @update:page="(value: number) => (page = value)"
     >
       <PaginationContent v-slot="{ items }">
-        <PaginationPrevious aria-label="이전 페이지" data-page-prev>
+        <PaginationPrevious :aria-label="t('common.previousPage')" data-page-prev>
           <ChevronLeft />
-          <span class="hidden sm:block">이전</span>
+          <span class="hidden sm:block">{{ t('common.previous') }}</span>
         </PaginationPrevious>
         <template v-for="(item, index) in items" :key="index">
           <PaginationItem
@@ -94,8 +96,8 @@
           </PaginationItem>
           <PaginationEllipsis v-else :index="index" />
         </template>
-        <PaginationNext aria-label="다음 페이지" data-page-next>
-          <span class="hidden sm:block">다음</span>
+        <PaginationNext :aria-label="t('common.nextPage')" data-page-next>
+          <span class="hidden sm:block">{{ t('common.next') }}</span>
           <ChevronRight />
         </PaginationNext>
       </PaginationContent>

@@ -1,6 +1,8 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
 
+import { t } from '@/i18n';
+
 /**
  * What the dashboard's pickers share, so they look and behave as one family.
  *
@@ -14,10 +16,17 @@ export const MANUAL = '__manual__';
 
 /** The copy every picker uses for the same thing. */
 export const PICKER_TEXT = {
-  manual: '직접 입력…',
-  back: '목록에서 고르기',
-  loading: '목록을 불러오는 중…',
-} as const;
+  // Getters, so a template reading them follows a change of language.
+  get manual() {
+    return t('common.pickerManual');
+  },
+  get back() {
+    return t('common.pickerBack');
+  },
+  get loading() {
+    return t('common.pickerLoading');
+  },
+};
 
 interface ManualFallbackSource {
   value: () => string;

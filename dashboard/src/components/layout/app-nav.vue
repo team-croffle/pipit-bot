@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useI18n } from 'vue-i18n';
   import { RouterLink } from 'vue-router';
 
   import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@
   import { navSections } from '@/nav';
 
   const emit = defineEmits<{ navigate: [] }>();
+  const { t } = useI18n();
   const { isOff } = useFeatures();
   const dimmed = (to: string) => Boolean(NAV_FEATURE[to] && isOff(NAV_FEATURE[to]));
 
@@ -28,7 +30,7 @@
         v-if="section.title"
         class="text-muted-foreground/80 px-2.5 pb-1 text-[0.68rem] font-semibold tracking-wider uppercase"
       >
-        {{ section.title }}
+        {{ t(section.title) }}
       </p>
       <RouterLink
         v-for="item in section.items"
@@ -40,11 +42,11 @@
           dimmed(item.to) ? 'opacity-50' : '',
         ]"
         :data-nav-off="dimmed(item.to) || undefined"
-        :title="dimmed(item.to) ? `${item.label} — 꺼져 있음` : undefined"
+        :title="dimmed(item.to) ? t('common.offTitle', { label: t(item.label) }) : undefined"
         @click="emit('navigate')"
       >
         <component :is="item.icon" class="size-5 shrink-0" />
-        <span class="truncate">{{ item.label }}</span>
+        <span class="truncate">{{ t(item.label) }}</span>
         <Badge v-if="item.planned" variant="outline" class="ml-auto px-1.5 py-0 text-[0.65rem]">
           {{ item.planned }}
         </Badge>

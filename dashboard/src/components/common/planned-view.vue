@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { Component } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Badge } from '@/components/ui/badge';
   import { Card, CardContent } from '@/components/ui/card';
@@ -13,13 +14,14 @@
     icon: Component;
     points: string[];
   }>();
+  const { t } = useI18n();
 </script>
 
 <template>
   <div class="flex flex-col gap-5">
     <PageHeader :title="title" :description="description">
       <template #actions>
-        <Badge variant="secondary">{{ version }} 예정</Badge>
+        <Badge variant="secondary">{{ t('common.plannedBadge', { version }) }}</Badge>
       </template>
     </PageHeader>
 
@@ -29,10 +31,9 @@
           <component :is="icon" class="size-6" />
         </div>
         <div class="min-w-0">
-          <p class="font-medium">아직 구현되지 않은 기능입니다.</p>
+          <p class="font-medium">{{ t('common.plannedTitle') }}</p>
           <p class="text-muted-foreground mt-1 text-sm">
-            로드맵 {{ version }}에 계획되어 있습니다. 이 화면은 자리를 잡아 두기 위한 것으로, 실제
-            동작은 하지 않습니다.
+            {{ t('common.plannedBody', { version }) }}
           </p>
         </div>
       </CardContent>
@@ -40,7 +41,7 @@
 
     <Card>
       <CardContent>
-        <p class="mb-3 text-sm font-medium">계획된 내용</p>
+        <p class="mb-3 text-sm font-medium">{{ t('common.plannedList') }}</p>
         <ul class="text-muted-foreground flex list-none flex-col gap-2 p-0 text-sm">
           <li v-for="point in points" :key="point" class="flex gap-2.5">
             <span class="bg-muted-foreground/50 mt-2 size-1.5 shrink-0 rounded-full" />

@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { fetchJson, putJson } from '@/api';
+import { t } from '@/i18n';
 
 /**
  * The bot's language settings (data/language.json, /api/settings/language), shared by the
@@ -35,8 +36,7 @@ export function useLanguageSettings() {
         loadError.value = answer.loadError ?? '';
       })
       .catch((cause: unknown) => {
-        loadError.value =
-          cause instanceof Error ? cause.message : '언어 설정을 불러오지 못했습니다.';
+        loadError.value = cause instanceof Error ? cause.message : t('language.loadFailed');
       })
       .finally(() => {
         loading = null;
@@ -47,7 +47,7 @@ export function useLanguageSettings() {
   /** Saves a change; returns the error message, or '' when it was saved. */
   async function save(change: Partial<LanguageSettings>): Promise<string> {
     if (!settings.value) {
-      return '언어 설정을 아직 불러오지 못했습니다.';
+      return t('language.notLoaded');
     }
     const next: LanguageSettings = {
       ...settings.value,
@@ -58,7 +58,7 @@ export function useLanguageSettings() {
       settings.value = (await putJson<Answer>('/api/settings/language', next)).settings;
       return '';
     } catch (cause) {
-      return cause instanceof Error ? cause.message : '저장하지 못했습니다.';
+      return cause instanceof Error ? cause.message : t('language.saveFailed');
     }
   }
 

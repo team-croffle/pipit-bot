@@ -1,0 +1,26 @@
+import type { login as en } from '../en/login';
+
+export const login: typeof en = {
+  title: '로그인',
+  description: '팀 대시보드에 로그인합니다.',
+  username: '사용자 이름',
+  password: '비밀번호',
+  submit: '로그인',
+  submitting: '로그인하는 중…',
+  continueWith: '{provider}(으)로 계속',
+  redirecting: '이동하는 중…',
+  or: '또는',
+  noMethods: '쓸 수 있는 로그인 방법이 없습니다. 운영자에게 서버 확인을 요청하세요.',
+  optionsFailed: '로그인 방법을 불러오지 못했습니다. 페이지를 새로 고쳐 다시 시도하세요.',
+  failed: '로그인하지 못했습니다.',
+  failedStatus: '로그인하지 못했습니다({status}).',
+  wrongPassword: '사용자 이름이나 비밀번호가 틀렸습니다.',
+  methodOff: '이 로그인 방법은 꺼져 있습니다.',
+  tooMany: '시도가 너무 많습니다. 1분 뒤 다시 시도하세요.',
+  idpDown: 'ID 제공자에 연결할 수 없습니다. 잠시 뒤 다시 시도하세요.',
+  notAllowed: '이 계정은 로그인할 수 없습니다. 관리자에게 추가를 요청하세요.',
+  callbackMoved: 'ID 제공자가 예전 콜백 주소를 쓰고 있습니다. 운영자에게 갱신을 요청하세요.',
+  cancelled: '로그인을 취소했습니다.',
+  unfinished: '로그인이 끝나지 않았습니다. 다시 시도하세요.',
+  notStarted: '로그인을 시작하지 못했습니다. 다시 시도하세요.',
+};
