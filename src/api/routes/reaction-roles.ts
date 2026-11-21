@@ -2,6 +2,7 @@ import { container } from '@sapphire/framework';
 import type { Hono } from 'hono';
 
 import { getConfiguredGuild } from '../../lib/discord-guild.js';
+import { phraseIn, say, textIn } from '../../lib/i18n/phrase.js';
 import { PublishError, publishPanel } from '../../lib/reaction-roles/publish.js';
 import {
   getReactionRoleLoadError,
@@ -12,6 +13,7 @@ import {
 } from '../../lib/reaction-roles/settings.js';
 import { dashboardViewer, dashboardWrite } from '../auth/dashboard.js';
 import type { ApiVariables } from '../context.js';
+import { requestLanguage } from '../language.js';
 
 /**
  * The panels, and the one action that reaches Discord.
@@ -45,13 +47,13 @@ export function mountReactionRoleRoutes(app: Hono<{ Variables: ApiVariables }>):
   app.post('/api/reaction-roles/:panelId/publish', dashboardViewer, dashboardWrite, async (c) => {
     const guild = getConfiguredGuild();
     if (!guild) {
-      return c.json({ error: '디스코드에 아직 연결되지 않았습니다.' }, 503);
+      return c.json({ error: textIn(requestLanguage(c), say('discordNotReady')) }, 503);
     }
 
     const panelId = c.req.param('panelId');
     const panel = getReactionRoleSettings().panels.find((stored) => stored.id === panelId);
     if (!panel) {
-      return c.json({ error: '패널을 찾을 수 없습니다. 먼저 저장해 주세요.' }, 404);
+      return c.json({ error: textIn(requestLanguage(c), say('rrPanelMissing')) }, 404);
     }
 
     try {
@@ -62,15 +64,15 @@ export function mountReactionRoleRoutes(app: Hono<{ Variables: ApiVariables }>):
         messageUrl: `https://discord.com/channels/${guild.id}/${saved.channelId}/${saved.messageId}`,
         // The message went out either way; these emoji just did not go on it.
         failedEmoji: published.failedEmoji,
-        warnings: published.warnings,
+        warnings: published.warnings.map((phrase) => phraseIn(requestLanguage(c), phrase)),
       });
     } catch (error) {
       if (error instanceof PublishError) {
-        return c.json({ error: error.message }, 400);
+        return c.json({ error: phraseIn(requestLanguage(c), error.phrase) }, 400);
       }
 
       container.logger.error('Failed to publish a reaction role panel:', error);
-      return c.json({ error: '패널을 발행하지 못했습니다. 봇 로그를 확인해 주세요.' }, 500);
+      return c.json({ error: textIn(requestLanguage(c), say('rrPublishFailed')) }, 500);
     }
   });
 }

@@ -17,11 +17,22 @@ import {
 
 import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { renderPlainEmbed } from '../embed/template.js';
+import { say, type NoticeKey, type Phrase } from '../i18n/phrase.js';
 import { emojiToReact, reactionMatchesEmoji } from './match.js';
 import type { ReactionRolePanel } from './settings.js';
 
 /** A reason the panel cannot be published, worded for the operator. */
-export class PublishError extends Error {}
+/** A panel that cannot go out as it is; `message` is English, `phrase` the same in other languages. */
+export class PublishError extends Error {
+  readonly phrase: Phrase;
+
+  constructor(key: NoticeKey, params?: Record<string, string | number>) {
+    const said = say(key, params);
+    super(said.message);
+    this.name = 'PublishError';
+    this.phrase = said.phrase;
+  }
+}
 
 const REQUIRED = [
   PermissionFlagsBits.ViewChannel,
@@ -31,31 +42,32 @@ const REQUIRED = [
   PermissionFlagsBits.ReadMessageHistory,
 ] as const;
 
+// Discord's own names for the permissions, as its settings show them.
 const PERMISSION_LABELS = new Map<bigint, string>([
-  [PermissionFlagsBits.ViewChannel, '채널 보기'],
-  [PermissionFlagsBits.SendMessages, '메시지 보내기'],
-  [PermissionFlagsBits.EmbedLinks, '링크 첨부'],
-  [PermissionFlagsBits.AddReactions, '반응 추가'],
-  [PermissionFlagsBits.ReadMessageHistory, '메시지 기록 보기'],
+  [PermissionFlagsBits.ViewChannel, 'View Channel'],
+  [PermissionFlagsBits.SendMessages, 'Send Messages'],
+  [PermissionFlagsBits.EmbedLinks, 'Embed Links'],
+  [PermissionFlagsBits.AddReactions, 'Add Reactions'],
+  [PermissionFlagsBits.ReadMessageHistory, 'Read Message History'],
 ]);
 
 function resolveChannel(guild: Guild, channelId: string): GuildTextBasedChannel {
   const channel = guild.channels.cache.get(channelId);
   if (!channel?.isTextBased()) {
-    throw new PublishError('채널을 찾을 수 없거나 봇이 글을 쓸 수 있는 채널이 아닙니다.');
+    throw new PublishError('rrChannelUnusable');
   }
 
   const me = guild.members.me;
   if (!me) {
-    throw new PublishError('봇의 서버 정보를 아직 불러오지 못했습니다.');
+    throw new PublishError('rrNoMember');
   }
 
   const permissions = channel.permissionsFor(me);
   const missing = REQUIRED.filter((flag) => !permissions?.has(flag)).map(
-    (flag) => PERMISSION_LABELS.get(flag) ?? '알 수 없는 권한',
+    (flag) => PERMISSION_LABELS.get(flag) ?? String(flag),
   );
   if (missing.length > 0) {
-    throw new PublishError(`이 채널에서 봇에게 없는 권한이 있습니다: ${missing.join(', ')}`);
+    throw new PublishError('rrMissingPermissions', { permissions: missing.join(', ') });
   }
 
   return channel;
@@ -83,33 +95,30 @@ function canManageMessages(guild: Guild, channel: GuildTextBasedChannel): boolea
 function checkRoles(guild: Guild, panel: ReactionRolePanel): void {
   const me = guild.members.me;
   if (!me) {
-    throw new PublishError('봇의 서버 정보를 아직 불러오지 못했습니다.');
+    throw new PublishError('rrNoMember');
   }
 
   if (!me.permissions.has(PermissionFlagsBits.ManageRoles)) {
-    throw new PublishError('봇에게 역할 관리 권한이 없습니다.');
+    throw new PublishError('rrNoManageRoles');
   }
 
   for (const option of panel.options) {
     const role = guild.roles.cache.get(option.roleId);
     if (!role) {
-      throw new PublishError(`서버에 없는 역할이 있습니다: ${option.emoji}`);
+      throw new PublishError('rrRoleMissing', { emoji: option.emoji });
     }
 
     if (role.managed) {
-      throw new PublishError(`${role.name}은(는) 연동이 관리하는 역할이라 부여할 수 없습니다.`);
+      throw new PublishError('rrRoleManaged', { role: role.name });
     }
 
     if (me.roles.highest.comparePositionTo(role) <= 0) {
-      throw new PublishError(
-        `${role.name}이(가) 봇의 역할보다 위에 있어 부여할 수 없습니다. 서버 설정에서 봇 역할을 위로 올려 주세요.`,
-      );
+      throw new PublishError('rrRoleTooHigh', { role: role.name });
     }
   }
 }
 
-const ORDER_WARNING =
-  '이모지 순서를 설정과 맞추지 못했습니다 — 봇에게 이 채널의 "메시지 관리" 권한이 필요합니다.';
+const ORDER_WARNING = say('rrOrderWarning').phrase;
 
 /**
  * True when adding the missing emoji would leave them out of the order the options
@@ -149,7 +158,7 @@ function needsRebuild(message: Message, panel: ReactionRolePanel): boolean {
 
 interface SyncResult {
   failedEmoji: string[];
-  warnings: string[];
+  warnings: Phrase[];
 }
 
 /**
@@ -170,7 +179,7 @@ async function syncReactions(
   panel: ReactionRolePanel,
   canManage: boolean,
 ): Promise<SyncResult> {
-  const warnings: string[] = [];
+  const warnings: Phrase[] = [];
   let cleared = false;
 
   if (needsRebuild(message, panel)) {
@@ -222,7 +231,7 @@ export interface PublishResult {
   /** Emoji the bot could not put on the message, if any. */
   failedEmoji: string[];
   /** What went ahead anyway but the operator should know about. */
-  warnings: string[];
+  warnings: Phrase[];
 }
 
 /**
@@ -234,7 +243,7 @@ export interface PublishResult {
  */
 export async function publishPanel(guild: Guild, panel: ReactionRolePanel): Promise<PublishResult> {
   if (panel.options.length === 0) {
-    throw new PublishError('역할이 하나도 없습니다. 이모지와 역할을 먼저 추가해 주세요.');
+    throw new PublishError('rrNoOptions');
   }
 
   const channel = resolveChannel(guild, panel.channelId);
@@ -246,15 +255,13 @@ export async function publishPanel(guild: Guild, panel: ReactionRolePanel): Prom
   // reaction standing and read the member's own unreact as a request to give the
   // role back, which is the opposite of what the setting asks for.
   if (panel.singleReaction && !canManage) {
-    throw new PublishError(
-      '반응 수를 1로 유지하려면 봇에게 이 채널의 "메시지 관리" 권한이 필요합니다.',
-    );
+    throw new PublishError('rrSingleNeedsManage');
   }
 
   // Shortcodes become real emoji here, the same way the reminder resolves them.
   const rendered = renderPlainEmbed(resolveTemplateEmojis(panel.embed, guild));
   if (!rendered.content && !rendered.embed) {
-    throw new PublishError('보낼 내용이 비어 있습니다. 제목이나 설명을 채워 주세요.');
+    throw new PublishError('rrEmpty');
   }
 
   const payload = {

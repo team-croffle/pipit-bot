@@ -5,6 +5,8 @@ import { actorOf } from './audit/discord.js';
 import { audit } from './audit/log.js';
 import { isEnabled } from './features.js';
 import { getGuildEventSettings } from './guild-event-settings.js';
+import { translator } from './i18n/index.js';
+import { messageLanguage } from './i18n/settings.js';
 import type { InviteMatch } from './invite-cache.js';
 import { countInviteJoin } from './invite-stats.js';
 
@@ -69,10 +71,15 @@ export async function onMemberJoin(member: GuildMember, invite: InviteMatch | nu
     detail: inviter ? `invited by ${inviter}` : undefined,
   });
 
+  // The record channel speaks the member events' language (i18n/settings.ts).
+  const t = translator(messageLanguage('memberEvents'), 'notice');
   const via = invite
-    ? `초대 \`${invite.code}\`${invite.inviterId ? ` (<@${invite.inviterId}>)` : ''}`
-    : '초대 알 수 없음';
-  await postRecord(member.guild, `📥 <@${member.id}> 입장 · ${via}`);
+    ? t('memberVia', {
+        code: invite.code,
+        inviter: invite.inviterId ? ` (<@${invite.inviterId}>)` : '',
+      })
+    : t('memberViaUnknown');
+  await postRecord(member.guild, t('memberJoined', { member: `<@${member.id}>`, via }));
 }
 
 /** A member left: record it and post the record line. */
@@ -86,6 +93,7 @@ export async function onMemberLeave(member: GuildMember | PartialGuildMember): P
     detail: days === null ? undefined : `stayed ${days} day${days === 1 ? '' : 's'}`,
   });
 
-  const stayed = days === null ? '' : ` · ${days}일 머묾`;
-  await postRecord(member.guild, `📤 <@${member.id}> 퇴장${stayed}`);
+  const t = translator(messageLanguage('memberEvents'), 'notice');
+  const stayed = days === null ? '' : t('memberStayed', { count: days });
+  await postRecord(member.guild, t('memberLeft', { member: `<@${member.id}>`, stayed }));
 }
