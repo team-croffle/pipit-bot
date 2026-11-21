@@ -11,6 +11,7 @@ import { loadFeatures } from './lib/features.js';
 import { loadTrackedMessages } from './lib/github/message-tracker.js';
 import { loadGithubNotifySettings } from './lib/github/settings.js';
 import { loadGuildEventSettings } from './lib/guild-event-settings.js';
+import { loadLanguageSettings } from './lib/i18n/settings.js';
 import { loadInviteStats } from './lib/invite-stats.js';
 import { loadPlaybackOptions } from './lib/music/playback-options.js';
 import { loadPlaylists } from './lib/music/playlists/store.js';
@@ -36,6 +37,8 @@ const main = async () => {
     // Before login: the command registry, filled at login, leaves out switched-off features.
     await loadFeatures();
     await loadAuditSettings();
+    // Before the recap's: it may carry the recap's old language setting over.
+    await loadLanguageSettings();
     await loadRecapSettings();
     await loadTrackedMessages();
     await loadReactionRoleSettings();

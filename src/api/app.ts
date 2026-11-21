@@ -37,6 +37,7 @@ import { mountFeatureRoutes } from './routes/features.js';
 import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
 import { mountInviteRoutes } from './routes/invites.js';
+import { mountLanguageRoutes } from './routes/language.js';
 import { mountMusicJobRoutes } from './routes/music-jobs.js';
 import { mountMusicRecapRoutes } from './routes/music-recaps.js';
 import { mountMusicSearchRoutes } from './routes/music-search.js';
@@ -123,6 +124,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   mountAuthMethodRoutes(app, config);
   mountAuthRoutes(app, config);
   mountUserRoutes(app, config);
+  mountLanguageRoutes(app);
 
   app.get('/api/me', async (c) => {
     const identity = await identityFromContext(c);

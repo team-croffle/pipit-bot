@@ -1,7 +1,7 @@
 import { createInstance, type TFunction } from 'i18next';
 
-import { en } from './locales/en.js';
-import { ko } from './locales/ko.js';
+import { en } from './locales/en/index.js';
+import { ko } from './locales/ko/index.js';
 
 /**
  * The bot's own words in more than one language (i18next).
