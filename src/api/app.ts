@@ -27,7 +27,7 @@ import {
 import { syncBanners } from '../lib/music/banner/manager.js';
 import { getRuntimeConfig, updateRuntimeConfig } from '../lib/runtime-config.js';
 import { auditDashboard } from './audit-middleware.js';
-import { dashboardViewer, dashboardWrite, identityFromContext } from './auth/dashboard.js';
+import { dashboardViewer, dashboardWrite } from './auth/dashboard.js';
 import type { ApiVariables } from './context.js';
 import { mountAccountRoutes } from './routes/accounts.js';
 import { mountAuditRoutes } from './routes/audit.js';
@@ -38,6 +38,7 @@ import { mountGithubNotifyRoutes } from './routes/github-notify.js';
 import { mountGithubWebhookRoutes } from './routes/github-webhook.js';
 import { mountInviteRoutes } from './routes/invites.js';
 import { mountLanguageRoutes } from './routes/language.js';
+import { mountMeRoutes } from './routes/me.js';
 import { mountMusicJobRoutes } from './routes/music-jobs.js';
 import { mountMusicRecapRoutes } from './routes/music-recaps.js';
 import { mountMusicSearchRoutes } from './routes/music-search.js';
@@ -45,7 +46,6 @@ import { mountMusicRoutes } from './routes/music.js';
 import { mountPlaylistRoutes } from './routes/playlists.js';
 import { mountReactionRoleRoutes } from './routes/reaction-roles.js';
 import { mountUserRoutes } from './routes/users.js';
-import { discordIdOf } from './viewer.js';
 
 const distRoot = join(rootDir, 'dashboard', 'dist');
 
@@ -126,15 +126,7 @@ export function createApp(config: EnvConfig): Hono<{ Variables: ApiVariables }> 
   mountUserRoutes(app, config);
   mountLanguageRoutes(app);
 
-  app.get('/api/me', async (c) => {
-    const identity = await identityFromContext(c);
-    if (!identity) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    // The Discord account behind this user, when the GitHub page links it (personal playlists).
-    return c.json({ ...identity, discordUserId: discordIdOf(identity) ?? null });
-  });
+  mountMeRoutes(app);
 
   app.get('/api/config', dashboardViewer, (c) => c.json(getRuntimeConfig()));
 

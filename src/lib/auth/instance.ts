@@ -48,6 +48,7 @@ function build(config: EnvConfig, withOidc: boolean) {
         githubLogin: { type: 'string', required: false, input: true },
         discordUserId: { type: 'string', required: false, input: true },
         devSeed: { type: 'boolean', required: false, input: false, defaultValue: false },
+        locale: { type: 'string', required: false, input: false },
       },
     },
     session: { expiresIn: SESSION_DAYS * 24 * 60 * 60, updateAge: 24 * 60 * 60 },
