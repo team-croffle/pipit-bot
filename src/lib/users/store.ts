@@ -62,7 +62,7 @@ export function forgetUser(id: string): void {
 /** Writes `change` to one user and keeps the copy here in step. */
 export async function updateUser(
   id: string,
-  change: Partial<Pick<UserRow, 'name' | 'groups' | 'githubLogin' | 'discordUserId'>>,
+  change: Partial<Pick<UserRow, 'name' | 'groups' | 'githubLogin' | 'discordUserId' | 'locale'>>,
   tx?: Transaction,
 ): Promise<UserRow | undefined> {
   const [row] = await (tx ?? getDb())

@@ -85,6 +85,13 @@
       "when": 1794953357586,
       "tag": "0011_drop_account_links",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795224597705,
+      "tag": "0012_user_locale",
+      "breakpoints": true
     }
   ]
 }

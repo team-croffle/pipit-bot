@@ -28,6 +28,8 @@ export const users = pgTable('users', {
   /** Lower-cased. Mentions and GitHub sign-in find the person by it. */
   githubLogin: text('github_login').unique(),
   discordUserId: text('discord_user_id').unique(),
+  /** The dashboard's language for this person (`ko`, `en`); null follows the server default. */
+  locale: text('locale'),
   /** One of the fixed development accounts — a production start refuses to run with one. */
   devSeed: boolean('dev_seed').notNull().default(false),
 });
