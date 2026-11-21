@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { onMounted } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import FeatureLanguageSelect from '@/components/common/feature-language-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
@@ -15,6 +16,7 @@
   import { usePlayback } from '@/composables/use-playback';
   import type { DashboardIdentity } from '@/types';
 
+  const { t } = useI18n();
   const { me } = defineProps<{ me: DashboardIdentity }>();
 
   const { playback, loading, error, message, busy, run, setRepeat, enqueue, start, refresh } =
@@ -25,7 +27,7 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="음악" description="재생 제어, 재생목록, 재생 옵션">
+    <PageHeader :title="t('music.title')" :description="t('music.description')">
       <template #actions>
         <FeatureLanguageSelect feature="music" :read-only="!me.canWriteSettings" />
       </template>
@@ -33,9 +35,11 @@
 
     <Tabs default-value="control" class="gap-5">
       <TabsList>
-        <TabsTrigger value="control" data-tab="control">재생 제어</TabsTrigger>
-        <TabsTrigger value="playlists" data-tab="playlists">재생목록</TabsTrigger>
-        <TabsTrigger value="options" data-tab="options">재생 옵션</TabsTrigger>
+        <TabsTrigger value="control" data-tab="control">{{ t('music.tabControl') }}</TabsTrigger>
+        <TabsTrigger value="playlists" data-tab="playlists">{{
+          t('music.tabPlaylists')
+        }}</TabsTrigger>
+        <TabsTrigger value="options" data-tab="options">{{ t('music.tabOptions') }}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="control" class="flex flex-col gap-4">

@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { fetchJson, postJson } from '@/api';
+import { t } from '@/i18n';
 import type { PlaylistDetail, PlaylistItemSource, PlaylistSummary } from '@/types';
 
 /** What the last save said, for the music page's status line. */
@@ -42,12 +43,18 @@ export function usePlaylistSaver() {
       say(
         true,
         result.skipped > 0
-          ? `"${playlist.name}"에 ${result.added}곡을 담았습니다. ${result.skipped}곡은 가득 차 빠졌습니다.`
-          : `"${playlist.name}"에 ${result.added > 1 ? `${result.added}곡을 ` : ''}담았습니다.`,
+          ? t('playlists.savedSkipped', {
+              name: playlist.name,
+              added: result.added,
+              skipped: result.skipped,
+            })
+          : result.added > 1
+            ? t('playlists.savedMany', { name: playlist.name, count: result.added }, result.added)
+            : t('playlists.savedOne', { name: playlist.name }),
       );
       return true;
     } catch (cause) {
-      say(false, cause instanceof Error ? cause.message : '재생목록에 담지 못했습니다.');
+      say(false, cause instanceof Error ? cause.message : t('playlists.saveFailed'));
       return false;
     }
   }
@@ -57,7 +64,7 @@ export function usePlaylistSaver() {
       const made = await postJson<PlaylistDetail>('/api/playlists', { name, scope: 'shared' });
       return await save(made, source);
     } catch (cause) {
-      say(false, cause instanceof Error ? cause.message : '재생목록을 만들지 못했습니다.');
+      say(false, cause instanceof Error ? cause.message : t('playlists.createFailed'));
       return false;
     }
   }

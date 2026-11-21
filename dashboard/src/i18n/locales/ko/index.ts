@@ -8,10 +8,14 @@ import { invites } from './invites';
 import { language } from './language';
 import { login } from './login';
 import { logs } from './logs';
+import { music } from './music';
 import { nav } from './nav';
+import { overview } from './overview';
 import { pickers } from './pickers';
 import { planned } from './planned';
+import { playlists } from './playlists';
 import { reactionRoles } from './reaction-roles';
+import { recap } from './recap';
 import { settings } from './settings';
 import { users } from './users';
 
@@ -26,10 +30,14 @@ export const ko: typeof en = {
   language,
   login,
   logs,
+  music,
   nav,
+  overview,
   pickers,
   planned,
+  playlists,
   reactionRoles,
+  recap,
   settings,
   users,
 };

@@ -1,47 +1,58 @@
 <script setup lang="ts">
   import { Clock, Disc3, ListMusic, Repeat, Users } from 'lucide-vue-next';
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import StatCard from '@/components/common/stat-card.vue';
   import RecapBars from '@/components/recap/recap-bars.vue';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-  import { formatPlayed, WEEKDAYS, type RecapSummary } from '@/lib/recap';
+  import { formatPlayed, hourLabels, monthLabels, weekdays, type RecapSummary } from '@/lib/recap';
 
   /**
    * One recap, everyone's or one's own. It names tracks and counts people — never who
    * asked for which track; the summary carries no person to show.
    */
+  const { t } = useI18n();
   const { summary, personal = false } = defineProps<{
     summary: RecapSummary;
     personal?: boolean;
   }>();
 
   const most = computed(() => Math.max(1, ...summary.topTracks.map((track) => track.listens)));
-  const hours = Array.from({ length: 24 }, (_, hour) => `${hour}시`);
-  const months = Array.from({ length: 12 }, (_, month) => `${month + 1}월`);
+  const hours = computed(hourLabels);
+  const months = computed(monthLabels);
+  const days = computed(weekdays);
 </script>
 
 <template>
   <div class="flex flex-col gap-5">
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-recap-stats>
-      <StatCard label="재생 시간" :value="formatPlayed(summary.playedSec)" :icon="Clock" />
       <StatCard
-        label="재생"
-        :value="`${summary.plays}회`"
-        :hint="`끝까지·절반 이상 ${summary.listens}회`"
+        :label="t('recap.playedTime')"
+        :value="formatPlayed(summary.playedSec)"
+        :icon="Clock"
+      />
+      <StatCard
+        :label="t('recap.plays')"
+        :value="t('recap.times', { count: summary.plays }, summary.plays)"
+        :hint="t('recap.listens', { count: summary.listens }, summary.listens)"
         :icon="Repeat"
       />
-      <StatCard label="곡" :value="`${summary.tracks}곡`" :icon="Disc3" />
+      <StatCard
+        :label="t('recap.tracks')"
+        :value="t('recap.trackCount', { count: summary.tracks }, summary.tracks)"
+        :icon="Disc3"
+      />
       <StatCard
         v-if="!personal"
-        label="참여 인원"
-        :value="`${summary.participants ?? 0}명`"
-        :hint="`자동 재생 ${Math.round(summary.autoplayShare * 100)}%`"
+        :label="t('recap.participants')"
+        :value="t('recap.people', { count: summary.participants ?? 0 }, summary.participants ?? 0)"
+        :hint="t('recap.autoplayShare', { percent: Math.round(summary.autoplayShare * 100) })"
         :icon="Users"
       />
       <StatCard
         v-else
-        label="자동 재생"
+        :label="t('recap.autoplay')"
         :value="`${Math.round(summary.autoplayShare * 100)}%`"
         :icon="ListMusic"
       />
@@ -50,12 +61,12 @@
     <div class="grid gap-5 lg:grid-cols-2">
       <Card class="min-w-0" data-recap-top>
         <CardHeader>
-          <CardTitle class="text-base">많이 들은 곡</CardTitle>
-          <CardDescription>끝까지, 또는 절반 이상 들은 횟수</CardDescription>
+          <CardTitle class="text-base">{{ t('recap.topTracks') }}</CardTitle>
+          <CardDescription>{{ t('recap.topTracksHint') }}</CardDescription>
         </CardHeader>
         <CardContent>
           <p v-if="summary.topTracks.length === 0" class="text-muted-foreground text-sm">
-            아직 끝까지 들은 곡이 없습니다.
+            {{ t('recap.noTopTracks') }}
           </p>
           <ol v-else class="flex flex-col gap-3">
             <li
@@ -71,7 +82,8 @@
                   {{ track.title }}
                 </span>
                 <span class="text-muted-foreground tnum shrink-0 text-xs">
-                  {{ track.listens }}회 · {{ formatPlayed(track.playedSec) }}
+                  {{ t('recap.times', { count: track.listens }, track.listens) }} ·
+                  {{ formatPlayed(track.playedSec) }}
                 </span>
               </div>
               <div class="bg-muted ml-7 h-1.5 overflow-hidden rounded-full">
@@ -88,19 +100,28 @@
       <div class="flex min-w-0 flex-col gap-5">
         <Card class="min-w-0">
           <CardHeader>
-            <CardTitle class="text-base">요일별</CardTitle>
+            <CardTitle class="text-base">{{ t('recap.byWeekday') }}</CardTitle>
           </CardHeader>
           <CardContent>
-            <RecapBars :labels="WEEKDAYS" :values="summary.byWeekday" label="요일별 재생" />
+            <RecapBars
+              :labels="days"
+              :values="summary.byWeekday"
+              :label="t('recap.byWeekdayPlays')"
+            />
           </CardContent>
         </Card>
         <Card class="min-w-0">
           <CardHeader>
-            <CardTitle class="text-base">시간대별</CardTitle>
-            <CardDescription>{{ summary.timeZone }} 기준</CardDescription>
+            <CardTitle class="text-base">{{ t('recap.byHour') }}</CardTitle>
+            <CardDescription>{{ t('recap.timeZone', { zone: summary.timeZone }) }}</CardDescription>
           </CardHeader>
           <CardContent>
-            <RecapBars :labels="hours" :values="summary.byHour" label="시간대별 재생" :every="3" />
+            <RecapBars
+              :labels="hours"
+              :values="summary.byHour"
+              :label="t('recap.byHourPlays')"
+              :every="3"
+            />
           </CardContent>
         </Card>
       </div>
@@ -108,13 +129,13 @@
 
     <Card v-if="summary.months" class="min-w-0" data-recap-months>
       <CardHeader>
-        <CardTitle class="text-base">월별 재생</CardTitle>
+        <CardTitle class="text-base">{{ t('recap.byMonth') }}</CardTitle>
       </CardHeader>
       <CardContent>
         <RecapBars
           :labels="months"
           :values="summary.months.map((month) => month.plays)"
-          label="월별 재생"
+          :label="t('recap.byMonth')"
         />
       </CardContent>
     </Card>

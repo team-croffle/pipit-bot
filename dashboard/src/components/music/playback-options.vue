@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
   import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +8,7 @@
   import { Switch } from '@/components/ui/switch';
   import type { PlaybackState } from '@/types';
 
+  const { t } = useI18n();
   const { playback, busy, error } = defineProps<{
     playback: PlaybackState | null;
     busy: boolean;
@@ -20,11 +22,7 @@
     () => !playback?.capabilities || playback.capabilities.includes('related'),
   );
 
-  const repeatModes = [
-    { value: 'off', label: '끔' },
-    { value: 'track', label: '한 곡' },
-    { value: 'queue', label: '대기열' },
-  ] as const;
+  const repeatModes = ['off', 'track', 'queue'] as const;
 
   function setRepeatDefault(mode: 'off' | 'track' | 'queue') {
     if (playback && playback.repeatDefault !== mode) {
@@ -52,10 +50,9 @@
         class="flex items-center justify-between gap-4 border-b py-4 first:pt-0 last:border-b-0 last:pb-0"
       >
         <div class="min-w-0">
-          <Label for="opt-mono">모노</Label>
+          <Label for="opt-mono">{{ t('music.options.mono') }}</Label>
           <p class="text-muted-foreground mt-1 text-xs">
-            좌우 소리를 합쳐 양쪽에 똑같이 내보냅니다. 이어폰을 한쪽만 낄 때 켜 두세요. 재생 중인
-            곡에도 바로 적용됩니다.
+            {{ t('music.options.monoHint') }}
           </p>
           <p v-if="error" class="text-destructive mt-1 text-xs" data-options-error>{{ error }}</p>
         </div>
@@ -72,13 +69,13 @@
       >
         <div class="min-w-0">
           <Label for="opt-autoplay" :class="autoplayOffered ? '' : 'text-muted-foreground'">
-            자동 재생
+            {{ t('music.autoplay') }}
           </Label>
           <p class="text-muted-foreground mt-1 text-xs">
             {{
               autoplayOffered
-                ? '대기열의 마지막 곡이 끝나 가면 music worker가 고른 비슷한 곡을 이어서 재생합니다. 그 사이 누가 곡을 넣으면 그 곡이 먼저입니다. 반복이 켜져 있거나 재생목록을 재생하는 동안은 쉬어요.'
-                : '지금 music worker는 다음 곡 추천을 지원하지 않습니다.'
+                ? t('music.options.autoplayHint')
+                : t('music.options.autoplayUnsupported')
             }}
           </p>
         </div>
@@ -94,24 +91,27 @@
         class="flex flex-col gap-3 border-b py-4 first:pt-0 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
       >
         <div class="min-w-0">
-          <Label>반복 재생 기본값</Label>
+          <Label>{{ t('music.options.repeatDefault') }}</Label>
           <p class="text-muted-foreground mt-1 text-xs">
-            새 세션이 시작될 때의 반복 모드입니다. 지금 재생 중인 대기열은 그대로입니다. 반복이 켜져
-            있으면 자동 재생은 쉽니다.
+            {{ t('music.options.repeatDefaultHint') }}
           </p>
         </div>
-        <div class="flex shrink-0 gap-1.5" role="group" aria-label="반복 재생 기본값">
+        <div
+          class="flex shrink-0 gap-1.5"
+          role="group"
+          :aria-label="t('music.options.repeatDefault')"
+        >
           <Button
             v-for="mode in repeatModes"
-            :key="mode.value"
+            :key="mode"
             size="sm"
-            :data-repeat-default="mode.value"
-            :variant="playback?.repeatDefault === mode.value ? 'default' : 'outline'"
-            :aria-pressed="playback?.repeatDefault === mode.value"
+            :data-repeat-default="mode"
+            :variant="playback?.repeatDefault === mode ? 'default' : 'outline'"
+            :aria-pressed="playback?.repeatDefault === mode"
             :disabled="!playback || busy"
-            @click="setRepeatDefault(mode.value)"
+            @click="setRepeatDefault(mode)"
           >
-            {{ mode.label }}
+            {{ t(`music.repeatMode.${mode}`) }}
           </Button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Check, ListStart, Play, Search } from 'lucide-vue-next';
   import { ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { postJson } from '@/api';
   import StateBlock from '@/components/common/state-block.vue';
@@ -19,6 +20,7 @@
   import { newJobId } from '@/lib/job-id';
   import type { MusicSearchResponse, MusicSearchResult } from '@/types';
 
+  const { t } = useI18n();
   const props = defineProps<{ canEnqueue: boolean }>();
   const emit = defineEmits<{ added: [] }>();
 
@@ -67,7 +69,7 @@
     } catch (cause) {
       if (!isRedirect(cause)) {
         results.value = [];
-        error.value = cause instanceof Error ? cause.message : '검색하지 못했습니다.';
+        error.value = cause instanceof Error ? cause.message : t('music.search.failed');
       }
     } finally {
       loading.value = false;
@@ -92,7 +94,7 @@
       emit('added');
     } catch (cause) {
       if (!isRedirect(cause)) {
-        addError.value = cause instanceof Error ? cause.message : '대기열에 추가하지 못했습니다.';
+        addError.value = cause instanceof Error ? cause.message : t('music.enqueueFailed');
       }
     } finally {
       busyIndex.value = null;
@@ -105,7 +107,7 @@
     <DialogTrigger as-child>
       <Button type="button" variant="outline" data-search-open>
         <Search />
-        검색
+        {{ t('music.search.open') }}
       </Button>
     </DialogTrigger>
     <DialogContent
@@ -113,28 +115,28 @@
       data-search-dialog
     >
       <DialogHeader>
-        <DialogTitle>곡 검색</DialogTitle>
-        <DialogDescription>결과 중에서 골라 재생하거나 다음 곡으로 넣습니다.</DialogDescription>
+        <DialogTitle>{{ t('music.search.title') }}</DialogTitle>
+        <DialogDescription>{{ t('music.search.description') }}</DialogDescription>
       </DialogHeader>
 
       <form class="flex gap-2" @submit.prevent="search">
         <Input
           v-model="query"
           type="search"
-          placeholder="곡 제목, 가수 이름 등"
+          :placeholder="t('music.search.placeholder')"
           maxlength="200"
           class="min-w-0 flex-1"
-          aria-label="찾을 곡"
+          :aria-label="t('music.search.queryLabel')"
           data-search-query
         />
         <Button type="submit" :disabled="loading || !query.trim()" data-search-submit>
           <Search />
-          검색
+          {{ t('music.search.open') }}
         </Button>
       </form>
 
       <p v-if="!canEnqueue" class="text-muted-foreground text-sm" data-search-hint>
-        검색은 할 수 있지만, 추가하려면 보이스 카드에서 봇을 통화방에 참여시키세요.
+        {{ t('music.search.joinFirst') }}
       </p>
       <p v-if="addError" class="text-destructive text-sm" role="alert">{{ addError }}</p>
       <p
@@ -151,7 +153,7 @@
         :loading="loading"
         :error="error"
         :empty="results.length === 0"
-        empty-text="검색 결과가 없습니다."
+        :empty-text="t('music.search.empty')"
       >
         <ul class="flex list-none flex-col gap-2 p-0" data-search-results>
           <li
@@ -172,7 +174,11 @@
               data-search-added
             >
               <Check class="size-[1.125rem]" />
-              {{ added[result.index] === 'next' ? '다음 곡으로 넣음' : '추가함' }}
+              {{
+                added[result.index] === 'next'
+                  ? t('music.search.addedNext')
+                  : t('music.search.added')
+              }}
             </p>
             <div v-else class="flex shrink-0 gap-2">
               <Button
@@ -182,7 +188,7 @@
                 @click="add(result, false)"
               >
                 <Play />
-                추가
+                {{ t('music.search.add') }}
               </Button>
               <Button
                 size="sm"
@@ -192,7 +198,7 @@
                 @click="add(result, true)"
               >
                 <ListStart />
-                다음에 재생
+                {{ t('music.now.playNext') }}
               </Button>
             </div>
             <AddToPlaylist

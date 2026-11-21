@@ -1,6 +1,7 @@
 import { computed, onUnmounted, ref } from 'vue';
 
 import { fetchJson, postJson } from '@/api';
+import { t } from '@/i18n';
 import { newJobId } from '@/lib/job-id';
 import type { PlaybackActionResult, PlaybackRepeatMode, PlaybackState } from '@/types';
 
@@ -94,7 +95,7 @@ export function usePlayback() {
       if (isRedirect(cause)) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : '재생 상태를 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('music.playbackFailed');
     } finally {
       loading.value = false;
       scheduleSync();
@@ -130,7 +131,7 @@ export function usePlayback() {
    * the card and sprang it back. `busy` is what tells the panel a request is running;
    * the text does not have to disappear to say the same thing.
    */
-  async function run(path: string, body?: unknown, fallback = '요청을 처리하지 못했습니다.') {
+  async function run(path: string, body?: unknown, fallback = t('music.requestFailed')) {
     busy.value = true;
     try {
       const result = await postJson<PlaybackActionResult>(path, body);
@@ -154,7 +155,7 @@ export function usePlayback() {
       return;
     }
 
-    await run('/api/music/playback/loop', { mode }, '반복 모드를 바꾸지 못했습니다.');
+    await run('/api/music/playback/loop', { mode }, t('music.repeatFailed'));
   }
 
   /** `next` puts the track at the front of the queue, like `!playnext`. */
@@ -171,9 +172,7 @@ export function usePlayback() {
         query: trimmed,
         ...(next ? { next: true } : {}),
       });
-      message.value = next
-        ? '다음 순서로 재생할 트랙을 준비하고 있습니다…'
-        : '트랙을 준비하고 있습니다…';
+      message.value = next ? t('music.preparingNext') : t('music.preparing');
       error.value = '';
       await refresh();
       return true;
@@ -181,7 +180,7 @@ export function usePlayback() {
       if (isRedirect(cause)) {
         return false;
       }
-      error.value = cause instanceof Error ? cause.message : '대기열에 추가하지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('music.enqueueFailed');
       return false;
     } finally {
       busy.value = false;

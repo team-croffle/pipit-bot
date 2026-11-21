@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ListPlus, Plus } from 'lucide-vue-next';
   import { ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
   import {
@@ -17,9 +18,10 @@
   import PlaylistNameDialog from './playlist-name-dialog.vue';
 
   /**
-   * "재생목록에 담기": a menu of playlists for one track (or the whole queue). Shown as an
+   * "Save to a playlist": a menu of playlists for one track (or the whole queue). Shown as an
    * icon in a row, or with a label where there is room.
    */
+  const { t } = useI18n();
   const props = defineProps<{
     source: PlaylistItemSource;
     label?: string;
@@ -66,8 +68,8 @@
         :size="control ? 'icon' : label ? (size ?? 'sm') : size === 'sm' ? 'icon-sm' : 'icon-xs'"
         :class="control ? 'rounded-full' : ''"
         :disabled="disabled || saving"
-        :aria-label="label ?? '재생목록에 담기'"
-        title="재생목록에 담기"
+        :aria-label="label ?? t('playlists.save')"
+        :title="t('playlists.save')"
         data-add-to-playlist
       >
         <ListPlus />
@@ -75,8 +77,10 @@
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="max-w-72">
-      <DropdownMenuLabel>재생목록에 담기</DropdownMenuLabel>
-      <DropdownMenuItem v-if="loading && !playlists.length" disabled>불러오는 중…</DropdownMenuItem>
+      <DropdownMenuLabel>{{ t('playlists.save') }}</DropdownMenuLabel>
+      <DropdownMenuItem v-if="loading && !playlists.length" disabled>
+        {{ t('common.loading') }}
+      </DropdownMenuItem>
       <DropdownMenuItem
         v-for="playlist in playlists"
         :key="playlist.id"
@@ -89,14 +93,14 @@
       <DropdownMenuSeparator />
       <DropdownMenuItem data-add-to-new @select="naming = true">
         <Plus />
-        새 재생목록…
+        {{ t('playlists.newEllipsis') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
   <PlaylistNameDialog
     v-model:open="naming"
-    title="새 재생목록에 담기"
-    description="공용 재생목록을 만들고 이 곡을 담습니다."
+    :title="t('playlists.saveToNew')"
+    :description="t('playlists.saveToNewHint')"
     :busy="saving"
     @submit="createThenSave"
   />

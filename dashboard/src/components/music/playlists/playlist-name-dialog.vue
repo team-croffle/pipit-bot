@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
   import {
@@ -14,6 +15,7 @@
   import type { PlaylistScope } from '@/types';
 
   /** Asks for a playlist name — for a new playlist, or a new name for one. */
+  const { t } = useI18n();
   const props = defineProps<{
     title: string;
     description?: string;
@@ -53,11 +55,16 @@
         <Input
           v-model="name"
           maxlength="60"
-          placeholder="재생목록 이름"
-          aria-label="재생목록 이름"
+          :placeholder="t('playlists.name')"
+          :aria-label="t('playlists.name')"
           data-playlist-name
         />
-        <div v-if="scopeChoice" class="flex gap-2" role="radiogroup" aria-label="종류">
+        <div
+          v-if="scopeChoice"
+          class="flex gap-2"
+          role="radiogroup"
+          :aria-label="t('playlists.scope')"
+        >
           <Button
             type="button"
             size="sm"
@@ -67,7 +74,7 @@
             data-playlist-scope="shared"
             @click="scope = 'shared'"
           >
-            공용 — 누구나 고침
+            {{ t('playlists.sharedChoice') }}
           </Button>
           <Button
             type="button"
@@ -78,12 +85,12 @@
             data-playlist-scope="personal"
             @click="scope = 'personal'"
           >
-            개인 — 나만
+            {{ t('playlists.personalChoice') }}
           </Button>
         </div>
         <DialogFooter>
           <Button type="submit" :disabled="busy || !name.trim()" data-playlist-name-submit>
-            저장
+            {{ t('playlists.saveName') }}
           </Button>
         </DialogFooter>
       </form>
