@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 
 import type { Notice } from '../discord/notice.js';
+import { translator, type Language } from '../i18n/index.js';
 import { say } from '../i18n/phrase.js';
 import type { SearchCandidate } from './search-client.js';
 import { formatDurationFromSeconds } from './track-format.js';
@@ -37,7 +38,13 @@ function label(index: number, candidate: SearchCandidate): string {
 }
 
 /** The private message listing the results, with one picked (the first, until changed). */
-export function searchResultsMessage(searchId: string, results: SearchCandidate[], picked = 0) {
+export function searchResultsMessage(
+  searchId: string,
+  results: SearchCandidate[],
+  picked = 0,
+  language: Language = 'en',
+) {
+  const t = translator(language, 'music');
   const list = results
     .map((candidate, index) => {
       const mark = index === picked ? '▶' : '　';
@@ -47,18 +54,14 @@ export function searchResultsMessage(searchId: string, results: SearchCandidate[
 
   const container = new ContainerBuilder()
     .setAccentColor(ACCENT)
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent('### 🔍 검색 결과'))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(t('searchResults')))
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(list))
     .addSeparatorComponents(new SeparatorBuilder())
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        '-# 곡을 고른 뒤 재생하거나 다음 곡으로 넣으세요 · 10분 동안 유효',
-      ),
-    );
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(t('searchHint')));
 
   const select = new StringSelectMenuBuilder()
     .setCustomId(`${SEARCH_ID.pick}:${searchId}`)
-    .setPlaceholder('곡 고르기')
+    .setPlaceholder(t('pickTrack'))
     .addOptions(
       results.map((candidate, index) => ({
         label: label(index, candidate),
@@ -72,17 +75,17 @@ export function searchResultsMessage(searchId: string, results: SearchCandidate[
       .setCustomId(`${SEARCH_ID.play}:${searchId}:${picked}`)
       .setStyle(ButtonStyle.Primary)
       .setEmoji('▶️')
-      .setLabel('재생 / 대기열에 추가'),
+      .setLabel(t('playOrQueue')),
     new ButtonBuilder()
       .setCustomId(`${SEARCH_ID.next}:${searchId}:${picked}`)
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⏭️')
-      .setLabel('다음에 재생'),
+      .setLabel(t('playNext')),
     new ButtonBuilder()
       .setCustomId(`${SEARCH_ID.save}:${searchId}:${picked}`)
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📁')
-      .setLabel('재생목록에 담기'),
+      .setLabel(t('saveToPlaylist')),
   ];
 
   return {

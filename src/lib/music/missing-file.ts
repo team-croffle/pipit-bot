@@ -4,6 +4,8 @@ import { container } from '@sapphire/framework';
 import type { GuildQueue, Player, Track } from 'discord-player';
 
 import { getConfiguredGuild } from '../discord-guild.js';
+import { translator } from '../i18n/index.js';
+import { messageLanguage } from '../i18n/settings.js';
 import { getRuntimeConfig } from '../runtime-config.js';
 import { localTrackPath } from './local-file-extractor.js';
 
@@ -67,7 +69,9 @@ export function watchMissingFiles(player: Player): void {
     container.logger.warn(`[music] ${lastNotice.message}`);
 
     void noticeChannel(queue)
-      .then((channel) => channel?.send(`Skipped **${title}**: its file is no longer available.`))
+      .then((channel) =>
+        channel?.send(translator(messageLanguage('music'), 'music')('fileGone', { title })),
+      )
       .catch((error: unknown) =>
         container.logger.warn('[music] could not post the skip notice', error),
       );

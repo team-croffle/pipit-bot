@@ -2,6 +2,7 @@ import type { ChatInputCommandInteraction, ModalSubmitInteraction } from 'discor
 
 import { auditInteraction } from '../audit/discord.js';
 import { replyNotice } from '../discord/notice.js';
+import { languageOfLocale } from '../i18n/index.js';
 import { say } from '../i18n/phrase.js';
 import { searchMusic, SearchFailure } from './search-client.js';
 import { saveSearch } from './search-results.js';
@@ -49,5 +50,7 @@ export async function answerSearch(
 
   const searchId = saveSearch(interaction.user.id, results);
   auditInteraction(interaction, { ok: true, message: '' });
-  await interaction.editReply(searchResultsMessage(searchId, results));
+  await interaction.editReply(
+    searchResultsMessage(searchId, results, 0, languageOfLocale(interaction.locale)),
+  );
 }

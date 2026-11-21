@@ -7,7 +7,11 @@ import {
   StringSelectMenuBuilder,
   TextDisplayBuilder,
 } from 'discord.js';
+import type { TFunction } from 'i18next';
 
+import type { Notice } from '../../discord/notice.js';
+import { translator, type Language } from '../../i18n/index.js';
+import { say } from '../../i18n/phrase.js';
 import { listPlaylists } from './store.js';
 import type { PlaylistViewer } from './types.js';
 
@@ -24,12 +28,12 @@ export const PLAYLIST_UI = {
 
 const ACCENT = 0xe9a23b;
 
-function options(viewer: PlaylistViewer, selected?: string) {
+function options(viewer: PlaylistViewer, t: TFunction, selected?: string) {
   return listPlaylists(viewer)
     .slice(0, 25)
     .map((playlist) => ({
       label: `${playlist.scope === 'personal' ? '🔒 ' : ''}${playlist.name}`.slice(0, 100),
-      description: `${playlist.items.length} tracks`,
+      description: t('tracks', { count: playlist.items.length }),
       value: playlist.id,
       default: playlist.id === selected,
     }));
@@ -54,28 +58,42 @@ function message(
   };
 }
 
-const NONE = 'No playlists yet — make one with /playlist create or on the dashboard.';
+/** Nothing to pick from: a notice in the person's language. */
+export function noPlaylistsNotice(): Notice {
+  return { ok: false, ...say('noPlaylistsAnywhere') };
+}
 
 /** Saving search result `index` of `searchId`: choose the playlist. */
-export function saveToPlaylistMessage(viewer: PlaylistViewer, searchId: string, index: number) {
-  const choices = options(viewer);
+export function saveToPlaylistMessage(
+  viewer: PlaylistViewer,
+  searchId: string,
+  index: number,
+  language: Language = 'en',
+) {
+  const t = translator(language, 'music');
+  const choices = options(viewer, t);
   if (choices.length === 0) {
     return null;
   }
 
-  return message('📁 재생목록에 담기', '어느 재생목록에 담을까요?', [
+  return message(t('saveTitle'), t('saveBody'), [
     new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(`${PLAYLIST_UI.save}:${searchId}:${index}`)
-        .setPlaceholder('재생목록 고르기')
+        .setPlaceholder(t('pickPlaylist'))
         .addOptions(choices),
     ),
   ]);
 }
 
 /** The remote's playlist button: choose a playlist, then play it in order or shuffled. */
-export function playPlaylistMessage(viewer: PlaylistViewer, selected?: string) {
-  const choices = options(viewer, selected);
+export function playPlaylistMessage(
+  viewer: PlaylistViewer,
+  selected?: string,
+  language: Language = 'en',
+) {
+  const t = translator(language, 'music');
+  const choices = options(viewer, t, selected);
   if (choices.length === 0) {
     return null;
   }
@@ -84,7 +102,7 @@ export function playPlaylistMessage(viewer: PlaylistViewer, selected?: string) {
     new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId(PLAYLIST_UI.pick)
-        .setPlaceholder('재생목록 고르기')
+        .setPlaceholder(t('pickPlaylist'))
         .addOptions(choices),
     ),
   ];
@@ -95,17 +113,15 @@ export function playPlaylistMessage(viewer: PlaylistViewer, selected?: string) {
           .setCustomId(`${PLAYLIST_UI.play}:${selected}`)
           .setStyle(ButtonStyle.Primary)
           .setEmoji('▶️')
-          .setLabel('재생'),
+          .setLabel(t('playButton')),
         new ButtonBuilder()
           .setCustomId(`${PLAYLIST_UI.shuffle}:${selected}`)
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('🔀')
-          .setLabel('섞어서 재생'),
+          .setLabel(t('shuffleButton')),
       ),
     );
   }
 
-  return message('📁 재생목록', '재생목록을 고르면 지금 대기열 뒤에 이어 재생합니다.', rows);
+  return message(t('playlistsTitle'), t('playlistsBody'), rows);
 }
-
-export { NONE as NO_PLAYLISTS };

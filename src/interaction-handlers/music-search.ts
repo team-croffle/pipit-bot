@@ -3,11 +3,12 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
+import { languageOfLocale } from '../lib/i18n/index.js';
 import { say } from '../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
-import { NO_PLAYLISTS, saveToPlaylistMessage } from '../lib/music/playlists/pickers.js';
+import { noPlaylistsNotice, saveToPlaylistMessage } from '../lib/music/playlists/pickers.js';
 import { requestPlay } from '../lib/music/request.js';
 import { getCandidate, getResults, PICK_PROBLEM_MESSAGE } from '../lib/music/search-results.js';
 import { SEARCH_ID, searchResultsMessage } from '../lib/music/search-view.js';
@@ -46,7 +47,9 @@ export class MusicSearchPick extends InteractionHandler {
     }
 
     const picked = Number(interaction.values[0] ?? 0);
-    await interaction.update(searchResultsMessage(id.searchId, results, picked));
+    await interaction.update(
+      searchResultsMessage(id.searchId, results, picked, languageOfLocale(interaction.locale)),
+    );
   }
 }
 
@@ -86,11 +89,12 @@ export class MusicSearchPlay extends InteractionHandler {
         discordViewer(interaction.user, interaction.member),
         id.searchId,
         id.index,
+        languageOfLocale(interaction.locale),
       );
       if (picker) {
         await interaction.reply({ ...picker, flags: picker.flags | MessageFlags.Ephemeral });
       } else {
-        await replyNotice(interaction, { ok: false, message: NO_PLAYLISTS });
+        await replyNotice(interaction, noPlaylistsNotice());
       }
       return;
     }
