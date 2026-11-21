@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
@@ -31,6 +32,7 @@
     loadError: string | null;
   }
 
+  const { t } = useI18n();
   const { readOnly } = defineProps<{ readOnly: boolean }>();
 
   const ZONES = [
@@ -78,7 +80,7 @@
       channels.value = channelBody.channels;
       error.value = '';
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '결산 설정을 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('recap.settings.loadFailed');
     }
   }
 
@@ -92,9 +94,9 @@
       saved.value = await putJson<Answer>('/api/settings/music-recap', draft.value);
       draft.value = { ...saved.value.settings };
       error.value = '';
-      notice.value = '저장했습니다.';
+      notice.value = t('recap.settings.saved');
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '결산 설정을 저장하지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('recap.settings.saveFailed');
     } finally {
       busy.value = false;
     }
@@ -106,10 +108,9 @@
 <template>
   <Card data-recap-settings>
     <CardHeader>
-      <CardTitle class="text-base">음악 결산</CardTitle>
+      <CardTitle class="text-base">{{ t('recap.title') }}</CardTitle>
       <CardDescription>
-        재생 기록으로 월말·연말 결산을 만듭니다. 누가 어떤 곡을 신청했는지는 어디에도 보이지
-        않습니다.
+        {{ t('recap.settings.description') }}
       </CardDescription>
     </CardHeader>
     <CardContent class="flex flex-col">
@@ -117,56 +118,56 @@
         <div v-if="draft" class="flex flex-col">
           <div class="flex items-center justify-between gap-4 border-b pb-3">
             <div class="min-w-0">
-              <p class="text-sm font-medium">재생 기록</p>
+              <p class="text-sm font-medium">{{ t('recap.settings.record') }}</p>
               <p class="text-muted-foreground mt-0.5 text-xs">
-                끄면 그동안의 재생은 결산에 들어가지 않습니다. 기록은 400일 뒤 정리됩니다.
+                {{ t('recap.settings.recordHint') }}
               </p>
             </div>
             <Switch
               v-model="draft.record"
               data-recap-record
-              aria-label="재생 기록"
+              :aria-label="t('recap.settings.record')"
               :disabled="readOnly || busy"
             />
           </div>
           <div class="flex items-center justify-between gap-4 border-b py-3">
             <div class="min-w-0">
-              <p class="text-sm font-medium">디스코드에 게시</p>
+              <p class="text-sm font-medium">{{ t('recap.settings.post') }}</p>
               <p class="text-muted-foreground mt-0.5 text-xs">
-                매월 1일에 지난달, 1월 1일에 지난해 결산을 아래 채널에 올립니다.
+                {{ t('recap.settings.postHint') }}
               </p>
             </div>
             <Switch
               v-model="draft.post"
               data-recap-post
-              aria-label="디스코드에 게시"
+              :aria-label="t('recap.settings.post')"
               :disabled="readOnly || busy"
             />
           </div>
           <div class="grid gap-4 pt-3 sm:grid-cols-2">
             <div class="flex min-w-0 flex-col gap-1.5">
-              <Label for="recap-channel">게시 채널</Label>
+              <Label for="recap-channel">{{ t('recap.settings.channel') }}</Label>
               <ChannelSelect
                 id="recap-channel"
                 v-model="draft.channelId"
                 :channels="channels"
-                placeholder="채널 선택"
+                :placeholder="t('recap.settings.chooseChannel')"
                 :empty-value="null"
                 :disabled="readOnly || busy"
               />
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <Label for="recap-zone">시간대</Label>
+              <Label for="recap-zone">{{ t('recap.settings.timeZone') }}</Label>
               <OptionSelect
                 id="recap-zone"
                 v-model="draft.timeZone"
                 :options="zoneOptions"
-                placeholder="시간대"
+                :placeholder="t('recap.settings.timeZone')"
                 :disabled="readOnly || busy"
               />
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <Label for="recap-top">곡 순위 개수</Label>
+              <Label for="recap-top">{{ t('recap.settings.topN') }}</Label>
               <Input
                 id="recap-top"
                 v-model.number="draft.topN"
@@ -177,17 +178,18 @@
               />
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <Label>결산 언어</Label>
+              <Label>{{ t('recap.settings.language') }}</Label>
               <!-- Since v0.8.3 the recap's language is a language setting (features.recap). -->
               <FeatureLanguageSelect feature="recap" :read-only="readOnly" />
               <p class="text-muted-foreground text-xs">
-                채널에 올리는 결산의 언어로, 바로 저장됩니다. <code>/recap</code>은 각자의 디스코드
-                언어를 따릅니다.
+                <I18nT keypath="recap.settings.languageHint" scope="global">
+                  <template #command><code>/recap</code></template>
+                </I18nT>
               </p>
             </div>
           </div>
           <p v-if="needsChannel" class="text-warning mt-3 text-xs" data-recap-needs-channel>
-            게시하려면 채널을 골라 주세요.
+            {{ t('recap.settings.needsChannel') }}
           </p>
           <div class="mt-4 flex items-center gap-3">
             <Button
@@ -196,7 +198,7 @@
               :disabled="readOnly || busy || !changed || needsChannel"
               @click="save"
             >
-              저장
+              {{ t('recap.settings.save') }}
             </Button>
             <span v-if="notice && !changed" class="text-muted-foreground text-xs">{{
               notice

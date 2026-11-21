@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { deleteJson, fetchJson, patchJson, postJson } from '@/api';
+import { t } from '@/i18n';
 import type {
   PlaybackActionResult,
   PlaylistDetail,
@@ -40,7 +41,7 @@ export function usePlaylists() {
       error.value = body.loadError ?? '';
     } catch (cause) {
       if (!isRedirect(cause)) {
-        error.value = messageOf(cause, '재생목록을 불러오지 못했습니다.');
+        error.value = messageOf(cause, t('playlists.loadFailed'));
       }
     } finally {
       loading.value = false;
@@ -52,7 +53,7 @@ export function usePlaylists() {
       selected.value = await fetchJson<PlaylistDetail>(`/api/playlists/${encodeURIComponent(id)}`);
     } catch (cause) {
       if (!isRedirect(cause)) {
-        error.value = messageOf(cause, '재생목록을 열지 못했습니다.');
+        error.value = messageOf(cause, t('playlists.openFailed'));
       }
     }
   }
@@ -82,8 +83,8 @@ export function usePlaylists() {
   ): Promise<PlaylistDetail | null> {
     const made = await act(
       () => postJson<PlaylistDetail>('/api/playlists', { name, scope }),
-      `"${name}" 재생목록을 만들었습니다.`,
-      '재생목록을 만들지 못했습니다.',
+      t('playlists.created', { name }),
+      t('playlists.createFailed'),
     );
     if (made) {
       selected.value = made;
@@ -94,8 +95,8 @@ export function usePlaylists() {
   async function rename(id: string, name: string): Promise<void> {
     const renamed = await act(
       () => patchJson<PlaylistDetail>(path(id), { name }),
-      '이름을 바꿨습니다.',
-      '이름을 바꾸지 못했습니다.',
+      t('playlists.renamed'),
+      t('playlists.renameFailed'),
     );
     if (renamed) {
       selected.value = renamed;
@@ -105,8 +106,8 @@ export function usePlaylists() {
   async function remove(id: string): Promise<void> {
     const removed = await act(
       () => deleteJson(path(id)),
-      '재생목록을 지웠습니다.',
-      '지우지 못했습니다.',
+      t('playlists.deleted'),
+      t('playlists.deleteFailed'),
     );
     if (removed && selected.value?.id === id) {
       selected.value = null;
@@ -117,12 +118,15 @@ export function usePlaylists() {
     const result = await act(
       () =>
         postJson<PlaylistDetail & { added: number; skipped: number }>(`${path(id)}/items`, source),
-      '재생목록에 담았습니다.',
-      '재생목록에 담지 못했습니다.',
+      t('playlists.added'),
+      t('playlists.saveFailed'),
     );
     if (result) {
       if (result.skipped > 0) {
-        message.value = `${result.added}곡을 담았습니다. ${result.skipped}곡은 재생목록이 가득 차 빠졌습니다.`;
+        message.value = t('playlists.addedSkipped', {
+          added: result.added,
+          skipped: result.skipped,
+        });
       }
       if (selected.value?.id === id) {
         selected.value = result;
@@ -134,8 +138,8 @@ export function usePlaylists() {
   async function removeItem(id: string, itemId: string): Promise<void> {
     const result = await act(
       () => deleteJson<PlaylistDetail>(`${path(id)}/items/${encodeURIComponent(itemId)}`),
-      '곡을 뺐습니다.',
-      '곡을 빼지 못했습니다.',
+      t('playlists.itemRemoved'),
+      t('playlists.itemRemoveFailed'),
     );
     if (result) {
       selected.value = result;
@@ -146,8 +150,8 @@ export function usePlaylists() {
     const result = await act(
       () =>
         postJson<PlaylistDetail>(`${path(id)}/items/${encodeURIComponent(itemId)}/move`, { to }),
-      '순서를 바꿨습니다.',
-      '순서를 바꾸지 못했습니다.',
+      t('playlists.moved'),
+      t('playlists.moveFailed'),
     );
     if (result) {
       selected.value = result;
@@ -170,14 +174,18 @@ export function usePlaylists() {
               query,
               ...target,
             }),
-      '가져왔습니다.',
-      '가져오지 못했습니다.',
+      t('playlists.imported'),
+      t('playlists.importFailed'),
     );
     if (result) {
       message.value =
         result.skipped > 0
-          ? `"${result.name}"에 ${result.added}곡을 가져왔습니다. ${result.skipped}곡은 가득 차 빠졌습니다.`
-          : `"${result.name}"에 ${result.added}곡을 가져왔습니다.`;
+          ? t('playlists.importedSkipped', {
+              name: result.name,
+              added: result.added,
+              skipped: result.skipped,
+            })
+          : t('playlists.importedInto', { name: result.name, count: result.added }, result.added);
       selected.value = result;
     }
     return result !== null;
@@ -186,10 +194,8 @@ export function usePlaylists() {
   async function play(id: string, shuffle: boolean): Promise<void> {
     await act(
       () => postJson<PlaybackActionResult>(`${path(id)}/play`, { shuffle }),
-      shuffle
-        ? '섞어서 재생합니다. 몇 곡씩 앞서 준비하며 이어 갑니다.'
-        : '재생합니다. 몇 곡씩 앞서 준비하며 이어 갑니다.',
-      '재생하지 못했습니다.',
+      shuffle ? t('playlists.playingShuffled') : t('playlists.playing'),
+      t('playlists.playFailed'),
     );
   }
 

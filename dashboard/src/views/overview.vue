@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Activity, Github, ListMusic, Radio } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { RouterLink } from 'vue-router';
 
   import { fetchJson } from '@/api';
@@ -10,6 +11,7 @@
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+  import { intlLocale } from '@/i18n';
   import type {
     DashboardIdentity,
     GithubDelivery,
@@ -18,6 +20,7 @@
     PlaybackState,
   } from '@/types';
 
+  const { t } = useI18n();
   const { me } = defineProps<{ me: DashboardIdentity }>();
 
   const playback = ref<PlaybackState | null>(null);
@@ -30,27 +33,27 @@
   const playbackLabel = computed(() => {
     const state = playback.value;
     if (!state?.active) {
-      return '대기 중';
+      return t('overview.idle');
     }
 
-    return state.paused ? '일시정지' : '재생 중';
+    return state.paused ? t('overview.paused') : t('overview.playing');
   });
 
   const playbackHint = computed(() => {
     const state = playback.value;
     if (!state?.active) {
-      return '재생 중인 트랙이 없습니다';
+      return t('overview.nothingPlaying');
     }
 
-    return state.current?.title ?? state.voiceChannelName ?? '보이스 채널 연결됨';
+    return state.current?.title ?? state.voiceChannelName ?? t('overview.voiceConnected');
   });
 
   const githubLabel = computed(() => {
     if (!github.value) {
-      return '알 수 없음';
+      return t('overview.unknown');
     }
 
-    return github.value.enabled ? '활성' : '비활성';
+    return github.value.enabled ? t('overview.enabled') : t('overview.disabled');
   });
 
   const githubHint = computed(() => {
@@ -59,20 +62,22 @@
       return '';
     }
     if (!settings.channelId) {
-      return '알림 채널이 지정되지 않았습니다';
+      return t('overview.noChannel');
     }
 
     const repoCount = settings.repos.length;
-    return repoCount > 0 ? `저장소 ${repoCount}곳 개별 설정` : '기본 설정 사용';
+    return repoCount > 0
+      ? t('overview.repoOverrides', { count: repoCount }, repoCount)
+      : t('overview.defaults');
   });
 
   const features = computed<{ label: string; on: boolean; to: string; planned?: string }[]>(() => [
-    { label: '음악 오케스트레이션', on: true, to: '/music' },
-    { label: 'GitHub PR 리마인더', on: github.value?.enabled ?? false, to: '/github' },
-    { label: '초대 로거', on: true, to: '/invites' },
-    { label: '리액션 롤', on: true, to: '/reaction-roles' },
-    { label: '감사 로깅', on: true, to: '/logs' },
-    { label: '음악 결산', on: true, to: '/settlement' },
+    { label: t('overview.featureMusic'), on: true, to: '/music' },
+    { label: t('overview.featureGithub'), on: github.value?.enabled ?? false, to: '/github' },
+    { label: t('overview.featureInvites'), on: true, to: '/invites' },
+    { label: t('overview.featureReactionRoles'), on: true, to: '/reaction-roles' },
+    { label: t('overview.featureAudit'), on: true, to: '/logs' },
+    { label: t('overview.featureRecap'), on: true, to: '/settlement' },
   ]);
 
   function outcomeVariant(
@@ -86,7 +91,7 @@
   }
 
   function formatTime(at: string): string {
-    return new Date(at).toLocaleString();
+    return new Date(at).toLocaleString(intlLocale());
   }
 
   onMounted(async () => {
@@ -112,7 +117,7 @@
     }
 
     if (playbackResult.status === 'rejected' && githubResult.status === 'rejected') {
-      error.value = '대시보드 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      error.value = t('overview.loadFailed');
     }
 
     loading.value = false;
@@ -121,33 +126,44 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="개요" description="봇 상태와 최근 활동을 한눈에" />
+    <PageHeader :title="t('overview.title')" :description="t('overview.description')" />
 
     <p
       v-if="!me.canWriteSettings"
       class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm"
     >
-      읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
+      {{ t('overview.readOnly') }}
     </p>
 
     <StateBlock :loading="loading" :error="error">
       <div class="flex flex-col gap-5">
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="재생 상태" :value="playbackLabel" :hint="playbackHint" :icon="Radio" />
           <StatCard
-            label="대기열"
-            :value="`${playback?.pendingCount ?? 0}곡`"
-            :hint="playback?.durationFormatted ?? '대기 중인 트랙 없음'"
+            :label="t('overview.playback')"
+            :value="playbackLabel"
+            :hint="playbackHint"
+            :icon="Radio"
+          />
+          <StatCard
+            :label="t('overview.queue')"
+            :value="
+              t(
+                'overview.trackCount',
+                { count: playback?.pendingCount ?? 0 },
+                playback?.pendingCount ?? 0,
+              )
+            "
+            :hint="playback?.durationFormatted ?? t('overview.queueEmpty')"
             :icon="ListMusic"
           />
           <StatCard
-            label="음악 작업"
-            :value="`${jobCount}건`"
-            hint="최근 워커 작업"
+            :label="t('overview.jobs')"
+            :value="t('overview.jobCount', { count: jobCount }, jobCount)"
+            :hint="t('overview.jobsHint')"
             :icon="Activity"
           />
           <StatCard
-            label="GitHub 리마인더"
+            :label="t('overview.githubReminders')"
             :value="githubLabel"
             :hint="githubHint"
             :icon="Github"
@@ -157,18 +173,15 @@
         <div class="grid gap-4 lg:grid-cols-5">
           <Card class="lg:col-span-3">
             <CardHeader>
-              <CardTitle class="text-base">최근 GitHub 발송</CardTitle>
+              <CardTitle class="text-base">{{ t('overview.recentDeliveries') }}</CardTitle>
               <CardAction>
                 <Button as-child variant="outline" size="sm">
-                  <RouterLink to="/github">설정 열기</RouterLink>
+                  <RouterLink to="/github">{{ t('overview.openSettings') }}</RouterLink>
                 </Button>
               </CardAction>
             </CardHeader>
             <CardContent>
-              <StateBlock
-                :empty="deliveries.length === 0"
-                empty-text="봇이 시작된 뒤 도착한 이벤트가 아직 없습니다."
-              >
+              <StateBlock :empty="deliveries.length === 0" :empty-text="t('overview.noDeliveries')">
                 <ul class="flex list-none flex-col gap-2 p-0">
                   <li
                     v-for="(delivery, index) in deliveries.slice(0, 6)"
@@ -198,7 +211,7 @@
 
           <Card class="lg:col-span-2">
             <CardHeader>
-              <CardTitle class="text-base">기능 상태</CardTitle>
+              <CardTitle class="text-base">{{ t('overview.featureStatus') }}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul class="flex list-none flex-col gap-1 p-0">
@@ -221,7 +234,7 @@
                       {{ feature.planned }}
                     </Badge>
                     <span v-else class="text-muted-foreground ml-auto shrink-0 text-xs">
-                      {{ feature.on ? '켜짐' : '꺼짐' }}
+                      {{ feature.on ? t('overview.on') : t('overview.off') }}
                     </span>
                   </RouterLink>
                 </li>

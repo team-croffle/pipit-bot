@@ -11,6 +11,7 @@
     X,
   } from 'lucide-vue-next';
   import { ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@
 
   import PlaylistNameDialog from './playlist-name-dialog.vue';
 
+  const { t } = useI18n();
   const props = defineProps<{
     playlist: PlaylistDetail;
     busy: boolean;
@@ -82,10 +84,13 @@
       <div class="min-w-0">
         <div class="flex items-center gap-2">
           <h3 class="truncate text-lg font-semibold" data-playlist-title>{{ playlist.name }}</h3>
-          <Badge variant="outline">{{ playlist.scope === 'shared' ? '공용' : '개인' }}</Badge>
+          <Badge variant="outline">{{
+            playlist.scope === 'shared' ? t('playlists.shared') : t('playlists.personal')
+          }}</Badge>
         </div>
         <p class="text-muted-foreground tnum text-sm">
-          {{ playlist.itemCount }}곡 · {{ formatSeconds(playlist.totalSec) }} ·
+          {{ t('playlists.trackCount', { count: playlist.itemCount }, playlist.itemCount) }} ·
+          {{ formatSeconds(playlist.totalSec) }} ·
           {{ playlist.createdBy }}
         </p>
       </div>
@@ -96,7 +101,7 @@
           @click="emit('play', false)"
         >
           <Play />
-          재생
+          {{ t('playlists.play') }}
         </Button>
         <Button
           variant="outline"
@@ -105,14 +110,14 @@
           @click="emit('play', true)"
         >
           <Shuffle />
-          섞어서
+          {{ t('playlists.shuffle') }}
         </Button>
         <Button
           variant="ghost"
           size="icon"
           :disabled="busy"
-          aria-label="이름 바꾸기"
-          title="이름 바꾸기"
+          :aria-label="t('playlists.rename')"
+          :title="t('playlists.rename')"
           data-playlist-rename
           @click="renaming = true"
         >
@@ -122,8 +127,8 @@
           variant="ghost"
           size="icon"
           :disabled="busy"
-          aria-label="재생목록 지우기"
-          title="재생목록 지우기"
+          :aria-label="t('playlists.delete')"
+          :title="t('playlists.delete')"
           data-playlist-delete
           @click="confirming = true"
         >
@@ -133,15 +138,15 @@
     </div>
 
     <p v-if="!canPlay" class="text-muted-foreground text-sm">
-      재생하려면 재생 제어 탭의 보이스 카드에서 봇을 통화방에 참여시키세요.
+      {{ t('playlists.joinFirst') }}
     </p>
 
     <form class="flex gap-2" @submit.prevent="addTyped">
       <Input
         v-model="typed"
         maxlength="500"
-        placeholder="곡 제목이나 링크를 입력해 담기…"
-        aria-label="곡 제목이나 링크"
+        :placeholder="t('playlists.typedPlaceholder')"
+        :aria-label="t('playlists.typedLabel')"
         class="min-w-0 flex-1"
         data-playlist-typed
       />
@@ -152,7 +157,7 @@
         data-playlist-typed-add
       >
         <Plus />
-        담기
+        {{ t('playlists.add') }}
       </Button>
     </form>
 
@@ -160,20 +165,19 @@
       <Input
         v-model="link"
         maxlength="500"
-        placeholder="링크에서 가져오기 — 여러 곡을 한꺼번에 담습니다"
-        aria-label="가져올 링크"
+        :placeholder="t('playlists.importPlaceholder')"
+        :aria-label="t('playlists.importLabel')"
         class="min-w-0 flex-1"
         data-playlist-import-link
       />
       <Button type="submit" variant="outline" :disabled="busy || !link.trim()" data-playlist-import>
         <Download />
-        가져오기
+        {{ t('playlists.import') }}
       </Button>
     </form>
 
     <p v-if="playlist.items.length === 0" class="text-muted-foreground text-sm">
-      아직 곡이 없습니다. 위에서 입력하거나, 재생 제어 탭의 곡·대기열·최근 재생·검색 결과에서
-      담으세요.
+      {{ t('playlists.noItems') }}
     </p>
     <ol v-else class="flex list-none flex-col gap-1 p-0" data-playlist-items>
       <li
@@ -191,7 +195,7 @@
             v-if="item.typed && item.request !== item.title"
             class="text-muted-foreground truncate text-xs"
           >
-            입력: {{ item.request }}
+            {{ t('playlists.typedAs', { request: item.request }) }}
           </p>
         </div>
         <span v-if="item.durationSec" class="text-muted-foreground tnum shrink-0 text-xs">
@@ -202,7 +206,7 @@
             variant="ghost"
             size="icon-sm"
             :disabled="busy || index === 0"
-            aria-label="위로"
+            :aria-label="t('music.row.up')"
             @click="emit('moveItem', item.id, index - 1)"
           >
             <ArrowUp />
@@ -211,7 +215,7 @@
             variant="ghost"
             size="icon-sm"
             :disabled="busy || index === playlist.items.length - 1"
-            aria-label="아래로"
+            :aria-label="t('music.row.down')"
             @click="emit('moveItem', item.id, index + 1)"
           >
             <ArrowDown />
@@ -220,7 +224,7 @@
             variant="ghost"
             size="icon-sm"
             :disabled="busy"
-            aria-label="빼기"
+            :aria-label="t('music.row.remove')"
             data-playlist-item-remove
             @click="emit('removeItem', item.id)"
           >
@@ -232,7 +236,7 @@
 
     <PlaylistNameDialog
       v-model:open="renaming"
-      title="이름 바꾸기"
+      :title="t('playlists.rename')"
       :initial="props.playlist.name"
       :busy="busy"
       @submit="rename"
@@ -240,15 +244,23 @@
     <Dialog v-model:open="confirming">
       <DialogContent class="sm:max-w-md" data-playlist-delete-dialog>
         <DialogHeader>
-          <DialogTitle>재생목록 지우기</DialogTitle>
+          <DialogTitle>{{ t('playlists.delete') }}</DialogTitle>
           <DialogDescription>
-            "{{ playlist.name }}"과 담긴 {{ playlist.itemCount }}곡을 지웁니다. 되돌릴 수 없습니다.
+            {{
+              t(
+                'playlists.deleteBody',
+                { name: playlist.name, count: playlist.itemCount },
+                playlist.itemCount,
+              )
+            }}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" @click="confirming = false">취소</Button>
+          <Button variant="outline" @click="confirming = false">
+            {{ t('playlists.cancel') }}
+          </Button>
           <Button variant="destructive" data-playlist-delete-confirm @click="confirmRemove">
-            지우기
+            {{ t('playlists.deleteConfirm') }}
           </Button>
         </DialogFooter>
       </DialogContent>

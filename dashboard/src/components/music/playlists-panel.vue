@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Download, ListMusic, Plus } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
   import { RouterLink } from 'vue-router';
 
   import StateBlock from '@/components/common/state-block.vue';
@@ -15,6 +16,7 @@
   import PlaylistImportDialog from './playlists/playlist-import-dialog.vue';
   import PlaylistNameDialog from './playlists/playlist-name-dialog.vue';
 
+  const { t } = useI18n();
   const props = defineProps<{ playback: PlaybackState | null; discordLinked: boolean }>();
   /** Playing changes the playback state; the page syncs with the bot only now and then. */
   const emit = defineEmits<{ changed: [] }>();
@@ -54,10 +56,14 @@
   onMounted(load);
 
   const groups = computed(() => [
-    { key: 'shared', title: '공용', items: playlists.value.filter((p) => p.scope === 'shared') },
+    {
+      key: 'shared',
+      title: t('playlists.shared'),
+      items: playlists.value.filter((p) => p.scope === 'shared'),
+    },
     {
       key: 'personal',
-      title: '내 재생목록',
+      title: t('playlists.mine'),
       items: playlists.value.filter((p) => p.scope === 'personal'),
     },
   ]);
@@ -73,7 +79,7 @@
   <div class="flex flex-col gap-4" data-playlists>
     <div class="flex flex-wrap items-center justify-between gap-3">
       <p class="text-muted-foreground text-sm">
-        재생목록을 저장하고 한 번에 재생합니다. 공용 재생목록은 누구나 고칠 수 있습니다.
+        {{ t('playlists.intro') }}
       </p>
       <div class="flex flex-wrap gap-2">
         <Button
@@ -85,7 +91,7 @@
           @click="importing = true"
         >
           <Download />
-          링크에서 가져오기
+          {{ t('playlists.importLink') }}
         </Button>
         <Button
           variant="outline"
@@ -95,7 +101,7 @@
           @click="creating = true"
         >
           <Plus />
-          새 재생목록
+          {{ t('playlists.new') }}
         </Button>
       </div>
     </div>
@@ -105,10 +111,22 @@
       class="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm"
       data-playlist-feed
     >
-      ▶ "{{ props.playback.playlist.name }}" 재생 중 — 남은
-      {{ props.playback.playlist.remaining }}곡<span v-if="props.playback.playlist.failed > 0"
-        >, 건너뛴 {{ props.playback.playlist.failed }}곡</span
-      >
+      {{
+        t(
+          'playlists.feed',
+          {
+            name: props.playback.playlist.name,
+            count: props.playback.playlist.remaining,
+          },
+          props.playback.playlist.remaining,
+        )
+      }}<span v-if="props.playback.playlist.failed > 0">{{
+        t(
+          'playlists.feedSkipped',
+          { count: props.playback.playlist.failed },
+          props.playback.playlist.failed,
+        )
+      }}</span>
     </p>
     <p
       v-if="error || message"
@@ -128,9 +146,9 @@
             <ListMusic class="size-6" />
           </div>
           <div class="min-w-0">
-            <p class="font-medium">아직 재생목록이 없습니다.</p>
+            <p class="font-medium">{{ t('playlists.none') }}</p>
             <p class="text-muted-foreground mt-1 text-sm">
-              새 재생목록을 만들고, 곡을 입력하거나 재생 제어 탭에서 담으세요.
+              {{ t('playlists.noneHint') }}
             </p>
           </div>
         </CardContent>
@@ -145,11 +163,17 @@
               class="text-muted-foreground text-xs"
               data-playlist-link-hint
             >
-              개인 재생목록을 쓰려면
-              <RouterLink to="/github" class="underline">GitHub 페이지</RouterLink>의 계정 연결에 내
-              GitHub ↔ 디스코드를 추가하세요.
+              <I18nT keypath="playlists.linkHint" scope="global">
+                <template #link>
+                  <RouterLink to="/github" class="underline">
+                    {{ t('playlists.githubPage') }}
+                  </RouterLink>
+                </template>
+              </I18nT>
             </p>
-            <p v-else-if="group.items.length === 0" class="text-muted-foreground text-xs">없음</p>
+            <p v-else-if="group.items.length === 0" class="text-muted-foreground text-xs">
+              {{ t('playlists.empty') }}
+            </p>
             <ul v-else class="flex list-none flex-col gap-2 p-0">
               <li v-for="playlist in group.items" :key="playlist.id">
                 <button
@@ -163,11 +187,15 @@
                   <span class="flex min-w-0 items-center gap-2">
                     <span class="truncate font-medium">{{ playlist.name }}</span>
                     <Badge v-if="playlist.scope === 'personal'" variant="outline" class="shrink-0">
-                      개인
+                      {{ t('playlists.personal') }}
                     </Badge>
                   </span>
                   <span class="text-muted-foreground tnum text-xs">
-                    {{ playlist.itemCount }}곡 · {{ formatSeconds(playlist.totalSec) }}
+                    {{
+                      t('playlists.trackCount', { count: playlist.itemCount }, playlist.itemCount)
+                    }}
+                    ·
+                    {{ formatSeconds(playlist.totalSec) }}
                   </span>
                 </button>
               </li>
@@ -191,7 +219,7 @@
               @remove-item="(itemId) => removeItem(selected!.id, itemId)"
               @move-item="(itemId, to) => moveItem(selected!.id, itemId, to)"
             />
-            <p v-else class="text-muted-foreground text-sm">왼쪽에서 재생목록을 고르세요.</p>
+            <p v-else class="text-muted-foreground text-sm">{{ t('playlists.pick') }}</p>
           </CardContent>
         </Card>
       </div>
@@ -199,12 +227,8 @@
 
     <PlaylistNameDialog
       v-model:open="creating"
-      title="새 재생목록"
-      :description="
-        discordLinked
-          ? '공용은 서버 모두가 보고 고치고, 개인은 나만 봅니다.'
-          : '서버 모두가 보고 고칠 수 있는 공용 재생목록을 만듭니다.'
-      "
+      :title="t('playlists.new')"
+      :description="discordLinked ? t('playlists.newScopes') : t('playlists.newShared')"
       :scope-choice="discordLinked"
       :busy="busy"
       @submit="onCreate"

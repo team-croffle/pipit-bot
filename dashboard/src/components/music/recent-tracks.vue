@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ChevronDown, History } from 'lucide-vue-next';
   import { computed, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
@@ -12,6 +13,7 @@
    * back, not something to watch — and fetched only while open: whenever the playing
    * track changes, since that is when the history moves.
    */
+  const { t } = useI18n();
   const props = defineProps<{ playback: PlaybackState | null }>();
 
   const open = ref(false);
@@ -26,8 +28,7 @@
       tracks.value = body.tracks;
       error.value = '';
     } catch (cause) {
-      error.value =
-        cause instanceof Error ? cause.message : '최근 재생 목록을 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('music.recent.loadFailed');
     } finally {
       loading.value = false;
     }
@@ -63,16 +64,16 @@
       @click="toggle"
     >
       <History />
-      최근 재생
+      {{ t('music.recent.title') }}
       <ChevronDown class="transition-transform" :class="open ? 'rotate-180' : ''" />
     </Button>
     <template v-if="open">
       <p v-if="error" class="text-destructive text-xs" role="alert">{{ error }}</p>
       <p v-else-if="loading && !tracks.length" class="text-muted-foreground text-xs">
-        불러오는 중…
+        {{ t('common.loading') }}
       </p>
       <p v-else-if="!tracks.length" class="text-muted-foreground text-xs">
-        이번 세션에서 재생한 곡이 아직 없습니다.
+        {{ t('music.recent.empty') }}
       </p>
       <ol v-else class="flex max-h-48 list-none flex-col overflow-y-auto p-0">
         <li

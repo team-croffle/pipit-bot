@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { RotateCcw, X } from 'lucide-vue-next';
   import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson, postJson } from '@/api';
   import ListPagination from '@/components/common/list-pagination.vue';
@@ -16,6 +17,7 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
+  import { intlLocale } from '@/i18n';
   import {
     canCancel,
     canRetry,
@@ -25,6 +27,7 @@
   } from '@/lib/music-jobs';
   import type { JobRecord, JobsResponse } from '@/types';
 
+  const { t } = useI18n();
   const jobs = ref<JobRecord[]>([]);
   const error = ref('');
   const loading = ref(true);
@@ -48,7 +51,7 @@
   let timer: ReturnType<typeof setInterval> | undefined;
 
   function formatTime(epochMs: number): string {
-    return new Date(epochMs).toLocaleString();
+    return new Date(epochMs).toLocaleString(intlLocale());
   }
 
   function isRedirect(cause: unknown): boolean {
@@ -64,7 +67,7 @@
       if (isRedirect(cause)) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : '작업 목록을 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('music.jobs.loadFailed');
     } finally {
       loading.value = false;
     }
@@ -78,16 +81,14 @@
     try {
       await postJson(`/api/music/jobs/${encodeURIComponent(job.jobId)}/${action}`);
       actionMessage.value =
-        action === 'cancel'
-          ? '작업을 취소했습니다. 나중에 준비가 끝나도 재생하지 않습니다.'
-          : '같은 요청으로 다시 준비하고 있습니다.';
+        action === 'cancel' ? t('music.jobs.cancelled') : t('music.jobs.retrying');
       actionFailed.value = false;
       emit('changed');
     } catch (cause) {
       if (isRedirect(cause)) {
         return;
       }
-      actionMessage.value = cause instanceof Error ? cause.message : '요청을 처리하지 못했습니다.';
+      actionMessage.value = cause instanceof Error ? cause.message : t('music.requestFailed');
       actionFailed.value = true;
     } finally {
       busyId.value = null;
@@ -114,7 +115,7 @@
 <template>
   <Card data-jobs-card>
     <CardHeader>
-      <CardTitle class="text-base">음악 작업</CardTitle>
+      <CardTitle class="text-base">{{ t('music.jobs.title') }}</CardTitle>
       <CardAction>
         <Badge variant="outline" class="tnum">{{ jobs.length }}</Badge>
       </CardAction>
@@ -133,7 +134,7 @@
         :loading="loading"
         :error="error"
         :empty="jobs.length === 0"
-        empty-text="아직 처리한 작업이 없습니다."
+        :empty-text="t('music.jobs.empty')"
       >
         <!-- Table on wide screens, cards on narrow ones — a 5-column table cannot
              shrink to a phone without a scrollbar swallowing the last column. -->
@@ -141,11 +142,13 @@
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead class="w-24">상태</TableHead>
-                <TableHead>요청</TableHead>
-                <TableHead>결과</TableHead>
-                <TableHead class="w-44">갱신</TableHead>
-                <TableHead class="w-24 text-right"><span class="sr-only">작업</span></TableHead>
+                <TableHead class="w-24">{{ t('music.jobs.status.title') }}</TableHead>
+                <TableHead>{{ t('music.jobs.query') }}</TableHead>
+                <TableHead>{{ t('music.jobs.result') }}</TableHead>
+                <TableHead class="w-44">{{ t('music.jobs.updated') }}</TableHead>
+                <TableHead class="w-24 text-right"
+                  ><span class="sr-only">{{ t('music.jobs.actions') }}</span></TableHead
+                >
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -176,10 +179,10 @@
                   </template>
                   <p v-else class="truncate">{{ job.track?.title ?? '—' }}</p>
                   <p v-if="job.lateResult" data-job-late class="text-muted-foreground text-xs">
-                    응답이 늦게 도착함 — 재생하지 않음
+                    {{ t('music.jobs.late') }}
                   </p>
                   <p v-if="job.retriedAs" data-job-retried class="text-muted-foreground text-xs">
-                    다시 시도함
+                    {{ t('music.jobs.retried') }}
                   </p>
                 </TableCell>
                 <TableCell class="text-muted-foreground tnum text-xs">
@@ -195,7 +198,7 @@
                     @click="act(job, 'cancel')"
                   >
                     <X />
-                    취소
+                    {{ t('music.jobs.cancel') }}
                   </Button>
                   <Button
                     v-else-if="canRetry(job)"
@@ -206,7 +209,7 @@
                     @click="act(job, 'retry')"
                   >
                     <RotateCcw />
-                    다시 시도
+                    {{ t('music.jobs.retry') }}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -242,10 +245,10 @@
               {{ job.track?.title ?? '—' }}
             </p>
             <p v-if="job.lateResult" data-job-late class="text-muted-foreground text-xs">
-              응답이 늦게 도착함 — 재생하지 않음
+              {{ t('music.jobs.late') }}
             </p>
             <p v-if="job.retriedAs" data-job-retried class="text-muted-foreground text-xs">
-              다시 시도함
+              {{ t('music.jobs.retried') }}
             </p>
             <div v-if="canCancel(job) || canRetry(job)" class="mt-2 flex justify-end">
               <Button
@@ -257,7 +260,7 @@
                 @click="act(job, 'cancel')"
               >
                 <X />
-                취소
+                {{ t('music.jobs.cancel') }}
               </Button>
               <Button
                 v-else
@@ -268,7 +271,7 @@
                 @click="act(job, 'retry')"
               >
                 <RotateCcw />
-                다시 시도
+                {{ t('music.jobs.retry') }}
               </Button>
             </div>
           </li>

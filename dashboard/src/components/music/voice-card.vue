@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { LogOut, Volume2 } from 'lucide-vue-next';
   import { computed, onMounted, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import VoiceChannelSelect from '@/components/common/voice-channel-select.vue';
@@ -12,6 +13,7 @@
   import { Slider } from '@/components/ui/slider';
   import type { DiscordVoiceChannel, PlaybackState } from '@/types';
 
+  const { t } = useI18n();
   const props = defineProps<{ playback: PlaybackState | null; busy: boolean }>();
 
   const emit = defineEmits<{ action: [path: string, body?: unknown] }>();
@@ -36,8 +38,7 @@
       channels.value = body.channels;
       channelsError.value = '';
     } catch (cause) {
-      channelsError.value =
-        cause instanceof Error ? cause.message : '통화방 목록을 불러오지 못했습니다.';
+      channelsError.value = cause instanceof Error ? cause.message : t('music.voice.loadFailed');
     } finally {
       channelsLoading.value = false;
     }
@@ -107,17 +108,17 @@
 <template>
   <Card data-voice-card>
     <CardHeader>
-      <CardTitle class="text-base">보이스 · 볼륨</CardTitle>
-      <CardDescription>봇이 접속한 통화방과 출력 볼륨</CardDescription>
+      <CardTitle class="text-base">{{ t('music.voice.title') }}</CardTitle>
+      <CardDescription>{{ t('music.voice.description') }}</CardDescription>
     </CardHeader>
     <CardContent class="flex flex-col gap-5">
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between gap-3">
-          <span class="text-sm">통화방</span>
+          <span class="text-sm">{{ t('music.voice.channel') }}</span>
           <Badge v-if="playback?.voiceChannelName" variant="outline" class="max-w-48 truncate">
             {{ playback.voiceChannelName }}
           </Badge>
-          <span v-else class="text-muted-foreground text-sm">참여 중이 아님</span>
+          <span v-else class="text-muted-foreground text-sm">{{ t('music.voice.notJoined') }}</span>
         </div>
 
         <div class="flex gap-2">
@@ -132,7 +133,7 @@
             />
           </div>
           <Button data-voice-join :disabled="busy || !target || target === joinedId" @click="join">
-            {{ joinedId ? '이동' : '참여' }}
+            {{ joinedId ? t('music.voice.move') : t('music.voice.join') }}
           </Button>
         </div>
 
@@ -140,7 +141,7 @@
           {{ channelsError }}
         </p>
         <p v-else-if="emptyWarning" class="text-muted-foreground text-xs">
-          아무도 없는 통화방입니다 — 봇은 30초 뒤 스스로 나갑니다.
+          {{ t('music.voice.emptyWarning') }}
         </p>
 
         <Button
@@ -153,7 +154,7 @@
           @click="emit('action', '/api/music/voice/leave')"
         >
           <LogOut />
-          나가기
+          {{ t('music.voice.leave') }}
         </Button>
       </div>
 
@@ -161,7 +162,7 @@
         <div class="flex items-center justify-between gap-3">
           <Label for="volume-number" class="text-muted-foreground inline-flex items-center gap-1.5">
             <Volume2 class="size-5" />
-            볼륨
+            {{ t('music.voice.volume') }}
           </Label>
           <Input
             id="volume-number"
@@ -181,7 +182,7 @@
         </div>
         <Slider
           data-volume-slider
-          aria-label="볼륨"
+          :aria-label="t('music.voice.volume')"
           :min="0"
           :max="MAX_VOLUME"
           :step="1"
@@ -200,11 +201,7 @@
           :class="boosted ? 'text-warning' : 'text-muted-foreground'"
           data-volume-hint
         >
-          {{
-            boosted
-              ? '100을 넘으면 소리를 키웁니다 — 큰 소리는 깨질 수 있어요.'
-              : '100이 원래 크기입니다. 통화방에 없어도 바꿀 수 있어요.'
-          }}
+          {{ boosted ? t('music.voice.boosted') : t('music.voice.volumeHint') }}
         </p>
       </div>
     </CardContent>

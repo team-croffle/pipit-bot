@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson, putJson } from '@/api';
   import StateBlock from '@/components/common/state-block.vue';
@@ -16,6 +17,7 @@
   import { Label } from '@/components/ui/label';
   import type { BotRuntimeConfig, DiscordChannel } from '@/types';
 
+  const { t } = useI18n();
   const { readOnly } = defineProps<{ readOnly: boolean }>();
 
   const channelIds = ref<string[]>([]);
@@ -24,12 +26,10 @@
   const error = ref('');
   const saved = ref('');
 
-  const UNCATEGORIZED = '카테고리 없음';
-
   const groups = computed(() => {
     const result: { category: string; channels: DiscordChannel[] }[] = [];
     for (const channel of channels.value) {
-      const category = channel.category ?? UNCATEGORIZED;
+      const category = channel.category ?? t('music.channels.uncategorized');
       const last = result.at(-1);
       if (last?.category === category) {
         last.channels.push(channel);
@@ -54,7 +54,7 @@
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : '채널 설정을 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('music.channels.loadFailed');
     } finally {
       loading.value = false;
     }
@@ -75,9 +75,9 @@
         musicChannelIds: channelIds.value,
       });
       channelIds.value = config.musicChannelIds ?? [];
-      saved.value = '저장했습니다.';
+      saved.value = t('music.channels.saved');
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('music.channels.saveFailed');
     }
   }
 </script>
@@ -85,13 +85,13 @@
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-base">명령 채널 제한</CardTitle>
+      <CardTitle class="text-base">{{ t('music.channels.title') }}</CardTitle>
       <CardDescription>
-        음악 명령을 선택한 텍스트 채널로 제한합니다. 모두 해제하면 어느 채널에서나 허용됩니다.
+        {{ t('music.channels.description') }}
       </CardDescription>
       <CardAction>
         <Button variant="outline" size="sm" :disabled="readOnly || loading" @click="save">
-          저장
+          {{ t('music.channels.save') }}
         </Button>
       </CardAction>
     </CardHeader>
@@ -107,7 +107,7 @@
               v-for="channel in group.channels"
               :key="channel.id"
               class="flex items-center gap-2.5"
-              :title="channel.canPost ? '' : '봇이 이 채널에 글을 쓸 수 없습니다.'"
+              :title="channel.canPost ? '' : t('music.channels.cannotPost')"
             >
               <Checkbox
                 :id="`music-${channel.id}`"

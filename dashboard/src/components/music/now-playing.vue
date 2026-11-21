@@ -12,6 +12,7 @@
     Square,
   } from 'lucide-vue-next';
   import { computed, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
   import SearchDialog from '@/components/music/search-dialog.vue';
@@ -29,6 +30,7 @@
   import { playlistFeedback } from '@/composables/use-playlist-saver';
   import type { PlaybackRepeatMode, PlaybackState, PlaybackStatus } from '@/types';
 
+  const { t } = useI18n();
   const props = defineProps<{
     playback: PlaybackState | null;
     busy: boolean;
@@ -45,12 +47,12 @@
 
   const subtitle = computed(() => {
     if (!current.value) {
-      return '위에서 추가하거나 디스코드 명령을 사용하세요.';
+      return t('music.now.hint');
     }
 
     const where = props.playback?.voiceChannelName
-      ? `#${props.playback.voiceChannelName} 재생 중`
-      : '재생 중';
+      ? t('music.now.playingIn', { channel: props.playback.voiceChannelName })
+      : t('music.status.playing');
     return where;
   });
 
@@ -60,10 +62,12 @@
   function downFor(since: number | null | undefined): string {
     const minutes = since ? Math.floor((Date.now() - since) / 60_000) : 0;
     if (minutes < 1) {
-      return '방금 꺼졌어요';
+      return t('music.now.downJustNow');
     }
 
-    return minutes < 60 ? `${minutes}분째` : `${Math.floor(minutes / 60)}시간째`;
+    return minutes < 60
+      ? t('music.now.downMinutes', { minutes })
+      : t('music.now.downHours', { hours: Math.floor(minutes / 60) });
   }
 
   // Priority, not stacking: an error is the thing to read, then a music worker that is
@@ -77,7 +81,7 @@
     // Adding stays possible — a worker that has just come back takes the request — but
     // this says why it will most likely fail. It goes away on the poll after it is back.
     if (workerDown.value) {
-      return `음악 워커가 꺼져 있어요 · ${downFor(props.playback?.worker?.since)}`;
+      return t('music.now.workerDown', { since: downFor(props.playback?.worker?.since) });
     }
 
     // Something the player did on its own (a track skipped for a missing file) is
@@ -96,9 +100,7 @@
       return props.message;
     }
 
-    return props.playback && !props.playback.canEnqueue
-      ? '트랙을 추가하려면 보이스 카드에서 봇을 통화방에 참여시키세요.'
-      : '';
+    return props.playback && !props.playback.canEnqueue ? t('music.now.joinFirst') : '';
   });
 
   const emit = defineEmits<{
@@ -118,13 +120,9 @@
     idle: 'outline',
   };
 
-  const statusLabel: Record<PlaybackStatus, string> = {
-    loading: '준비 중',
-    playing: '재생 중',
-    paused: '일시정지',
-    ready: '대기',
-    idle: '유휴',
-  };
+  function statusLabel(state: PlaybackStatus): string {
+    return t(`music.status.${state}`);
+  }
 
   // `off` and `track` are the two the button cycles between when nothing is queued;
   // the full set lives in the queue card's repeat control.
@@ -156,7 +154,7 @@
           id="enqueue-query"
           v-model="query"
           type="text"
-          placeholder="검색어나 링크를 입력하세요…"
+          :placeholder="t('music.now.queryPlaceholder')"
           class="flex-1"
           :disabled="!playback?.canEnqueue || busy"
         />
@@ -171,7 +169,7 @@
             :disabled="cannotAdd"
           >
             <Play />
-            재생
+            {{ t('music.now.play') }}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
@@ -181,8 +179,8 @@
                 size="icon"
                 class="border-primary-foreground/20 rounded-l-none border-l"
                 :disabled="cannotAdd"
-                aria-label="추가 방법 선택"
-                title="추가 방법 선택"
+                :aria-label="t('music.now.addMode')"
+                :title="t('music.now.addMode')"
               >
                 <ChevronDown />
               </Button>
@@ -190,7 +188,7 @@
             <DropdownMenuContent align="end">
               <DropdownMenuItem @select="submit(true)">
                 <ListStart />
-                다음에 재생
+                {{ t('music.now.playNext') }}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -230,7 +228,7 @@
               class="min-w-0 truncate font-semibold"
               :class="current ? '' : 'text-muted-foreground'"
             >
-              {{ current?.title ?? '재생 중인 트랙이 없습니다' }}
+              {{ current?.title ?? t('music.now.nothingPlaying') }}
             </p>
           </div>
           <p class="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
@@ -241,14 +239,18 @@
               data-autoplay-current
             >
               <Bot class="size-4" aria-hidden="true" />
-              자동 재생
+              {{ t('music.autoplay') }}
             </span>
           </p>
           <Progress
             data-now-progress
             class="mt-3 h-1.5"
             :model-value="progress"
-            :aria-label="current ? `${Math.round(progress)}% 재생` : '재생 중인 트랙 없음'"
+            :aria-label="
+              current
+                ? t('music.now.progress', { percent: Math.round(progress) })
+                : t('music.now.noTrack')
+            "
           />
           <p class="text-muted-foreground tnum mt-1.5 flex justify-between text-xs">
             <span>{{ current?.positionLabel ?? '--:--' }}</span>
@@ -260,7 +262,7 @@
           :variant="playback ? statusVariant[playback.status] : 'outline'"
           class="mt-0.5 min-w-14 shrink-0 justify-center"
         >
-          {{ playback ? statusLabel[playback.status] : '…' }}
+          {{ playback ? statusLabel(playback.status) : '…' }}
         </Badge>
       </div>
 
@@ -271,8 +273,8 @@
           class="rounded-full"
           :class="playback && playback.repeatMode !== 'off' ? 'border-primary text-primary' : ''"
           :disabled="busy"
-          :aria-label="`반복 재생: ${playback?.repeatMode ?? 'off'}`"
-          :title="`반복 재생: ${playback?.repeatMode ?? 'off'}`"
+          :aria-label="t('music.now.repeat', { mode: playback?.repeatMode ?? 'off' })"
+          :title="t('music.now.repeat', { mode: playback?.repeatMode ?? 'off' })"
           @click="cycleRepeat"
         >
           <Repeat />
@@ -283,8 +285,8 @@
           size="icon"
           class="rounded-full"
           :disabled="busy || !playback?.hasPrevious"
-          aria-label="이전 트랙"
-          title="이전 트랙 — 지금 곡은 대기열 맨 앞으로"
+          :aria-label="t('music.now.previous')"
+          :title="t('music.now.previousHint')"
           @click="emit('action', '/api/music/playback/back')"
         >
           <SkipBack />
@@ -294,7 +296,7 @@
           size="icon-lg"
           class="rounded-full"
           :disabled="busy || !playback.active"
-          aria-label="재개"
+          :aria-label="t('music.now.resume')"
           @click="emit('action', '/api/music/playback/resume')"
         >
           <Play />
@@ -304,7 +306,7 @@
           size="icon-lg"
           class="rounded-full"
           :disabled="busy || !playback?.active"
-          aria-label="일시정지"
+          :aria-label="t('music.status.paused')"
           @click="emit('action', '/api/music/playback/pause')"
         >
           <Pause />
@@ -314,7 +316,7 @@
           size="icon"
           class="rounded-full"
           :disabled="busy || !playback?.active"
-          aria-label="다음 트랙"
+          :aria-label="t('music.now.next')"
           @click="emit('action', '/api/music/playback/skip')"
         >
           <SkipForward />
@@ -324,7 +326,7 @@
           size="icon"
           class="rounded-full"
           :disabled="busy || !playback?.active"
-          aria-label="정지하고 나가기"
+          :aria-label="t('music.now.stop')"
           @click="emit('action', '/api/music/playback/stop')"
         >
           <Square />

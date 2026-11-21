@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ArrowDown, ArrowUp, Bot, Ellipsis, SkipForward, X } from 'lucide-vue-next';
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import AddToPlaylist from '@/components/music/playlists/add-to-playlist.vue';
   import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@
    * WHY a menu on phones: four icon buttons left a title of a few letters at 375px, and
    * the title is what the row is for. From `sm` up the buttons sit in the row.
    */
+  const { t } = useI18n();
   const props = defineProps<{ track: PlaybackTrackItem; last: boolean; busy: boolean }>();
 
   const emit = defineEmits<{ action: [path: string, body?: unknown] }>();
@@ -27,8 +29,8 @@
   // A row keeps its component as the queue moves (keyed by id), so its number can change.
   const skipTitle = computed(() =>
     props.track.index > 1
-      ? `여기로 건너뛰기 — 앞의 ${props.track.index - 1}곡은 대기열에서 빠집니다`
-      : '여기로 건너뛰기',
+      ? t('music.row.skipToDrops', { count: props.track.index - 1 }, props.track.index - 1)
+      : t('music.row.skipTo'),
   );
 
   function move(by: -1 | 1): void {
@@ -61,7 +63,7 @@
       v-if="track.autoplay"
       class="text-muted-foreground size-4 shrink-0"
       role="img"
-      aria-label="자동 재생으로 들어온 곡"
+      :aria-label="t('music.row.autoplayed')"
       data-autoplay-row
     />
     <span v-if="track.duration" class="text-muted-foreground tnum shrink-0 text-xs">
@@ -75,8 +77,8 @@
         variant="ghost"
         size="icon-xs"
         :disabled="busy || track.index === 1"
-        :aria-label="`${track.index}번 위로`"
-        title="위로"
+        :aria-label="t('music.row.upLabel', { index: track.index })"
+        :title="t('music.row.up')"
         @click="move(-1)"
       >
         <ArrowUp />
@@ -86,8 +88,8 @@
         variant="ghost"
         size="icon-xs"
         :disabled="busy || last"
-        :aria-label="`${track.index}번 아래로`"
-        title="아래로"
+        :aria-label="t('music.row.downLabel', { index: track.index })"
+        :title="t('music.row.down')"
         @click="move(1)"
       >
         <ArrowDown />
@@ -97,7 +99,7 @@
         variant="ghost"
         size="icon-xs"
         :disabled="busy"
-        :aria-label="`${track.index}번으로 건너뛰기`"
+        :aria-label="t('music.row.skipToLabel', { index: track.index })"
         :title="skipTitle"
         @click="skipTo"
       >
@@ -108,8 +110,8 @@
         variant="ghost"
         size="icon-xs"
         :disabled="busy"
-        :aria-label="`${track.index}번 삭제`"
-        title="대기열에서 빼기"
+        :aria-label="t('music.row.removeLabel', { index: track.index })"
+        :title="t('music.row.removeHint')"
         @click="remove"
       >
         <X />
@@ -124,7 +126,7 @@
           size="icon-xs"
           class="shrink-0 sm:hidden"
           :disabled="busy"
-          :aria-label="`${track.index}번 메뉴`"
+          :aria-label="t('music.row.menuLabel', { index: track.index })"
         >
           <Ellipsis />
         </Button>
@@ -132,19 +134,19 @@
       <DropdownMenuContent align="end">
         <DropdownMenuItem :disabled="track.index === 1" @select="move(-1)">
           <ArrowUp />
-          위로
+          {{ t('music.row.up') }}
         </DropdownMenuItem>
         <DropdownMenuItem :disabled="last" @select="move(1)">
           <ArrowDown />
-          아래로
+          {{ t('music.row.down') }}
         </DropdownMenuItem>
         <DropdownMenuItem @select="skipTo">
           <SkipForward />
-          여기로 건너뛰기
+          {{ t('music.row.skipTo') }}
         </DropdownMenuItem>
         <DropdownMenuItem @select="remove">
           <X />
-          빼기
+          {{ t('music.row.remove') }}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
