@@ -108,7 +108,7 @@ Pipit speaks English and Korean. Three things decide which:
 
 - **Messages posted to a channel** — the music channel's banner, GitHub notifications, the join and leave record, reaction-role notices, recaps — follow the server's **message language** (English by default), and each feature can override it on its own page ("Message language" in the page header; the recap's is on its settings card)
 - **Replies only one person sees** — slash command answers, the music remote's forms and search results — follow that person's **Discord language**. Slash command descriptions are registered in both, so Discord shows each person their own
-- **The dashboard** follows the person's own choice, then the server's dashboard default, then their browser's language (from v0.8.3-rc.2; until then it is in Korean except the sign-in page)
+- **The dashboard** follows the person's own choice (the language menu in its header), then the server's dashboard default, then their browser's language; the sign-in page follows the browser
 
 The server defaults and the per-feature overrides are on the settings page's **Language** card and in `data/language.json`. A wording an operator wrote — a GitHub template, a join message, a reaction-role panel — is sent as written; only the built-in wording follows the language (and `{event}`, which the bot fills in). The music channel's banner was always in Korean before v0.8.3: **set the message language (or music's) to Korean to keep it so.**
 

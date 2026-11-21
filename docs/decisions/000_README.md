@@ -76,3 +76,4 @@ Each file has:
 | [024](./024_v0.8.0_database.md) | v0.8.0 | The data the bot keeps adding to moves into PostgreSQL; settings stay files |
 | [025](./025_v0.8.1_music-recap.md) | v0.8.1 | Music recaps count a play history of their own, and never show who asked for what |
 | [026](./026_v0.8.2_dashboard-login.md) | v0.8.2 | The dashboard signs people in itself, and admin is a group |
+| [027](./027_v0.8.3_languages.md) | v0.8.3 | Pipit speaks English and Korean: a server default, a choice per feature, and each person's own |
