@@ -102,9 +102,19 @@ With `NODE_ENV=development` the bot creates two fixed accounts, `admin` / `admin
 4. For password sign-in, set `DASHBOARD_BOOTSTRAP_USERNAME` and `DASHBOARD_BOOTSTRAP_PASSWORD` once
 5. Everyone signs in again
 
+### Languages
+
+Pipit speaks English and Korean. Three things decide which:
+
+- **Messages posted to a channel** — the music channel's banner, GitHub notifications, the join and leave record, reaction-role notices, recaps — follow the server's **message language** (English by default), and each feature can override it on its own page ("Message language" in the page header; the recap's is on its settings card)
+- **Replies only one person sees** — slash command answers, the music remote's forms and search results — follow that person's **Discord language**. Slash command descriptions are registered in both, so Discord shows each person their own
+- **The dashboard** follows the person's own choice, then the server's dashboard default, then their browser's language (from v0.8.3-rc.2; until then it is in Korean except the sign-in page)
+
+The server defaults and the per-feature overrides are on the settings page's **Language** card and in `data/language.json`. A wording an operator wrote — a GitHub template, a join message, a reaction-role panel — is sent as written; only the built-in wording follows the language (and `{event}`, which the bot fills in). The music channel's banner was always in Korean before v0.8.3: **set the message language (or music's) to Korean to keep it so.**
+
 ### Data: a database and `data/`
 
-What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels, the dashboard's users and their sessions (with the GitHub ↔ Discord account links) and the music play history. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
+What the bot **produces and keeps adding to** lives in **PostgreSQL** (required): tracked GitHub messages, the music channels' banner messages, invite counts, the audit log, playlists, reaction-role panels, the dashboard's users and their sessions (with the GitHub ↔ Discord account links) and the music play history. **Settings a person opens and edits** stay JSON files under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json`, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`, `language.json`; gitignored) — when the dashboard is locked out, they can still be fixed in an editor. Mount `./pipit-bot/data:/app/data` in Docker.
 
 - **Starting** — the bot waits for the database for up to two minutes (a container that is still starting is fine), then applies its migrations. Without a database to connect to it does not start
 - **Upgrading from a release without a database** — on its first start the bot moves each file it now keeps in the database into it, once, and renames the file to `*.migrated` (it is not deleted). The log says what was moved
@@ -233,7 +243,7 @@ Every track that plays is recorded — the track, how long it actually played, h
 - **The year's playlist** — with the year's recap comes a shared playlist, "2026 결산", of its most played tracks
 - **Dashboard** — the **음악 결산** page shows any month or year, the running one so far, and **내 결산** (your own plays, through your GitHub ↔ Discord link). An admin can post a finished period again
 - **`/recap [period]`** — your own recap, shown only to you, in your Discord language (Korean or English)
-- **Settings** — the settings page's 음악 결산 card, kept in `data/music-recap.json`: recording (on), posting (off), the channel, the time zone periods follow (`Asia/Seoul`), how many tracks a recap lists (10) and the language a posted recap is written in (`en` or `ko`, `en` by default). Recaps start with the plays recorded from v0.8.1 on
+- **Settings** — the settings page's 음악 결산 card, kept in `data/music-recap.json`: recording (on), posting (off), the channel, the time zone periods follow (`Asia/Seoul`), how many tracks a recap lists (10). A posted recap's language is a language setting (see [Languages](#languages)); one chosen here before v0.8.3 is carried over once. Recaps start with the plays recorded from v0.8.1 on
 
 ## Feature switches
 
