@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 
 import type { Notice } from '../discord/notice.js';
+import { say } from '../i18n/phrase.js';
 import type { SearchCandidate } from './search-client.js';
 import { formatDurationFromSeconds } from './track-format.js';
 
@@ -96,5 +97,5 @@ export function searchResultsMessage(searchId: string, results: SearchCandidate[
 
 /** What a search answers when there is nothing to pick from. */
 export function noResultsNotice(): Notice {
-  return { ok: false, message: 'Nothing matched that search.' };
+  return { ok: false, ...say('noMatch') };
 }

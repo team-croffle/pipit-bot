@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import type { ButtonInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
+import { say } from '../lib/i18n/phrase.js';
 import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
 import { deletePlaylist, PlaylistError } from '../lib/music/playlists/store.js';
@@ -30,12 +31,15 @@ export class PlaylistDeleteButton extends InteractionHandler {
       );
       await replyNotice(
         interaction,
-        { ok: true, message: `Deleted "${gone.name}".` },
+        { ok: true, ...say('deletedPlaylist', { name: gone.name }) },
         { seconds: 5 },
       );
     } catch (error) {
-      const message = error instanceof PlaylistError ? error.message : 'Could not delete it.';
-      await replyNotice(interaction, { ok: false, message }, { seconds: 5 });
+      const failure =
+        error instanceof PlaylistError
+          ? { message: error.message, phrase: error.phrase }
+          : say('deleteFailed');
+      await replyNotice(interaction, { ok: false, ...failure }, { seconds: 5 });
     }
   }
 }

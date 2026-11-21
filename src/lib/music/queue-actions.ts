@@ -1,3 +1,4 @@
+import { say } from '../i18n/phrase.js';
 import { nudgeAutoplay } from './autoplay.js';
 import { setPcmVolume } from './pcm-volume.js';
 import { updatePlaybackOptions, type RepeatDefault } from './playback-options.js';
@@ -31,10 +32,7 @@ function findQueuedTrack(
 function notQueued(ref: QueuedTrackRef): QueuedTrackResult {
   return {
     ok: false,
-    message:
-      'id' in ref
-        ? 'That track is no longer in the queue.'
-        : `No track found at index ${ref.index}.`,
+    ...('id' in ref ? say('trackGone') : say('noTrackAt', { index: ref.index })),
   };
 }
 
@@ -51,10 +49,10 @@ export function removeQueuedTrack(ref: QueuedTrackRef, guildId?: string): Queued
 
   const title = formatTrackTitle(found.track);
   if (!queue.node.remove(found.track)) {
-    return { ok: false, message: 'Failed to remove that track.' };
+    return { ok: false, ...say('removeFailed') };
   }
 
-  return { ok: true, message: `Removed: ${title}`, title };
+  return { ok: true, ...say('removed', { title }), title };
 }
 
 /** Like `!skipto`: the tracks queued before the target are dropped, not kept for later. */
@@ -71,10 +69,10 @@ export function skipToQueuedTrack(ref: QueuedTrackRef, guildId?: string): Queued
 
   const title = formatTrackTitle(found.track);
   if (!queue.node.skipTo(found.track)) {
-    return { ok: false, message: 'Failed to skip to that track.' };
+    return { ok: false, ...say('skipToFailed') };
   }
 
-  return { ok: true, message: `Skipped to: ${title}`, title };
+  return { ok: true, ...say('skippedTo', { title }), title };
 }
 
 /**
@@ -92,7 +90,7 @@ export function moveQueuedTrack(
   }
 
   if (!Number.isInteger(to) || to < 1) {
-    return { ok: false, message: 'The new position must be 1 or more.' };
+    return { ok: false, ...say('positionTooLow') };
   }
 
   const found = findQueuedTrack(queue, ref);
@@ -103,11 +101,11 @@ export function moveQueuedTrack(
   const target = Math.min(to, queue.tracks.size);
   const title = formatTrackTitle(found.track);
   if (target - 1 === found.position) {
-    return { ok: true, message: `${title} is already at ${target}.`, title };
+    return { ok: true, ...say('alreadyAt', { title, position: target }), title };
   }
 
   queue.node.move(found.track, target - 1);
-  return { ok: true, message: `Moved ${title} to ${target}.`, title };
+  return { ok: true, ...say('movedTo', { title, position: target }), title };
 }
 
 /**
@@ -122,11 +120,11 @@ export function shuffleQueue(guildId?: string): PlaybackActionResult {
   }
 
   if (queue.tracks.size < 2) {
-    return { ok: false, message: 'There need to be at least two queued tracks to shuffle.' };
+    return { ok: false, ...say('shuffleNeedsTwo') };
   }
 
   queue.tracks.shuffle();
-  return { ok: true, message: `Shuffled ${queue.tracks.size} tracks.` };
+  return { ok: true, ...say('shuffled', { count: queue.tracks.size }) };
 }
 
 /** A setting like mono: it applies whether or not the bot is in a voice channel (pcm-volume.ts). */
@@ -134,36 +132,33 @@ export function setVolume(volume: number): PlaybackActionResult {
   if (!isVolume(volume)) {
     return {
       ok: false,
-      message: `The volume is a whole number from ${MIN_VOLUME} to ${MAX_VOLUME}.`,
+      ...say('volumeRange', { min: MIN_VOLUME, max: MAX_VOLUME }),
     };
   }
 
   setPcmVolume(volume);
   return {
     ok: true,
-    message:
-      volume > 100
-        ? `Volume set to ${volume} — above 100 is a boost, and loud parts may distort.`
-        : `Volume set to ${volume}.`,
+    ...(volume > 100 ? say('volumeBoost', { volume }) : say('volumeSet', { volume })),
   };
 }
 
 /** A setting, not an action on the session: it applies whether or not the bot is in a voice channel. */
 export function setMono(on: boolean): PlaybackActionResult {
   void updatePlaybackOptions({ mono: on });
-  return { ok: true, message: on ? 'Mono on: both ears hear the same.' : 'Mono off.' };
+  return { ok: true, ...say(on ? 'monoOn' : 'monoOff') };
 }
 
 /** The repeat mode new sessions start in; the playing one keeps its own. */
 export function setRepeatDefault(mode: RepeatDefault): PlaybackActionResult {
   void updatePlaybackOptions({ repeatDefault: mode });
-  return { ok: true, message: `New sessions start with repeat ${mode}.` };
+  return { ok: true, ...say('repeatDefault', { mode }) };
 }
 
 /** Also a setting; needs a music worker that can suggest tracks (`related`). */
 export function setAutoplay(on: boolean): PlaybackActionResult {
   if (on && !hasCapability('related')) {
-    return { ok: false, message: 'The music worker does not offer autoplay.' };
+    return { ok: false, ...say('noAutoplay') };
   }
 
   void updatePlaybackOptions({ autoplay: on });

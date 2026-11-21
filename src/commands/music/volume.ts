@@ -3,6 +3,7 @@ import { Command } from '@sapphire/framework';
 
 import { replyNotice } from '../../lib/discord/notice.js';
 import { guildOnly } from '../../lib/discord/slash.js';
+import { say } from '../../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../../lib/music/banner/manager.js';
 import { getVolume } from '../../lib/music/pcm-volume.js';
 import { setVolume } from '../../lib/music/queue-actions.js';
@@ -29,7 +30,7 @@ export class UserCommand extends Command {
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const value = interaction.options.getInteger('value');
     if (value === null) {
-      await replyNotice(interaction, { ok: true, message: `Volume: ${getVolume()}` });
+      await replyNotice(interaction, { ok: true, ...say('volume', { volume: getVolume() }) });
       return;
     }
 

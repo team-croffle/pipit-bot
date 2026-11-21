@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import { MessageFlags, type ButtonInteraction, type StringSelectMenuInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
+import { say } from '../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
@@ -73,7 +74,7 @@ export class MusicSearchPlay extends InteractionHandler {
     if (!isMusicChannel(interaction.channelId)) {
       await replyNotice(interaction, {
         ok: false,
-        message: 'Music commands can only be used in a designated music channel.',
+        ...say('musicChannelOnly'),
       });
       return;
     }

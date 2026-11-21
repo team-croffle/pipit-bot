@@ -160,7 +160,7 @@ export class UserCommand extends Command {
       await replyNotice(interaction, await runPlaylistSubcommand(interaction, sub));
     } catch (error) {
       if (error instanceof PlaylistError) {
-        await replyNotice(interaction, { ok: false, message: error.message });
+        await replyNotice(interaction, { ok: false, message: error.message, phrase: error.phrase });
         return;
       }
       throw error;

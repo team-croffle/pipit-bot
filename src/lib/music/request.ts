@@ -2,6 +2,7 @@ import { useMainPlayer } from 'discord-player';
 import type { GuildMember, GuildTextBasedChannel } from 'discord.js';
 
 import type { Notice } from '../discord/notice.js';
+import { say } from '../i18n/phrase.js';
 import { toLocalPlayQuery } from './local-file-extractor.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
 import { insertNextIfPlaying, prepareTrack } from './prepare-track.js';
@@ -26,12 +27,12 @@ export interface PlayRequest {
 export async function requestPlay(request: PlayRequest): Promise<Notice> {
   const query = request.query.trim();
   if (!query) {
-    return { ok: false, message: 'Type a song title or a link to play.' };
+    return { ok: false, ...say('typeToPlay') };
   }
 
   const voiceChannel = request.member.voice.channel;
   if (!voiceChannel) {
-    return { ok: false, message: 'Join a voice channel first.' };
+    return { ok: false, ...say('joinVoiceFirst') };
   }
 
   try {
@@ -45,7 +46,7 @@ export async function requestPlay(request: PlayRequest): Promise<Notice> {
         request.member.id,
       );
       if (inserted) {
-        return { ok: true, message: `${inserted.title} will play next.` };
+        return { ok: true, ...say('playsNext', { title: inserted.title }) };
       }
     }
 
@@ -60,8 +61,11 @@ export async function requestPlay(request: PlayRequest): Promise<Notice> {
     );
 
     return queue.isPlaying() && queue.tracks.size > 0
-      ? { ok: true, message: `Added ${track.title} to the queue (position ${queue.tracks.size}).` }
-      : { ok: true, message: `Now playing: ${track.title}` };
+      ? {
+          ok: true,
+          ...say('addedToQueue', { title: track.title, position: queue.tracks.size }),
+        }
+      : { ok: true, ...say('nowPlaying', { title: track.title }) };
   } catch (error) {
     return {
       ok: false,

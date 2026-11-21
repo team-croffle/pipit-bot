@@ -23,6 +23,13 @@ const searches = new Map<string, SavedSearch>();
 
 export type PickProblem = 'missing' | 'expired' | 'not-yours';
 
+export const PICK_PROBLEM_KEY = {
+  missing: 'pickMissing',
+  expired: 'pickExpired',
+  'not-yours': 'pickNotYours',
+} as const satisfies Record<PickProblem, string>;
+
+/** The English text of a pick problem (the phrase is `PICK_PROBLEM_KEY`). */
 export const PICK_PROBLEM_MESSAGE: Record<PickProblem, string> = {
   missing: 'That search result is no longer available. Search again.',
   expired: 'These search results have expired. Search again.',

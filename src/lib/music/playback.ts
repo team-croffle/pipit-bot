@@ -3,6 +3,7 @@ import { QueueRepeatMode, useQueue, type Track } from 'discord-player';
 import { listJobs } from '../../api/jobs/pending-registry.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import { isEnabled } from '../features.js';
+import { say } from '../i18n/phrase.js';
 import { isAutoplayTrack } from './autoplay-files.js';
 import { getRecentNotice, type PlaybackNotice } from './missing-file.js';
 import { getVolume } from './pcm-volume.js';
@@ -256,18 +257,18 @@ export function pausePlayback(): PlaybackActionResult {
   const current = queue?.currentTrack;
 
   if (!queue || !current) {
-    return { ok: false, message: 'No track is currently playing.' };
+    return { ok: false, ...say('noTrackPlaying') };
   }
 
   if (queue.node.isPaused()) {
-    return { ok: false, message: 'The music is already paused.' };
+    return { ok: false, ...say('alreadyPaused') };
   }
 
   if (queue.node.pause()) {
-    return { ok: true, message: `Paused: ${formatTrackTitle(current)}` };
+    return { ok: true, ...say('paused', { title: formatTrackTitle(current) }) };
   }
 
-  return { ok: false, message: 'Failed to pause the track.' };
+  return { ok: false, ...say('pauseFailed') };
 }
 
 export function resumePlayback(): PlaybackActionResult {
@@ -275,18 +276,18 @@ export function resumePlayback(): PlaybackActionResult {
   const current = queue?.currentTrack;
 
   if (!queue || !current) {
-    return { ok: false, message: 'No track is currently playing.' };
+    return { ok: false, ...say('noTrackPlaying') };
   }
 
   if (!queue.node.isPaused()) {
-    return { ok: false, message: 'The music is not paused.' };
+    return { ok: false, ...say('notPaused') };
   }
 
   if (queue.node.resume()) {
-    return { ok: true, message: `Resumed: ${formatTrackTitle(current)}` };
+    return { ok: true, ...say('resumed', { title: formatTrackTitle(current) }) };
   }
 
-  return { ok: false, message: 'Failed to resume the track.' };
+  return { ok: false, ...say('resumeFailed') };
 }
 
 export function skipPlayback(): PlaybackActionResult {
@@ -294,49 +295,49 @@ export function skipPlayback(): PlaybackActionResult {
   const current = queue?.currentTrack;
 
   if (!queue) {
-    return { ok: false, message: 'No active music session found.' };
+    return { ok: false, ...say('noSession') };
   }
 
   if (!current) {
-    return { ok: false, message: 'No track is currently playing.' };
+    return { ok: false, ...say('noTrackPlaying') };
   }
 
   if (queue.node.skip()) {
-    return { ok: true, message: `Skipped: ${formatTrackTitle(current)}` };
+    return { ok: true, ...say('skipped', { title: formatTrackTitle(current) }) };
   }
 
-  return { ok: false, message: 'Failed to skip the track.' };
+  return { ok: false, ...say('skipFailed') };
 }
 
 export function stopPlayback(): PlaybackActionResult {
   const queue = getGuildQueue();
 
   if (!queue) {
-    return { ok: false, message: 'No active music session found.' };
+    return { ok: false, ...say('noSession') };
   }
 
   stopFeed();
   if (queue.node.stop()) {
-    return { ok: true, message: 'Stopped playback and cleared the queue.' };
+    return { ok: true, ...say('stopped') };
   }
 
-  return { ok: false, message: 'Failed to stop playback.' };
+  return { ok: false, ...say('stopFailed') };
 }
 
 export function clearQueue(): PlaybackActionResult {
   const queue = getGuildQueue();
 
   if (!queue) {
-    return { ok: false, message: 'No active music session found.' };
+    return { ok: false, ...say('noSession') };
   }
 
   if (queue.tracks.size === 0) {
-    return { ok: false, message: 'The queue is empty.' };
+    return { ok: false, ...say('queueEmpty') };
   }
 
   stopFeed();
   queue.tracks.clear();
-  return { ok: true, message: 'Queue cleared.' };
+  return { ok: true, ...say('queueCleared') };
 }
 
 export type LoopMode = 'track' | 'queue' | 'off';
@@ -345,18 +346,18 @@ export function setLoopMode(mode: LoopMode): PlaybackActionResult {
   const queue = getGuildQueue();
 
   if (!queue) {
-    return { ok: false, message: 'No active music session found.' };
+    return { ok: false, ...say('noSession') };
   }
 
   switch (mode) {
     case 'track':
       queue.setRepeatMode(QueueRepeatMode.TRACK);
-      return { ok: true, message: 'Repeat mode set to track.' };
+      return { ok: true, ...say('repeatTrack') };
     case 'queue':
       queue.setRepeatMode(QueueRepeatMode.QUEUE);
-      return { ok: true, message: 'Repeat mode set to queue.' };
+      return { ok: true, ...say('repeatQueue') };
     case 'off':
       queue.setRepeatMode(QueueRepeatMode.OFF);
-      return { ok: true, message: 'Repeat mode off.' };
+      return { ok: true, ...say('repeatOff') };
   }
 }

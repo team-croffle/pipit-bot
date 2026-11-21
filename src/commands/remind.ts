@@ -5,6 +5,7 @@ import { MessageFlags } from 'discord.js';
 import { replyNotice, type Notice } from '../lib/discord/notice.js';
 import { guildOnly } from '../lib/discord/slash.js';
 import { parseItemReference, remindReference } from '../lib/github/remind-reference.js';
+import { say } from '../lib/i18n/phrase.js';
 
 const USAGE = 'Examples: `owner/repo #12` · `repo #12` · `https://github.com/owner/repo/issues/12`';
 
@@ -42,7 +43,7 @@ export class UserCommand extends Command {
     if (!reference) {
       await replyNotice(interaction, {
         ok: false,
-        message: 'Tell me which pull request or issue to remind about.',
+        ...say('remindWhich'),
         detail: USAGE,
       });
       return;
@@ -60,22 +61,21 @@ export class UserCommand extends Command {
     const subject = `${result.repo}#${reference.number}${noun}`;
 
     if (result.outcome === 'sent') {
-      const where = result.channelId ? ` in <#${result.channelId}>` : '';
+      const where = result.channelId ? ` <#${result.channelId}>` : '';
       // A target is a person, or a team standing behind its mapped role.
-      const who = result.targets === 1 ? '1 person or team' : `${result.targets} people or teams`;
-      return { ok: true, message: `Reminded ${who} about ${subject}${where}.` };
+      return { ok: true, ...say('reminded', { count: result.targets, subject, where }) };
     }
 
     if (result.outcome === 'edited') {
       return {
         ok: true,
-        message: `Nothing to send for ${subject}; its announcement was brought up to date.`,
+        ...say('remindEdited', { subject }),
       };
     }
 
     return {
       ok: false,
-      message: `No reminder was sent for ${subject}.`,
+      ...say('remindNone', { subject }),
       detail: result.detail,
     };
   }

@@ -7,6 +7,7 @@ import {
 import type { ChatInputCommandInteraction, ContextMenuCommandInteraction } from 'discord.js';
 
 import { isCommandEnabled } from '../lib/discord/command-features.js';
+import { say } from '../lib/i18n/phrase.js';
 
 /**
  * Runs before every command: one of a switched-off feature answers that it is off.
@@ -39,6 +40,6 @@ export class UserPrecondition extends AllFlowsPrecondition {
   private check(command: { name: string; category?: string | null } | undefined) {
     return !command || isCommandEnabled(command)
       ? this.ok()
-      : this.error({ message: 'This feature is switched off on this server.' });
+      : this.error({ ...say('featureOff'), context: { phrase: say('featureOff').phrase } });
   }
 }

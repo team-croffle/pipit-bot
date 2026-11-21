@@ -3,6 +3,7 @@ import { Command } from '@sapphire/framework';
 
 import { replyNotice } from '../../lib/discord/notice.js';
 import { guildOnly } from '../../lib/discord/slash.js';
+import { say } from '../../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../../lib/music/banner/manager.js';
 import { getPlaybackOptions } from '../../lib/music/playback-options.js';
 import { setAutoplay, setMono, setRepeatDefault } from '../../lib/music/queue-actions.js';
@@ -54,7 +55,12 @@ export class UserCommand extends Command {
       const options = getPlaybackOptions();
       await replyNotice(interaction, {
         ok: true,
-        message: `Mono: ${onOff(options.mono)} · Autoplay: ${onOff(options.autoplay)} · Repeat for new sessions: ${options.repeatDefault} · Volume: ${options.volume}`,
+        ...say('optionsSummary', {
+          mono: onOff(options.mono),
+          autoplay: onOff(options.autoplay),
+          repeat: options.repeatDefault,
+          volume: options.volume,
+        }),
       });
       return;
     }

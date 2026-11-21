@@ -2,6 +2,7 @@ import { getVoiceConnection, useMainPlayer, useQueue } from 'discord-player';
 import type { Guild, VoiceBasedChannel } from 'discord.js';
 
 import { getConfiguredGuild } from '../discord-guild.js';
+import { say } from '../i18n/phrase.js';
 import type { PlaybackActionResult } from './playback.js';
 import { PLAYER_NODE_OPTIONS } from './player-node-options.js';
 import { stopFeed } from './playlists/feed-state.js';
@@ -62,7 +63,7 @@ export async function joinVoiceChannel(
 
   if (queue?.channel && connection) {
     if (queue.channel.id === voiceChannel.id) {
-      return { ok: false, message: `Already in ${voiceChannel.name}.` };
+      return { ok: false, ...say('alreadyIn', { channel: voiceChannel.name }) };
     }
 
     const moved = connection.rejoin({
@@ -71,12 +72,12 @@ export async function joinVoiceChannel(
       selfMute: false,
     });
     return moved
-      ? { ok: true, message: `Moved to ${voiceChannel.name}.` }
-      : { ok: false, message: `Could not move to ${voiceChannel.name}.` };
+      ? { ok: true, ...say('movedToChannel', { channel: voiceChannel.name }) }
+      : { ok: false, ...say('moveFailed', { channel: voiceChannel.name }) };
   }
 
   await connectPlayerToChannel(voiceChannel);
-  return { ok: true, message: `Joined ${voiceChannel.name}.` };
+  return { ok: true, ...say('joined', { channel: voiceChannel.name }) };
 }
 
 /**
@@ -92,7 +93,7 @@ export async function joinFromRemote(
   if (queue?.channel && queue.channel.id !== voiceChannel.id && queue.currentTrack) {
     return {
       ok: false,
-      message: `Already playing in ${queue.channel.name} — join that channel to listen.`,
+      ...say('playingElsewhere', { channel: queue.channel.name }),
     };
   }
 
@@ -104,7 +105,7 @@ export function leaveVoiceChannel(guildId: string): PlaybackActionResult {
   const connection = getVoiceConnection(guildId);
 
   if (!queue && !connection) {
-    return { ok: false, message: 'No active music session found in this server.' };
+    return { ok: false, ...say('noSessionHere') };
   }
 
   stopFeed();
@@ -114,5 +115,5 @@ export function leaveVoiceChannel(guildId: string): PlaybackActionResult {
     connection?.destroy();
   }
 
-  return { ok: true, message: 'Left the voice channel successfully.' };
+  return { ok: true, ...say('left') };
 }

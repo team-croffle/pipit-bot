@@ -1,7 +1,7 @@
 import { getGuildQueue } from '../playback.js';
-import { getCandidate, PICK_PROBLEM_MESSAGE } from '../search-results.js';
+import { getCandidate, PICK_PROBLEM_KEY } from '../search-results.js';
 import { sourceOf } from '../track-source.js';
-import { PlaylistError } from './store.js';
+import { playlistError } from './store.js';
 import type { PlaylistItem } from './types.js';
 
 /** Where a track to save comes from. */
@@ -14,13 +14,10 @@ export type ItemSource =
 
 type NewItem = Omit<PlaylistItem, 'id'>;
 
-const CANNOT_SAVE =
-  'That track cannot be saved: the bot no longer knows what it was asked for (it played before a restart).';
-
 function fromTrack(track: { url: string; title?: string } | undefined | null): NewItem {
   const source = track ? sourceOf(track) : undefined;
   if (!source) {
-    throw new PlaylistError(409, CANNOT_SAVE);
+    throw playlistError(409, 'cannotSave');
   }
   return { title: source.title, durationSec: source.durationSec, query: source.query };
 }
@@ -40,7 +37,7 @@ export function resolveItems(source: ItemSource): NewItem[] {
   if (source.from === 'typed') {
     const query = source.query.trim();
     if (!query || query.length > 500) {
-      throw new PlaylistError(400, 'Type a song title or a link (up to 500 characters).');
+      throw playlistError(400, 'typeTitleOrLink');
     }
     return [{ title: query, query, typed: true }];
   }
@@ -48,9 +45,9 @@ export function resolveItems(source: ItemSource): NewItem[] {
   if (source.from === 'search') {
     const found = getCandidate(source.searchId, source.index, source.owner);
     if ('problem' in found) {
-      throw new PlaylistError(
+      throw playlistError(
         found.problem === 'not-yours' ? 403 : 409,
-        PICK_PROBLEM_MESSAGE[found.problem],
+        PICK_PROBLEM_KEY[found.problem],
       );
     }
     const { title, durationSec, query } = found.candidate;
@@ -59,12 +56,12 @@ export function resolveItems(source: ItemSource): NewItem[] {
 
   const queue = getGuildQueue();
   if (!queue) {
-    throw new PlaylistError(409, 'Nothing is playing.');
+    throw playlistError(409, 'nothingPlaying');
   }
 
   if (source.from === 'current') {
     if (!queue.currentTrack) {
-      throw new PlaylistError(409, 'Nothing is playing.');
+      throw playlistError(409, 'nothingPlaying');
     }
     return [fromTrack(queue.currentTrack)];
   }
@@ -75,20 +72,20 @@ export function resolveItems(source: ItemSource): NewItem[] {
         .map((track) => (sourceOf(track) ? fromTrack(track) : null))
         .filter((item): item is NewItem => item !== null);
       if (items.length === 0) {
-        throw new PlaylistError(409, 'No track in the queue can be saved.');
+        throw playlistError(409, 'nothingSavableInQueue');
       }
       return items;
     }
     const track = pick(queue.tracks.store, source.ref);
     if (!track) {
-      throw new PlaylistError(404, 'That track is no longer in the queue.');
+      throw playlistError(404, 'trackGone');
     }
     return [fromTrack(track)];
   }
 
   const track = pick(queue.history.tracks.store, source.ref);
   if (!track) {
-    throw new PlaylistError(404, 'That track is no longer in the recent list.');
+    throw playlistError(404, 'notInRecent');
   }
   return [fromTrack(track)];
 }

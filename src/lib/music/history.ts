@@ -1,3 +1,4 @@
+import { say } from '../i18n/phrase.js';
 import { formatTrackTitle, getGuildQueue, type PlaybackActionResult } from './playback.js';
 
 /**
@@ -34,19 +35,19 @@ export function getRecentTracks(guildId?: string): HistoryTrack[] {
 export async function playPrevious(guildId?: string): Promise<PlaybackActionResult> {
   const queue = getGuildQueue(guildId);
   if (!queue) {
-    return { ok: false, message: 'No active music session found in this server.' };
+    return { ok: false, ...say('noSessionHere') };
   }
 
   const previous = queue.history.tracks.store[0];
   if (!previous) {
-    return { ok: false, message: 'Nothing has played before this track.' };
+    return { ok: false, ...say('nothingBefore') };
   }
 
   try {
     await queue.history.back(true);
   } catch {
-    return { ok: false, message: 'Could not go back to the previous track.' };
+    return { ok: false, ...say('backFailed') };
   }
 
-  return { ok: true, message: `Back to: ${formatTrackTitle(previous)}` };
+  return { ok: true, ...say('backTo', { title: formatTrackTitle(previous) }) };
 }
