@@ -9,8 +9,11 @@ import {
   SeparatorSpacingSize,
   TextDisplayBuilder,
 } from 'discord.js';
+import type { TFunction } from 'i18next';
 
 import { getEnv } from '../../env.js';
+import { translator } from '../../i18n/index.js';
+import { messageLanguage } from '../../i18n/settings.js';
 import type { PlaybackState } from '../playback.js';
 import { MAX_VOLUME, MIN_VOLUME } from '../volume.js';
 import { hasCapability } from '../worker-capabilities.js';
@@ -58,12 +61,15 @@ export function knobCell(progress: number): number {
   return Math.min(Math.floor(Math.min(Math.max(progress, 0), 1) * BAR_CELLS), BAR_CELLS - 1);
 }
 
-const REPEAT_LABEL: Record<PlaybackState['repeatMode'], string> = {
-  off: '반복 꺼짐',
-  track: '한 곡 반복',
-  queue: '대기열 반복',
-  autoplay: '자동 재생',
-};
+const REPEAT_KEY = {
+  off: 'repeatOff',
+  track: 'repeatTrack',
+  queue: 'repeatQueue',
+  autoplay: 'repeatAutoplay',
+} as const satisfies Record<PlaybackState['repeatMode'], string>;
+
+/** The banner is a public post: it speaks the music feature's language (i18n/settings.ts). */
+type T = TFunction;
 
 function text(content: string): TextDisplayBuilder {
   return new TextDisplayBuilder().setContent(content);
@@ -78,14 +84,14 @@ function button(id: string, label: string, emoji: string, style = ButtonStyle.Se
 }
 
 /** The remote's link to the dashboard's music page — absent when its address is not known. */
-function dashboardLink(): ButtonBuilder[] {
+function dashboardLink(t: T): ButtonBuilder[] {
   const base = getEnv().dashboardUrl;
   return base
     ? [
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
           .setURL(`${base}/music`)
-          .setLabel('관제 센터')
+          .setLabel(t('dashboard'))
           .setEmoji('🖥️'),
       ]
     : [];
@@ -97,11 +103,8 @@ function progressBar(progress: number): string {
 }
 
 /** Music switched off from the dashboard: no buttons, nothing to press. */
-function switchedOff(container: ContainerBuilder): void {
-  container.addTextDisplayComponents(
-    text('## 💿 Pipit Hub Music'),
-    text('**음악 기능이 꺼져 있어요.**\n-# 관리자가 대시보드 설정에서 다시 켤 수 있어요.'),
-  );
+function switchedOff(container: ContainerBuilder, t: T): void {
+  container.addTextDisplayComponents(text('## 💿 Pipit Hub Music'), text(t('switchedOff')));
 }
 
 /** Only a read that failed counts: right after start the status is still unknown. */
@@ -109,75 +112,77 @@ function workerDown(): boolean {
   return getWorkerStatus().status === 'down';
 }
 
-function idle(container: ContainerBuilder): void {
+function idle(container: ContainerBuilder, t: T): void {
   const down = workerDown();
   container
     .addTextDisplayComponents(
       text('## 💿 Pipit Hub Music'),
-      text(
-        workerDown()
-          ? '**음악 워커가 꺼져 있어요.**\n-# 지금은 곡을 준비할 수 없어요. 돌아오면 이 안내가 저절로 사라져요.'
-          : '**이 채널에 곡 제목이나 URL을 입력하여 재생해 보세요.**\n-# 곡을 준비해서 바로 들려 드릴게요. 통화방에 먼저 들어가 있어 주세요.',
-      ),
+      text(workerDown() ? t('workerDown') : t('idleHint')),
     )
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text('### 🎛️ 리모컨'))
+    .addTextDisplayComponents(text(t('remote')))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
-        button(REMOTE.play, '재생', '▶️', ButtonStyle.Primary).setDisabled(down),
-        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍').setDisabled(down)] : []),
-        button(REMOTE.playlists, '재생목록', '📁').setDisabled(down),
-        button(REMOTE.join, '통화방 참여', '🔈'),
-        ...dashboardLink(),
+        button(REMOTE.play, t('play'), '▶️', ButtonStyle.Primary).setDisabled(down),
+        ...(hasCapability('search')
+          ? [button(REMOTE.search, t('search'), '🔍').setDisabled(down)]
+          : []),
+        button(REMOTE.playlists, t('playlists'), '📁').setDisabled(down),
+        button(REMOTE.join, t('join'), '🔈'),
+        ...dashboardLink(t),
       ),
     );
 }
 
-function playing(container: ContainerBuilder, state: PlaybackState): void {
+function playing(container: ContainerBuilder, state: PlaybackState, t: T): void {
   const current = state.current!;
   const down = workerDown();
   const requester = current.autoplay
-    ? '🤖 자동 재생으로 이어 듣는 곡이에요'
+    ? t('byAutoplay')
     : current.requester
-      ? `👤 ${escapeMarkdown(current.requester.name)}님이 신청했어요`
-      : '🖥️ 대시보드에서 추가했어요';
+      ? t('requestedBy', { name: escapeMarkdown(current.requester.name) })
+      : t('fromDashboard');
   const queueLine =
-    state.pendingCount > 0 ? `📜 대기열 ${state.pendingCount}곡` : '📜 대기열이 비었어요';
+    state.pendingCount > 0 ? t('queued', { count: state.pendingCount }) : t('queueEmpty');
+  const status = [
+    t('status', { repeat: t(REPEAT_KEY[state.repeatMode]), volume: state.volume }),
+    ...(state.mono ? [t('mono')] : []),
+    ...(state.autoplay ? [t('autoplayOn')] : []),
+    queueLine,
+  ].join(' · ');
 
   container
     .addTextDisplayComponents(
-      text(state.paused ? '## ⏸️ 잠시 멈췄어요' : '## 💿 지금 이 곡을 들려 드리고 있어요'),
+      text(state.paused ? t('pausedHeading') : t('playingHeading')),
       text(`### ${escapeMarkdown(current.title)}`),
       text(`-# ${requester}\n${progressBar(current.progress)} \`${current.durationLabel}\``),
     )
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(
-      text(
-        `🔁 ${REPEAT_LABEL[state.repeatMode]} · 🔊 볼륨 ${state.volume}${state.mono ? ' · 🎧 모노' : ''}${state.autoplay ? ' · ♾️ 자동 재생' : ''} · ${queueLine}${down ? '\n-# ⚠️ 음악 워커가 꺼져 있어 새 곡은 지금 준비할 수 없어요.' : ''}`,
-      ),
-    )
+    .addTextDisplayComponents(text(down ? `${status}\n${t('workerDownLine')}` : status))
     .addSeparatorComponents(separator())
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         state.paused
-          ? button(REMOTE.resume, '재개', '▶️', ButtonStyle.Primary)
-          : button(REMOTE.pause, '일시정지', '⏸️', ButtonStyle.Primary),
-        button(REMOTE.skip, '다음', '⏭️'),
-        button(REMOTE.stop, '정지', '⏹️', ButtonStyle.Danger),
-        button(REMOTE.queue, '대기열', '📜'),
-        button(REMOTE.playlists, '재생목록', '📁').setDisabled(down),
+          ? button(REMOTE.resume, t('resume'), '▶️', ButtonStyle.Primary)
+          : button(REMOTE.pause, t('pause'), '⏸️', ButtonStyle.Primary),
+        button(REMOTE.skip, t('next'), '⏭️'),
+        button(REMOTE.stop, t('stop'), '⏹️', ButtonStyle.Danger),
+        button(REMOTE.queue, t('queue'), '📜'),
+        button(REMOTE.playlists, t('playlists'), '📁').setDisabled(down),
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
-        button(REMOTE.play, '곡 추가', '➕').setDisabled(down),
-        ...(hasCapability('search') ? [button(REMOTE.search, '검색', '🔍').setDisabled(down)] : []),
-        button(REMOTE.loop, '반복', '🔁'),
+        button(REMOTE.play, t('add'), '➕').setDisabled(down),
+        ...(hasCapability('search')
+          ? [button(REMOTE.search, t('search'), '🔍').setDisabled(down)]
+          : []),
+        button(REMOTE.loop, t('loop'), '🔁'),
         button(REMOTE.volumeDown, '−10', '🔉').setDisabled(state.volume <= MIN_VOLUME),
         button(REMOTE.volumeUp, '+10', '🔊').setDisabled(state.volume >= MAX_VOLUME),
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(
           REMOTE.mono,
-          state.mono ? '모노 끄기' : '모노',
+          state.mono ? t('monoOffButton') : t('monoButton'),
           '🎧',
           state.mono ? ButtonStyle.Success : ButtonStyle.Secondary,
         ),
@@ -185,26 +190,27 @@ function playing(container: ContainerBuilder, state: PlaybackState): void {
           ? [
               button(
                 REMOTE.autoplay,
-                state.autoplay ? '자동 재생 끄기' : '자동 재생',
+                state.autoplay ? t('autoplayOffButton') : t('autoplayButton'),
                 '♾️',
                 state.autoplay ? ButtonStyle.Success : ButtonStyle.Secondary,
               ).setDisabled(down),
             ]
           : []),
-        button(REMOTE.join, '통화방 참여', '🔈'),
-        ...dashboardLink(),
+        button(REMOTE.join, t('join'), '🔈'),
+        ...dashboardLink(t),
       ),
     );
 }
 
 export function renderBanner(state: PlaybackState) {
+  const t = translator(messageLanguage('music'), 'music');
   const container = new ContainerBuilder().setAccentColor(ACCENT);
   if (state.musicEnabled === false) {
-    switchedOff(container);
+    switchedOff(container, t);
   } else if (state.active && state.current) {
-    playing(container, state);
+    playing(container, state, t);
   } else {
-    idle(container);
+    idle(container, t);
   }
 
   return {
@@ -222,6 +228,8 @@ export function bannerSignature(state: PlaybackState): string {
   return JSON.stringify({
     // Bumped when the buttons change, so a banner left by an older version is redrawn.
     layout: 6,
+    // A change of language redraws it (v0.8.3).
+    language: messageLanguage('music'),
     search: hasCapability('search'),
     workerDown: workerDown(),
     off: state.musicEnabled === false,

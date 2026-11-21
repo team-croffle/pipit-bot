@@ -3,6 +3,7 @@
  * (i18n/phrase.ts). English is also what the API and the audit log carry.
  */
 export const notice = {
+  noPlaylistsAnywhere: 'No playlists yet — make one with /playlist create or on the dashboard.',
   deleteButton: 'Delete "{{name}}"',
   requestedBy: 'Requested by {{name}}',
   preparing: 'Preparing the track…',

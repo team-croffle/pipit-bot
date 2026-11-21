@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import type { ButtonInteraction, StringSelectMenuInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
+import { languageOfLocale } from '../lib/i18n/index.js';
 import { say } from '../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
@@ -39,7 +40,7 @@ export class PlaylistPickerSelect extends InteractionHandler {
     const playlistId = interaction.values[0] ?? '';
 
     if (interaction.customId === PLAYLIST_UI.pick) {
-      const next = playPlaylistMessage(viewer, playlistId);
+      const next = playPlaylistMessage(viewer, playlistId, languageOfLocale(interaction.locale));
       if (next) {
         await interaction.update(next);
       }

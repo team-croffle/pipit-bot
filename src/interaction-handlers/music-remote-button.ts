@@ -8,8 +8,10 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from 'discord.js';
+import type { TFunction } from 'i18next';
 
 import { replyNotice, type Notice } from '../lib/discord/notice.js';
+import { languageOfLocale, translator } from '../lib/i18n/index.js';
 import { say } from '../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { REMOTE } from '../lib/music/banner/render.js';
@@ -25,7 +27,7 @@ import {
   type LoopMode,
 } from '../lib/music/playback.js';
 import { discordViewer } from '../lib/music/playlists/discord.js';
-import { NO_PLAYLISTS, playPlaylistMessage } from '../lib/music/playlists/pickers.js';
+import { noPlaylistsNotice, playPlaylistMessage } from '../lib/music/playlists/pickers.js';
 import { setAutoplay, setMono, setVolume } from '../lib/music/queue-actions.js';
 import { queueText } from '../lib/music/queue-view.js';
 import { joinFromRemote } from '../lib/music/voice-connection.js';
@@ -44,15 +46,15 @@ function stepVolume(by: -1 | 1): Notice {
   return setVolume(clampVolume(getVolume() + by * REMOTE_VOLUME_STEP));
 }
 
-function playModal(): ModalBuilder {
+function playModal(t: TFunction): ModalBuilder {
   return new ModalBuilder()
     .setCustomId(PLAY_MODAL)
-    .setTitle('곡 재생')
+    .setTitle(t('playModalTitle'))
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId(PLAY_MODAL_QUERY)
-          .setLabel('곡 제목이나 링크')
+          .setLabel(t('playModalLabel'))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(500),
@@ -60,16 +62,16 @@ function playModal(): ModalBuilder {
     );
 }
 
-function searchModal(): ModalBuilder {
+function searchModal(t: TFunction): ModalBuilder {
   return new ModalBuilder()
     .setCustomId(SEARCH_MODAL)
-    .setTitle('곡 검색')
+    .setTitle(t('searchModalTitle'))
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId(PLAY_MODAL_QUERY)
-          .setLabel('찾을 곡')
-          .setPlaceholder('곡 제목, 가수 이름 등')
+          .setLabel(t('searchModalLabel'))
+          .setPlaceholder(t('searchModalPlaceholder'))
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(200),
@@ -103,23 +105,29 @@ export class MusicRemoteButton extends InteractionHandler {
 
     if (interaction.customId === REMOTE.play) {
       // A modal has to be the first answer — no defer before it.
-      await interaction.showModal(playModal());
+      await interaction.showModal(
+        playModal(translator(languageOfLocale(interaction.locale), 'music')),
+      );
       return;
     }
 
     if (interaction.customId === REMOTE.search) {
-      await interaction.showModal(searchModal());
+      await interaction.showModal(
+        searchModal(translator(languageOfLocale(interaction.locale), 'music')),
+      );
       return;
     }
 
     if (interaction.customId === REMOTE.playlists) {
       const picker = playPlaylistMessage(
         discordViewer(interaction.user, interaction.inCachedGuild() ? interaction.member : null),
+        undefined,
+        languageOfLocale(interaction.locale),
       );
       if (picker) {
         await interaction.reply({ ...picker, flags: picker.flags | MessageFlags.Ephemeral });
       } else {
-        await replyNotice(interaction, { ok: false, message: NO_PLAYLISTS });
+        await replyNotice(interaction, noPlaylistsNotice());
       }
       return;
     }

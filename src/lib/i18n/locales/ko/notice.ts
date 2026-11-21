@@ -2,6 +2,7 @@ import type { notice as en } from '../en/notice.js';
 
 /** 동작 결과 — 한국어. 한국어 복수형은 `_other`만 쓰지만 키는 영어와 맞춰 둔다. */
 export const notice: typeof en = {
+  noPlaylistsAnywhere: '재생목록이 없어요 — /playlist create나 대시보드에서 만드세요.',
   deleteButton: '"{{name}}" 지우기',
   requestedBy: '{{name}}님의 요청',
   preparing: '곡을 준비하고 있어요…',
