@@ -6,6 +6,7 @@ import { container } from '@sapphire/framework';
 import { dataDir } from '../../constants.js';
 import { getDb } from '../../db/client.js';
 import { migrateFile } from '../../db/migrate-file.js';
+import { say, type NoticeKey, type Phrase } from '../../i18n/phrase.js';
 import { canEdit, canView } from './access.js';
 import { deletePlaylistRow, readPlaylists, writePlaylist } from './storage.js';
 import {
@@ -20,11 +21,24 @@ import {
 export class PlaylistError extends Error {
   readonly status: 400 | 403 | 404 | 409;
 
-  constructor(status: 400 | 403 | 404 | 409, message: string) {
+  /** The message in other languages (i18n/phrase.ts); `message` stays English. */
+  readonly phrase?: Phrase;
+
+  constructor(status: 400 | 403 | 404 | 409, message: string, phrase?: Phrase) {
     super(message);
     this.name = 'PlaylistError';
     this.status = status;
+    this.phrase = phrase;
   }
+}
+
+export function playlistError(
+  status: 400 | 403 | 404 | 409,
+  key: NoticeKey,
+  params?: Record<string, string | number>,
+): PlaylistError {
+  const { message, phrase } = say(key, params);
+  return new PlaylistError(status, message, phrase);
 }
 
 /**
@@ -107,7 +121,7 @@ const now = () => new Date().toISOString();
 function cleanName(name: unknown): string {
   const trimmed = typeof name === 'string' ? name.trim().replaceAll(/\s+/g, ' ') : '';
   if (!trimmed || trimmed.length > PLAYLIST_LIMITS.nameLength) {
-    throw new PlaylistError(400, `A playlist name is 1–${PLAYLIST_LIMITS.nameLength} characters.`);
+    throw playlistError(400, 'nameLength', { max: PLAYLIST_LIMITS.nameLength });
   }
   return trimmed;
 }
@@ -126,7 +140,7 @@ function assertNameFree(
       playlist.name.toLowerCase() === name.toLowerCase(),
   );
   if (taken) {
-    throw new PlaylistError(409, `There is already a playlist called "${name}".`);
+    throw playlistError(409, 'nameTaken', { name });
   }
 }
 
@@ -145,7 +159,7 @@ export function listPlaylists(viewer: PlaylistViewer): Playlist[] {
 export function getPlaylist(id: string, viewer: PlaylistViewer): Playlist {
   const playlist = playlists.find((item) => item.id === id);
   if (!playlist || !canView(playlist, viewer)) {
-    throw new PlaylistError(404, 'That playlist does not exist.');
+    throw playlistError(404, 'playlistMissing');
   }
   return playlist;
 }
@@ -153,7 +167,7 @@ export function getPlaylist(id: string, viewer: PlaylistViewer): Playlist {
 function editable(id: string, viewer: PlaylistViewer): Playlist {
   const playlist = getPlaylist(id, viewer);
   if (!canEdit(playlist, viewer)) {
-    throw new PlaylistError(403, 'You cannot change that playlist.');
+    throw playlistError(403, 'playlistNotYours');
   }
   return playlist;
 }
@@ -170,13 +184,10 @@ export async function createPlaylist(
 ): Promise<Playlist> {
   const name = cleanName(input.name);
   if (input.scope === 'personal' && !viewer.discordId) {
-    throw new PlaylistError(
-      409,
-      'A personal playlist needs your Discord account: link your GitHub account to it on the GitHub page.',
-    );
+    throw playlistError(409, 'personalNeedsDiscord');
   }
   if (playlists.length >= PLAYLIST_LIMITS.playlists) {
-    throw new PlaylistError(409, `There can be at most ${PLAYLIST_LIMITS.playlists} playlists.`);
+    throw playlistError(409, 'tooManyPlaylists', { max: PLAYLIST_LIMITS.playlists });
   }
 
   const ownerId = input.scope === 'personal' ? viewer.discordId : undefined;
@@ -226,7 +237,7 @@ export async function addItems(
   const playlist = editable(id, viewer);
   const room = PLAYLIST_LIMITS.items - playlist.items.length;
   if (room <= 0) {
-    throw new PlaylistError(409, `A playlist holds at most ${PLAYLIST_LIMITS.items} tracks.`);
+    throw playlistError(409, 'playlistFull', { max: PLAYLIST_LIMITS.items });
   }
 
   const accepted = items.slice(0, room).map((item) => ({ ...item, id: randomUUID().slice(0, 8) }));
@@ -244,7 +255,7 @@ export async function removeItem(
   const playlist = editable(id, viewer);
   const index = playlist.items.findIndex((item) => item.id === itemId);
   if (index < 0) {
-    throw new PlaylistError(404, 'That track is not in the playlist.');
+    throw playlistError(404, 'notInPlaylist');
   }
   playlist.items.splice(index, 1);
   playlist.updatedAt = now();
@@ -262,7 +273,7 @@ export async function moveItem(
   const playlist = editable(id, viewer);
   const from = playlist.items.findIndex((item) => item.id === itemId);
   if (from < 0) {
-    throw new PlaylistError(404, 'That track is not in the playlist.');
+    throw playlistError(404, 'notInPlaylist');
   }
   const [item] = playlist.items.splice(from, 1);
   playlist.items.splice(Math.max(0, Math.min(Math.floor(to), playlist.items.length)), 0, item!);

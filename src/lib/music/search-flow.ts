@@ -2,6 +2,7 @@ import type { ChatInputCommandInteraction, ModalSubmitInteraction } from 'discor
 
 import { auditInteraction } from '../audit/discord.js';
 import { replyNotice } from '../discord/notice.js';
+import { say } from '../i18n/phrase.js';
 import { searchMusic, SearchFailure } from './search-client.js';
 import { saveSearch } from './search-results.js';
 import { noResultsNotice, searchResultsMessage } from './search-view.js';
@@ -18,7 +19,7 @@ export async function answerSearch(
   if (!hasCapability('search')) {
     await replyNotice(interaction, {
       ok: false,
-      message: 'The music worker does not offer search.',
+      ...say('noSearch'),
     });
     return;
   }
@@ -27,7 +28,7 @@ export async function answerSearch(
   if (!text) {
     await replyNotice(interaction, {
       ok: false,
-      message: 'Type a song title or words to search for.',
+      ...say('typeToSearch'),
     });
     return;
   }

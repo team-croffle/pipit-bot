@@ -1,8 +1,9 @@
 import { escapeMarkdown, type GuildMember, type User } from 'discord.js';
 
 import type { Notice } from '../../discord/notice.js';
+import { say } from '../../i18n/phrase.js';
 import { formatDurationFromSeconds } from '../track-format.js';
-import { getPlaylist, findPlaylistByName, listPlaylists, PlaylistError } from './store.js';
+import { getPlaylist, findPlaylistByName, listPlaylists, playlistError } from './store.js';
 import type { Playlist, PlaylistViewer } from './types.js';
 
 /** A Discord user as a playlist viewer: their own id is their personal key. */
@@ -20,7 +21,7 @@ export function playlistFromOption(value: string, viewer: PlaylistViewer): Playl
   } catch {
     const byName = findPlaylistByName(value, viewer);
     if (!byName) {
-      throw new PlaylistError(404, `No playlist called "${value}".`);
+      throw playlistError(404, 'noPlaylistCalled', { name: value });
     }
     return byName;
   }
@@ -46,7 +47,7 @@ const SHOWN = 25;
 /** `/playlist show`: the tracks, numbered, with lengths — titles only. */
 export function showPlaylist(playlist: Playlist): Notice {
   if (playlist.items.length === 0) {
-    return { ok: true, message: `${playlist.name} — no tracks yet` };
+    return { ok: true, ...say('playlistNoTracks', { name: playlist.name }) };
   }
 
   const total = playlist.items.reduce((sum, item) => sum + (item.durationSec ?? 0), 0);
@@ -69,12 +70,12 @@ export function showPlaylist(playlist: Playlist): Notice {
 export function listForDiscord(viewer: PlaylistViewer): Notice {
   const playlists = listPlaylists(viewer);
   if (playlists.length === 0) {
-    return { ok: true, message: 'No playlists yet — make one with /playlist create.' };
+    return { ok: true, ...say('noPlaylists') };
   }
 
   return {
     ok: true,
-    message: `${playlists.length} playlist${playlists.length === 1 ? '' : 's'}`,
+    ...say('playlistCount', { count: playlists.length }),
     detail: playlists
       .slice(0, 40)
       .map(

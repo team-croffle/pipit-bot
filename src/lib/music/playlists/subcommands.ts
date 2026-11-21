@@ -7,6 +7,8 @@ import {
 } from 'discord.js';
 
 import { noticeContainer, type Notice } from '../../discord/notice.js';
+import { languageOfLocale } from '../../i18n/index.js';
+import { phraseIn, say, sayDetail } from '../../i18n/phrase.js';
 import { requestBannerRefresh } from '../banner/manager.js';
 import { canEnqueuePlayback } from '../playback.js';
 import { connectPlayerToChannel } from '../voice-connection.js';
@@ -41,13 +43,13 @@ export async function runPlaylistSubcommand(
       );
       return {
         ok: true,
-        message: `Made ${personal ? 'your personal' : 'the shared'} playlist "${made.name}".`,
+        ...say(personal ? 'madePersonal' : 'madeShared', { name: made.name }),
       };
     }
     case 'rename': {
       const playlist = target();
       const renamed = await renamePlaylist(playlist.id, options.getString('to', true), viewer);
-      return { ok: true, message: `Renamed to "${renamed.name}".` };
+      return { ok: true, ...say('renamed', { name: renamed.name }) };
     }
     case 'add': {
       const playlist = target();
@@ -59,10 +61,10 @@ export async function runPlaylistSubcommand(
             ? { from: 'queue', ref: 'all' }
             : { from: 'typed', query: options.getString('text') ?? '' };
       const result = await addItems(playlist.id, resolveItems(source), viewer);
-      const skipped = result.skipped > 0 ? ` ${result.skipped} did not fit.` : '';
       return {
         ok: true,
-        message: `Saved ${result.added} track${result.added === 1 ? '' : 's'} to "${playlist.name}".${skipped}`,
+        ...say('savedTracks', { count: result.added, name: playlist.name }),
+        ...(result.skipped > 0 && sayDetail('didNotFit', { count: result.skipped })),
       };
     }
     case 'remove': {
@@ -71,11 +73,14 @@ export async function runPlaylistSubcommand(
       if (!item) {
         return {
           ok: false,
-          message: `"${playlist.name}" has no track ${options.getInteger('position', true)}.`,
+          ...say('noTrackNumber', {
+            name: playlist.name,
+            position: options.getInteger('position', true),
+          }),
         };
       }
       await removeItem(playlist.id, item.id, viewer);
-      return { ok: true, message: `Removed ${item.title} from "${playlist.name}".` };
+      return { ok: true, ...say('removedFrom', { title: item.title, name: playlist.name }) };
     }
     case 'move': {
       const playlist = target();
@@ -83,11 +88,17 @@ export async function runPlaylistSubcommand(
       if (!item) {
         return {
           ok: false,
-          message: `"${playlist.name}" has no track ${options.getInteger('from', true)}.`,
+          ...say('noTrackNumber', {
+            name: playlist.name,
+            position: options.getInteger('from', true),
+          }),
         };
       }
       await moveItem(playlist.id, item.id, options.getInteger('to', true) - 1, viewer);
-      return { ok: true, message: `Moved ${item.title} to ${options.getInteger('to', true)}.` };
+      return {
+        ok: true,
+        ...say('movedTo', { title: item.title, position: options.getInteger('to', true) }),
+      };
     }
     case 'import': {
       const into = options.getString('into');
@@ -104,10 +115,10 @@ export async function runPlaylistSubcommand(
             },
             viewer,
           );
-      const skipped = result.skipped > 0 ? ` ${result.skipped} did not fit.` : '';
       return {
         ok: true,
-        message: `Imported ${result.added} track${result.added === 1 ? '' : 's'} into "${result.playlist.name}".${skipped}`,
+        ...say('importedTracks', { count: result.added, name: result.playlist.name }),
+        ...(result.skipped > 0 && sayDetail('didNotFit', { count: result.skipped })),
       };
     }
     case 'play': {
@@ -115,7 +126,7 @@ export async function runPlaylistSubcommand(
       if (!canEnqueuePlayback()) {
         const voice = interaction.member.voice.channel;
         if (!voice) {
-          return { ok: false, message: 'Join a voice channel first.' };
+          return { ok: false, ...say('joinVoiceFirst') };
         }
         await connectPlayerToChannel(voice);
       }
@@ -127,7 +138,7 @@ export async function runPlaylistSubcommand(
       return notice;
     }
     default:
-      return { ok: false, message: 'Unknown subcommand.' };
+      return { ok: false, ...say('unknownSubcommand') };
   }
 }
 
@@ -139,19 +150,23 @@ export async function confirmPlaylistDelete(
     interaction.options.getString('name', true),
     discordViewer(interaction.user, interaction.member),
   );
+  const language = languageOfLocale(interaction.locale);
   const button = new ButtonBuilder()
     .setCustomId(`${PLAYLIST_DELETE}:${playlist.id}`)
     .setStyle(ButtonStyle.Danger)
-    .setLabel(`"${playlist.name}" 지우기`.slice(0, 80));
+    .setLabel(
+      phraseIn(language, { key: 'deleteButton', params: { name: playlist.name } }).slice(0, 80),
+    );
   await interaction.reply({
     components: [
       noticeContainer(
         {
           ok: false,
-          message: `Delete "${playlist.name}" and its ${playlist.items.length} tracks?`,
-          detail: '-# This cannot be undone.',
+          ...say('deleteAsk', { name: playlist.name, count: playlist.items.length }),
+          detail: `-# ${phraseIn(language, { key: 'cannotUndo' })}`,
         },
-        '30초 안에 누르세요',
+        phraseIn(language, { key: 'pressWithin', params: { count: 30 } }),
+        language,
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(button),
     ],

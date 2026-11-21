@@ -3,6 +3,7 @@ import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework
 import type { ButtonInteraction, StringSelectMenuInteraction } from 'discord.js';
 
 import { replyNotice } from '../lib/discord/notice.js';
+import { say } from '../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
 import { canEnqueuePlayback } from '../lib/music/playback.js';
@@ -59,12 +60,15 @@ export class PlaylistPickerSelect extends InteractionHandler {
       await addItems(playlist.id, items, viewer);
       await replyNotice(
         interaction,
-        { ok: true, message: `Saved to "${playlist.name}".` },
+        { ok: true, ...say('savedTo', { name: playlist.name }) },
         { seconds: RESULT_SECONDS },
       );
     } catch (error) {
-      const message = error instanceof PlaylistError ? error.message : 'Could not save it.';
-      await replyNotice(interaction, { ok: false, message }, { seconds: RESULT_SECONDS });
+      const failure =
+        error instanceof PlaylistError
+          ? { message: error.message, phrase: error.phrase }
+          : say('saveFailed');
+      await replyNotice(interaction, { ok: false, ...failure }, { seconds: RESULT_SECONDS });
     }
   }
 }
@@ -101,7 +105,7 @@ export class PlaylistPickerPlay extends InteractionHandler {
         if (!voice) {
           await replyNotice(
             interaction,
-            { ok: false, message: 'Join a voice channel first.' },
+            { ok: false, ...say('joinVoiceFirst') },
             { seconds: RESULT_SECONDS },
           );
           return;
@@ -115,8 +119,11 @@ export class PlaylistPickerPlay extends InteractionHandler {
       await replyNotice(interaction, notice, { seconds: RESULT_SECONDS });
       requestBannerRefresh();
     } catch (error) {
-      const message = error instanceof PlaylistError ? error.message : 'Could not play it.';
-      await replyNotice(interaction, { ok: false, message }, { seconds: RESULT_SECONDS });
+      const failure =
+        error instanceof PlaylistError
+          ? { message: error.message, phrase: error.phrase }
+          : say('playFailed');
+      await replyNotice(interaction, { ok: false, ...failure }, { seconds: RESULT_SECONDS });
     }
   }
 }

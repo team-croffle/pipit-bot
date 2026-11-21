@@ -10,6 +10,7 @@ import {
 } from 'discord.js';
 
 import { replyNotice, type Notice } from '../lib/discord/notice.js';
+import { say } from '../lib/i18n/phrase.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { REMOTE } from '../lib/music/banner/render.js';
 import { refuseWhenMusicOff } from '../lib/music/music-switch.js';
@@ -95,7 +96,7 @@ export class MusicRemoteButton extends InteractionHandler {
     if (!isMusicChannel(interaction.channelId)) {
       await replyNotice(interaction, {
         ok: false,
-        message: 'Music commands can only be used in a designated music channel.',
+        ...say('musicChannelOnly'),
       });
       return;
     }
@@ -128,7 +129,7 @@ export class MusicRemoteButton extends InteractionHandler {
       if (!voiceChannel) {
         await replyNotice(
           interaction,
-          { ok: false, message: 'Join a voice channel first.' },
+          { ok: false, ...say('joinVoiceFirst') },
           { seconds: RESULT_SECONDS },
         );
         return;
@@ -174,7 +175,7 @@ export class MusicRemoteButton extends InteractionHandler {
       case REMOTE.autoplay:
         return setAutoplay(!getPlaybackState().autoplay);
       default:
-        return { ok: false, message: 'That button no longer does anything.' };
+        return { ok: false, ...say('buttonStale') };
     }
   }
 }

@@ -4,6 +4,7 @@ import type { RepliableInteraction } from 'discord.js';
 import { getConfiguredGuild } from '../discord-guild.js';
 import { replyNotice } from '../discord/notice.js';
 import { isEnabled, onFeatureChange } from '../features.js';
+import { say } from '../i18n/phrase.js';
 import { requestBannerRefresh } from './banner/manager.js';
 import { leaveVoiceChannel } from './voice-connection.js';
 
@@ -37,6 +38,6 @@ export async function refuseWhenMusicOff(interaction: RepliableInteraction): Pro
   if (isEnabled('music')) {
     return false;
   }
-  await replyNotice(interaction, { ok: false, message: 'Music is switched off on this server.' });
+  await replyNotice(interaction, { ok: false, ...say('musicOff') });
   return true;
 }

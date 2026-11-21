@@ -6,6 +6,7 @@ import type {
   Message,
 } from 'discord.js';
 
+import { say } from '../lib/i18n/phrase.js';
 import { getRuntimeConfig } from '../lib/runtime-config.js';
 
 /**
@@ -38,7 +39,11 @@ export class UserPrecondition extends AllFlowsPrecondition {
   private check(channelId: string | null) {
     return isMusicChannel(channelId)
       ? this.ok()
-      : this.error({ identifier: 'MusicChannel', message: REFUSAL });
+      : this.error({
+          identifier: 'MusicChannel',
+          message: REFUSAL,
+          context: { phrase: say('musicChannelOnly').phrase },
+        });
   }
 }
 

@@ -6,6 +6,8 @@ import { actorOf } from '../lib/audit/discord.js';
 import { audit } from '../lib/audit/log.js';
 import { disappearsIn, noticeMessage, type Notice } from '../lib/discord/notice.js';
 import { isEnabled } from '../lib/features.js';
+import { phraseIn, say } from '../lib/i18n/phrase.js';
+import { messageLanguage } from '../lib/i18n/settings.js';
 import { requestBannerRefresh } from '../lib/music/banner/manager.js';
 import { requestPlay } from '../lib/music/request.js';
 import { getRuntimeConfig } from '../lib/runtime-config.js';
@@ -46,17 +48,16 @@ export class UserEvent extends Listener<typeof Events.MessageCreate> {
     }
 
     const name = escapeMarkdown(message.member.displayName);
+    // A public post in the music channel: the music feature's language.
+    const language = messageLanguage('music');
+    const requestedBy = `-# ${phraseIn(language, { key: 'requestedBy', params: { name } })}`;
     // Gone first, so the channel never shows the raw line for long. Without the
     // permission the request still runs; the line just stays.
     await message.delete().catch(() => undefined);
 
     const answer = await message.channel
       .send(
-        noticeMessage({
-          ok: true,
-          message: '곡을 준비하고 있어요…',
-          detail: `-# ${name}님의 요청`,
-        }),
+        noticeMessage({ ok: true, ...say('preparing'), detail: requestedBy }, undefined, language),
       )
       .catch(() => null);
 
@@ -70,7 +71,11 @@ export class UserEvent extends Listener<typeof Events.MessageCreate> {
     });
     await answer
       ?.edit(
-        noticeMessage({ ...notice, detail: `-# ${name}님의 요청` }, disappearsIn(ANSWER_SECONDS)),
+        noticeMessage(
+          { ...notice, detail: requestedBy, detailPhrase: undefined },
+          disappearsIn(ANSWER_SECONDS, language),
+          language,
+        ),
       )
       .catch(() => undefined);
     requestBannerRefresh();

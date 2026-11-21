@@ -5,6 +5,7 @@ import type { Player } from 'discord-player';
 
 import { waitForJob, type TrackMeta } from '../../../api/jobs/pending-registry.js';
 import type { Notice } from '../../discord/notice.js';
+import { say } from '../../i18n/phrase.js';
 import { raisePlaybackNotice } from '../missing-file.js';
 import { getGuildQueue } from '../playback.js';
 import { playPreparedTrack, rememberTrackMeta, submitMusicJob } from '../prepare-track.js';
@@ -183,7 +184,7 @@ export function playPlaylist(
   options: { shuffle?: boolean; requestedBy?: string } = {},
 ): Notice {
   if (playlist.items.length === 0) {
-    return { ok: false, message: `"${playlist.name}" has no tracks yet.` };
+    return { ok: false, ...say('playlistEmpty', { name: playlist.name }) };
   }
 
   stopFeed();
@@ -208,7 +209,10 @@ export function playPlaylist(
 
   return {
     ok: true,
-    message: `Playing "${playlist.name}"${options.shuffle ? ' shuffled' : ''} — ${total} track${total === 1 ? '' : 's'}.`,
+    ...say(options.shuffle ? 'playingPlaylistShuffled' : 'playingPlaylist', {
+      name: playlist.name,
+      count: total,
+    }),
   };
 }
 

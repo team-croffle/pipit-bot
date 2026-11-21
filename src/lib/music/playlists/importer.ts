@@ -1,7 +1,7 @@
 import { expandMusic } from '../expand-client.js';
 import { SearchFailure } from '../search-client.js';
 import { hasCapability } from '../worker-capabilities.js';
-import { addItems, createPlaylist, getPlaylist, PlaylistError } from './store.js';
+import { addItems, createPlaylist, getPlaylist, playlistError, PlaylistError } from './store.js';
 import type { Playlist, PlaylistScope, PlaylistViewer } from './types.js';
 
 export interface ImportResult {
@@ -12,11 +12,11 @@ export interface ImportResult {
 
 async function expand(query: string) {
   if (!hasCapability('expand')) {
-    throw new PlaylistError(409, 'The music worker does not offer importing.');
+    throw playlistError(409, 'noImport');
   }
   const text = query.trim();
   if (!text || text.length > 500) {
-    throw new PlaylistError(400, 'Paste a link (up to 500 characters).');
+    throw playlistError(400, 'pasteLink');
   }
 
   let expanded;
@@ -29,7 +29,7 @@ async function expand(query: string) {
     );
   }
   if (expanded.items.length === 0) {
-    throw new PlaylistError(409, 'There was nothing to import from that.');
+    throw playlistError(409, 'nothingToImport');
   }
   return expanded;
 }
