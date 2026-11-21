@@ -5,6 +5,7 @@
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
+  import FeatureLanguageSelect from '@/components/common/feature-language-select.vue';
   import MemberSelect from '@/components/common/member-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
@@ -421,6 +422,7 @@
       description="GitHub App이 보낸 PR·이슈 활동을 디스코드 채널로 전달합니다"
     >
       <template #actions>
+        <FeatureLanguageSelect feature="github" :read-only="readOnly" />
         <Badge :variant="settings.enabled ? 'default' : 'secondary'">
           {{ settings.enabled ? '활성' : '비활성' }}
         </Badge>

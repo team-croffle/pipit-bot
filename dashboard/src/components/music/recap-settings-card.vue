@@ -3,6 +3,7 @@
 
   import { fetchJson, putJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
+  import FeatureLanguageSelect from '@/components/common/feature-language-select.vue';
   import OptionSelect from '@/components/common/option-select.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import { Button } from '@/components/ui/button';
@@ -40,11 +41,6 @@
     'Europe/Berlin',
     'America/New_York',
     'America/Los_Angeles',
-  ];
-
-  const LANGUAGES = [
-    { id: 'ko', name: '한국어' },
-    { id: 'en', name: 'English' },
   ];
 
   const saved = ref<Answer | null>(null);
@@ -181,18 +177,12 @@
               />
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <Label for="recap-language">결산 언어</Label>
-              <OptionSelect
-                id="recap-language"
-                :model-value="draft.language"
-                :options="LANGUAGES"
-                placeholder="언어"
-                :disabled="readOnly || busy"
-                @update:model-value="(value) => draft && (draft.language = value as 'en' | 'ko')"
-              />
+              <Label>결산 언어</Label>
+              <!-- Since v0.8.3 the recap's language is a language setting (features.recap). -->
+              <FeatureLanguageSelect feature="recap" :read-only="readOnly" />
               <p class="text-muted-foreground text-xs">
-                채널에 올리는 결산의 언어입니다. <code>/recap</code>은 각자의 디스코드 언어를
-                따릅니다.
+                채널에 올리는 결산의 언어로, 바로 저장됩니다. <code>/recap</code>은 각자의 디스코드
+                언어를 따릅니다.
               </p>
             </div>
           </div>

@@ -6,6 +6,7 @@
   import ChannelSelect from '@/components/common/channel-select.vue';
   import EmojiPicker from '@/components/common/emoji-picker.vue';
   import EmojiText from '@/components/common/emoji-text.vue';
+  import FeatureLanguageSelect from '@/components/common/feature-language-select.vue';
   import OptionSelect from '@/components/common/option-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
@@ -88,6 +89,7 @@
   <div class="flex flex-col gap-5">
     <PageHeader title="리액션 롤" description="봇이 올린 메시지에 반응하면 역할이 부여됩니다">
       <template #actions>
+        <FeatureLanguageSelect feature="reactionRoles" :read-only="readOnly" />
         <Button :disabled="readOnly || busy" @click="addPanel">
           <Plus />
           패널 추가
