@@ -94,7 +94,7 @@ the larger decisions behind them are in [decisions](./decisions/000_README.md).
 
 ### v0.8.3 — languages
 
-- The dashboard's language is chosen in the settings, and each feature's Discord messages in that feature's settings (Korean, English)
+- Korean and English — channel messages in the server's default language (each feature can choose its own), personal replies and slash command descriptions in each person's Discord language, the dashboard in each person's choice
 
 ### v0.9 — calendars
 
