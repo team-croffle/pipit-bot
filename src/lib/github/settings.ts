@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { dataDir } from '../constants.js';
+import type { Language } from '../i18n/index.js';
 import { loadSettingsFile } from '../settings-file.js';
 import { defaultTemplateFor, LEGACY_DEFAULT_TEMPLATE } from './default-templates.js';
 import { parseEmbedTemplate, parseEmbedTemplateMap, type EmbedTemplate } from './embed-template.js';
@@ -350,12 +351,26 @@ export function resolveRepoRule(
   return { channelId, events: rule?.events ?? settings.events };
 }
 
-/** The wording for one event: its own override, else that event's built-in default. */
+/**
+ * The wording for one event: its own override, else that event's built-in default in
+ * `language`. An override that is word for word a built-in default (saved untouched from
+ * the dashboard) counts as the default, so it follows the language too.
+ */
 export function resolveTemplate(
   settings: GithubNotifySettings,
   toggle: keyof GithubEventToggles,
+  language: Language = 'en',
 ): EmbedTemplate {
-  return settings.eventTemplates[toggle] ?? defaultTemplateFor(toggle);
+  const stored = settings.eventTemplates[toggle];
+  const same = (other: EmbedTemplate) => JSON.stringify(stored) === JSON.stringify(other);
+  if (
+    stored &&
+    !same(defaultTemplateFor(toggle, 'en')) &&
+    !same(defaultTemplateFor(toggle, 'ko'))
+  ) {
+    return stored;
+  }
+  return defaultTemplateFor(toggle, language);
 }
 
 let loadError: string | null = null;
