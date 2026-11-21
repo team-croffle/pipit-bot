@@ -2,6 +2,28 @@ import type { notice as en } from '../en/notice.js';
 
 /** 동작 결과 — 한국어. 한국어 복수형은 `_other`만 쓰지만 키는 영어와 맞춰 둔다. */
 export const notice: typeof en = {
+  rrChannelUnusable: '채널을 찾을 수 없거나 봇이 글을 쓸 수 있는 채널이 아닙니다.',
+  rrNoMember: '봇의 서버 정보를 아직 불러오지 못했습니다.',
+  rrMissingPermissions: '이 채널에서 봇에게 없는 권한이 있습니다: {{permissions}}',
+  rrNoManageRoles: '봇에게 역할 관리 권한이 없습니다.',
+  rrRoleMissing: '서버에 없는 역할이 있습니다: {{emoji}}',
+  rrRoleManaged: '{{role}}은(는) 연동이 관리하는 역할이라 부여할 수 없습니다.',
+  rrRoleTooHigh:
+    '{{role}}이(가) 봇의 역할보다 위에 있어 부여할 수 없습니다. 서버 설정에서 봇 역할을 위로 올려 주세요.',
+  rrOrderWarning:
+    '이모지 순서를 설정과 맞추지 못했습니다 — 봇에게 이 채널의 "메시지 관리" 권한이 필요합니다.',
+  rrNoOptions: '역할이 하나도 없습니다. 이모지와 역할을 먼저 추가해 주세요.',
+  rrSingleNeedsManage: '반응 수를 1로 유지하려면 봇에게 이 채널의 "메시지 관리" 권한이 필요합니다.',
+  rrEmpty: '보낼 내용이 비어 있습니다. 제목이나 설명을 채워 주세요.',
+  discordNotReady: '디스코드에 아직 연결되지 않았습니다.',
+  rrPanelMissing: '패널을 찾을 수 없습니다. 먼저 저장해 주세요.',
+  rrPublishFailed: '패널을 발행하지 못했습니다. 봇 로그를 확인해 주세요.',
+  memberVia: '초대 `{{code}}`{{inviter}}',
+  memberViaUnknown: '초대 알 수 없음',
+  memberJoined: '📥 {{member}} 입장 · {{via}}',
+  memberStayed_one: ' · {{count}}일 머묾',
+  memberStayed_other: ' · {{count}}일 머묾',
+  memberLeft: '📤 {{member}} 퇴장{{stayed}}',
   noPlaylistsAnywhere: '재생목록이 없어요 — /playlist create나 대시보드에서 만드세요.',
   deleteButton: '"{{name}}" 지우기',
   requestedBy: '{{name}}님의 요청',

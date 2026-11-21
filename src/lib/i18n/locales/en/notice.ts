@@ -3,6 +3,29 @@
  * (i18n/phrase.ts). English is also what the API and the audit log carry.
  */
 export const notice = {
+  rrChannelUnusable: 'The channel cannot be found, or it is not one the bot can post in.',
+  rrNoMember: "The bot's server details have not loaded yet.",
+  rrMissingPermissions: 'The bot is missing permissions in this channel: {{permissions}}',
+  rrNoManageRoles: 'The bot does not have the Manage Roles permission.',
+  rrRoleMissing: 'A role is no longer on the server: {{emoji}}',
+  rrRoleManaged: '{{role}} is managed by an integration and cannot be given.',
+  rrRoleTooHigh:
+    "{{role}} is above the bot's role and cannot be given. Move the bot's role up in the server settings.",
+  rrOrderWarning:
+    'The emoji could not be put in the configured order — the bot needs Manage Messages in this channel.',
+  rrNoOptions: 'There are no roles yet. Add an emoji and a role first.',
+  rrSingleNeedsManage:
+    'Keeping one reaction per member needs the bot to have Manage Messages in this channel.',
+  rrEmpty: 'There is nothing to send. Fill in a title or a description.',
+  discordNotReady: 'Not connected to Discord yet.',
+  rrPanelMissing: 'The panel cannot be found. Save it first.',
+  rrPublishFailed: "The panel could not be published. Check the bot's log.",
+  memberVia: 'invite `{{code}}`{{inviter}}',
+  memberViaUnknown: 'invite unknown',
+  memberJoined: '📥 {{member}} joined · {{via}}',
+  memberStayed_one: ' · stayed {{count}} day',
+  memberStayed_other: ' · stayed {{count}} days',
+  memberLeft: '📤 {{member}} left{{stayed}}',
   noPlaylistsAnywhere: 'No playlists yet — make one with /playlist create or on the dashboard.',
   deleteButton: 'Delete "{{name}}"',
   requestedBy: 'Requested by {{name}}',
