@@ -10,7 +10,9 @@
  * webhook layer produces.
  */
 
+import type { Language } from '../i18n/index.js';
 import { emptyEmbedTemplate, type EmbedTemplate } from './embed-template.js';
+import { githubText } from './language.js';
 import type { GithubEventKey } from './template.js';
 
 /**
@@ -124,6 +126,15 @@ export const DEFAULT_EVENT_TEMPLATES: Record<GithubEventKey, EmbedTemplate> = {
   ]),
 };
 
-export function defaultTemplateFor(event: GithubEventKey): EmbedTemplate {
-  return structuredClone(DEFAULT_EVENT_TEMPLATES[event]);
+/** An event's built-in wording, its field names in `language` (language.ts). */
+export function defaultTemplateFor(
+  event: GithubEventKey,
+  language: Language = 'en',
+): EmbedTemplate {
+  const template = structuredClone(DEFAULT_EVENT_TEMPLATES[event]);
+  template.fields = template.fields.map((field) => ({
+    ...field,
+    name: githubText(field.name, language),
+  }));
+  return template;
 }

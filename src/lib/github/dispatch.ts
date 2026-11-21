@@ -12,6 +12,7 @@ import { getConfiguredGuild } from '../discord-guild.js';
 import { resolveTemplateEmojis } from '../embed/emoji.js';
 import { recordDelivery, type DeliveryOutcome } from './delivery-log.js';
 import { formatGithubNotification } from './format-message.js';
+import { githubLanguage, githubText } from './language.js';
 import { unmappedTeams } from './mentions.js';
 import {
   findTrackedMessage,
@@ -193,10 +194,12 @@ async function updateAnnouncement(
     return 'The channel of the earlier message is gone.';
   }
 
+  const language = githubLanguage();
+  const announcement = asAnnouncement(notification, tracked.toggle);
   const rendered = formatGithubNotification(
-    asAnnouncement(notification, tracked.toggle),
+    { ...announcement, label: githubText(announcement.label, language) },
     getAccountLinks(),
-    resolveTemplateEmojis(resolveTemplate(settings, tracked.toggle), guild),
+    resolveTemplateEmojis(resolveTemplate(settings, tracked.toggle, language), guild),
     settings.teams,
   );
   if (!rendered.content && !rendered.embed) {
@@ -304,11 +307,13 @@ export async function dispatchGithubNotification(
     return skip('The configured channel no longer exists, or is not one the bot can post in.');
   }
 
+  const language = githubLanguage();
   const message = formatGithubNotification(
-    notification,
+    // The delivery log keeps the English label; the message says it in the GitHub language.
+    { ...notification, label: githubText(notification.label, language) },
     getAccountLinks(),
     // Shortcodes become real emoji here, before any payload value is substituted in.
-    resolveTemplateEmojis(resolveTemplate(settings, notification.toggle), guild),
+    resolveTemplateEmojis(resolveTemplate(settings, notification.toggle, language), guild),
     settings.teams,
   );
   if (!message.content && !message.embed) {
