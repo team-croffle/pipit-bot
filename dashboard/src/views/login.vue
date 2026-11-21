@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { KeyRound, LogIn } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { useRoute } from 'vue-router';
 
   import BrandMark from '@/components/layout/brand-mark.vue';
@@ -24,14 +25,15 @@
 
   /**
    * The sign-in page (v0.8.2). It offers only the methods that are switched on, and sends
-   * the person back to where they were going. English, unlike the rest of the dashboard
-   * for now (2026-11-18, the team; every page gets a language in v0.8.3).
+   * the person back to where they were going. Nobody is known yet, so it speaks the
+   * browser's language (i18n/index.ts).
    */
 
   // The shell's theme toggle is not on this page; this keeps the saved or system theme.
   useTheme();
 
   const route = useRoute();
+  const { t } = useI18n();
   const next = computed(() => safeNext(route.query.next));
 
   const methods = ref<OfferedMethod[]>([]);
@@ -60,7 +62,7 @@
       }
       methods.value = await fetchMethods();
     } catch {
-      loadError.value = 'The sign-in options could not be loaded. Reload the page to try again.';
+      loadError.value = t('login.optionsFailed');
     } finally {
       loading.value = false;
     }
@@ -76,7 +78,7 @@
       await signInWithPassword(username.value.trim(), password.value);
       window.location.replace(next.value);
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Signing in failed.';
+      error.value = cause instanceof Error ? cause.message : t('login.failed');
       password.value = '';
       busy.value = null;
     }
@@ -91,7 +93,7 @@
     try {
       await signInWithProvider(method, next.value);
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Signing in failed.';
+      error.value = cause instanceof Error ? cause.message : t('login.failed');
       busy.value = null;
     }
   }
@@ -107,8 +109,8 @@
 
       <Card>
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Sign in to the team dashboard.</CardDescription>
+          <CardTitle>{{ t('login.title') }}</CardTitle>
+          <CardDescription>{{ t('login.description') }}</CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col gap-5">
           <Alert v-if="error" variant="destructive" role="alert">
@@ -118,7 +120,7 @@
           <div v-if="loading" class="flex flex-col gap-3" role="status" aria-live="polite">
             <Skeleton class="h-9 w-full" />
             <Skeleton class="h-9 w-full" />
-            <span class="sr-only">Loading…</span>
+            <span class="sr-only">{{ t('common.loading') }}</span>
           </div>
 
           <p v-else-if="loadError" class="text-destructive text-sm" role="alert">
@@ -126,13 +128,13 @@
           </p>
 
           <p v-else-if="methods.length === 0" class="text-muted-foreground text-sm">
-            No sign-in method is available. Ask the operator to check the server.
+            {{ t('login.noMethods') }}
           </p>
 
           <template v-else>
             <form v-if="hasPassword" class="flex flex-col gap-4" @submit.prevent="submitPassword">
               <div class="flex flex-col gap-2">
-                <Label for="login-username">User name</Label>
+                <Label for="login-username">{{ t('login.username') }}</Label>
                 <Input
                   id="login-username"
                   v-model="username"
@@ -143,7 +145,7 @@
                 />
               </div>
               <div class="flex flex-col gap-2">
-                <Label for="login-password">Password</Label>
+                <Label for="login-password">{{ t('login.password') }}</Label>
                 <Input
                   id="login-password"
                   v-model="password"
@@ -154,13 +156,13 @@
               </div>
               <Button type="submit" :disabled="busy !== null">
                 <KeyRound />
-                {{ busy === 'password' ? 'Signing in…' : 'Sign in' }}
+                {{ busy === 'password' ? t('login.submitting') : t('login.submit') }}
               </Button>
             </form>
 
             <div v-if="hasPassword && providers.length > 0" class="flex items-center gap-3">
               <Separator class="flex-1" />
-              <span class="text-muted-foreground text-xs">or</span>
+              <span class="text-muted-foreground text-xs">{{ t('login.or') }}</span>
               <Separator class="flex-1" />
             </div>
 
@@ -175,8 +177,8 @@
                 <LogIn />
                 {{
                   busy === provider.method
-                    ? 'Redirecting…'
-                    : `Continue with ${providerName(provider)}`
+                    ? t('login.redirecting')
+                    : t('login.continueWith', { provider: providerName(provider) })
                 }}
               </Button>
             </div>

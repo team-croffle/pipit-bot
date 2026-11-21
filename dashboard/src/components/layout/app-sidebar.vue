@@ -1,10 +1,13 @@
 <script setup lang="ts">
+  import { useI18n } from 'vue-i18n';
+
   import AppNav from './app-nav.vue';
   import BrandMark from './brand-mark.vue';
   import ThemeToggle from './theme-toggle.vue';
 
   defineProps<{ version?: string }>();
   const emit = defineEmits<{ navigate: [] }>();
+  const { t } = useI18n();
 </script>
 
 <template>
@@ -13,7 +16,7 @@
       <BrandMark :size="36" />
       <div class="min-w-0 leading-tight">
         <p class="font-jua truncate text-base tracking-tight">pipit-hub</p>
-        <p class="text-muted-foreground truncate text-xs">Team Croffle 관제 센터</p>
+        <p class="text-muted-foreground truncate text-xs">{{ t('common.appSubtitle') }}</p>
       </div>
     </div>
 

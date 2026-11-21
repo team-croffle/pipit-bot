@@ -15,6 +15,7 @@ import type { Component } from 'vue';
 
 export interface NavItem {
   to: string;
+  /** An i18n key (nav.*). */
   label: string;
   icon: Component;
   /** Set on pages that exist as a preview of planned work rather than a live feature. */
@@ -24,6 +25,7 @@ export interface NavItem {
 }
 
 export interface NavSection {
+  /** An i18n key, or '' for none. */
   title: string;
   items: NavItem[];
 }
@@ -31,31 +33,31 @@ export interface NavSection {
 export const navSections: NavSection[] = [
   {
     title: '',
-    items: [{ to: '/', label: '개요', icon: LayoutDashboard, exact: true }],
+    items: [{ to: '/', label: 'nav.overview', icon: LayoutDashboard, exact: true }],
   },
   {
-    title: '기능',
+    title: 'nav.features',
     items: [
-      { to: '/music', label: '음악', icon: Music },
-      { to: '/github', label: 'GitHub 리마인더', icon: Github },
-      { to: '/invites', label: '초대 로거', icon: UserPlus },
-      { to: '/reaction-roles', label: '리액션 롤', icon: Smile },
-      { to: '/calendar', label: '캘린더 연동', icon: CalendarDays, planned: 'v0.9' },
-      { to: '/polls', label: '투표', icon: ListChecks, planned: 'v0.10' },
+      { to: '/music', label: 'nav.music', icon: Music },
+      { to: '/github', label: 'nav.github', icon: Github },
+      { to: '/invites', label: 'nav.invites', icon: UserPlus },
+      { to: '/reaction-roles', label: 'nav.reactionRoles', icon: Smile },
+      { to: '/calendar', label: 'nav.calendar', icon: CalendarDays, planned: 'v0.9' },
+      { to: '/polls', label: 'nav.polls', icon: ListChecks, planned: 'v0.10' },
     ],
   },
   {
-    title: '운영',
+    title: 'nav.operations',
     items: [
-      { to: '/settlement', label: '음악 결산', icon: BarChart3 },
-      { to: '/logs', label: '로깅', icon: ScrollText },
+      { to: '/settlement', label: 'nav.settlement', icon: BarChart3 },
+      { to: '/logs', label: 'nav.logs', icon: ScrollText },
     ],
   },
   {
-    title: '시스템',
+    title: 'nav.system',
     items: [
-      { to: '/users', label: '사용자', icon: Users },
-      { to: '/settings', label: '설정', icon: Settings },
+      { to: '/users', label: 'nav.users', icon: Users },
+      { to: '/settings', label: 'nav.settings', icon: Settings },
     ],
   },
 ];

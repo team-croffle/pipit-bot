@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import { LogOut, Menu } from 'lucide-vue-next';
   import { computed, onMounted, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
   import { RouterView, useRoute } from 'vue-router';
 
   import { fetchJson, logout } from './api';
   import FeatureOffNotice from './components/common/feature-off-notice.vue';
   import AppSidebar from './components/layout/app-sidebar.vue';
   import BrandMark from './components/layout/brand-mark.vue';
+  import LanguageMenu from './components/layout/language-menu.vue';
   import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
   import { Badge } from './components/ui/badge';
   import { Button } from './components/ui/button';
@@ -19,6 +21,7 @@
   } from './components/ui/sheet';
   import { Skeleton } from './components/ui/skeleton';
   import { useFeatures } from './composables/use-features';
+  import { resolveLanguage, setLanguage } from './i18n';
   import type { DashboardIdentity, HealthResponse } from './types';
 
   const appVersion = import.meta.env.VITE_APP_VERSION;
@@ -33,12 +36,13 @@
   // The sign-in page draws itself, without the shell or a signed-in user.
   const bare = computed(() => route.meta.bare === true);
 
+  const { t } = useI18n();
   const healthLabel = computed(() => {
     if (health.value === 'ok') {
-      return '온라인';
+      return t('common.online');
     }
 
-    return health.value === 'error' ? '응답 없음' : '확인 중';
+    return health.value === 'error' ? t('common.noResponse') : t('common.checking');
   });
 
   // Closing on navigation keeps the drawer from covering the page it just opened.
@@ -58,11 +62,13 @@
     void loadFeatures();
     try {
       me.value = await fetchJson<DashboardIdentity>('/api/me');
+      // Their own language, then the server's default, then the browser's (i18n/index.ts).
+      setLanguage(resolveLanguage(me.value.locale, me.value.dashboardLanguage));
     } catch (cause) {
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : '로그인 정보를 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('common.meFailed');
     } finally {
       loading.value = false;
     }
@@ -91,13 +97,20 @@
       >
         <Sheet v-model:open="mobileNavOpen">
           <SheetTrigger as-child>
-            <Button variant="ghost" size="icon" class="lg:hidden" aria-label="메뉴 열기">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="lg:hidden"
+              :aria-label="t('common.openMenu')"
+            >
               <Menu />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" class="w-64 p-0">
-            <SheetTitle class="sr-only">내비게이션</SheetTitle>
-            <SheetDescription class="sr-only">대시보드 페이지 목록</SheetDescription>
+            <SheetTitle class="sr-only">{{ t('common.navigation') }}</SheetTitle>
+            <SheetDescription class="sr-only">
+              {{ t('common.navigationDescription') }}
+            </SheetDescription>
             <AppSidebar :version="appVersion" @navigate="mobileNavOpen = false" />
           </SheetContent>
         </Sheet>
@@ -105,7 +118,11 @@
         <BrandMark :size="28" class="lg:hidden" />
 
         <div class="ml-auto flex items-center gap-2 sm:gap-3">
-          <Badge variant="outline" class="gap-1.5 font-normal" :title="`API 상태: ${healthLabel}`">
+          <Badge
+            variant="outline"
+            class="gap-1.5 font-normal"
+            :title="t('common.apiStatus', { status: healthLabel })"
+          >
             <span
               class="size-1.5 rounded-full"
               :class="{
@@ -122,13 +139,14 @@
           <template v-else-if="me">
             <div class="flex items-center gap-2">
               <span class="hidden max-w-32 truncate text-sm sm:inline">
-                {{ me.user ?? 'anonymous' }}
+                {{ me.user ?? t('common.anonymous') }}
               </span>
               <Badge :variant="me.canWriteSettings ? 'default' : 'secondary'">
-                {{ me.canWriteSettings ? 'admin' : 'member' }}
+                {{ me.canWriteSettings ? t('common.admin') : t('common.member') }}
               </Badge>
             </div>
-            <Button variant="ghost" size="icon" aria-label="로그아웃" @click="logout">
+            <LanguageMenu v-model:me="me" />
+            <Button variant="ghost" size="icon" :aria-label="t('common.logout')" @click="logout">
               <LogOut />
             </Button>
           </template>
@@ -137,7 +155,7 @@
 
       <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         <Alert v-if="error" variant="destructive" class="mb-5">
-          <AlertTitle>불러오지 못했습니다</AlertTitle>
+          <AlertTitle>{{ t('common.loadFailed') }}</AlertTitle>
           <AlertDescription>{{ error }}</AlertDescription>
         </Alert>
 

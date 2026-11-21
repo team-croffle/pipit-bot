@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import {
     Select,
@@ -21,6 +22,7 @@
    */
   const { feature, readOnly } = defineProps<{ feature: MessageFeature; readOnly: boolean }>();
   const { settings, load, save } = useLanguageSettings();
+  const { t } = useI18n();
   const busy = ref(false);
   const failure = ref('');
   const DEFAULT = 'default';
@@ -30,7 +32,9 @@
     current.value === DEFAULT ? defaultLabel.value : LANGUAGE_NAMES[current.value as Language],
   );
   const defaultLabel = computed(() =>
-    settings.value ? `기본 따름 (${LANGUAGE_NAMES[settings.value.messages]})` : '기본 따름',
+    settings.value
+      ? t('language.followDefaultIs', { language: LANGUAGE_NAMES[settings.value.messages] })
+      : t('language.followDefault'),
   );
 
   async function pick(value: unknown) {
@@ -54,13 +58,15 @@
 <template>
   <div class="flex min-w-0 flex-col gap-1" :data-feature-language="feature">
     <div class="flex items-center gap-2">
-      <span class="text-muted-foreground shrink-0 text-xs">메시지 언어</span>
+      <span class="text-muted-foreground shrink-0 text-xs">{{
+        t('language.messageLanguage')
+      }}</span>
       <Select
         :model-value="current"
         :disabled="readOnly || busy || !settings"
         @update:model-value="pick"
       >
-        <SelectTrigger class="h-8 min-w-36" :aria-label="`${feature} 메시지 언어`">
+        <SelectTrigger class="h-8 min-w-36" :aria-label="t('language.ariaFeature', { feature })">
           <SelectValue>{{ currentLabel }}</SelectValue>
         </SelectTrigger>
         <SelectContent>

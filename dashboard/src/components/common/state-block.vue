@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { useI18n } from 'vue-i18n';
+
   import { Skeleton } from '@/components/ui/skeleton';
 
   /**
@@ -6,6 +8,7 @@
    * failed, or loaded but with nothing to show.
    */
   defineProps<{ loading?: boolean; error?: string; empty?: boolean; emptyText?: string }>();
+  const { t } = useI18n();
 </script>
 
 <template>
@@ -13,11 +16,11 @@
     <Skeleton class="h-4 w-2/5" />
     <Skeleton class="h-4 w-4/5" />
     <Skeleton class="h-4 w-3/5" />
-    <span class="sr-only">불러오는 중…</span>
+    <span class="sr-only">{{ t('common.loading') }}</span>
   </div>
   <p v-else-if="error" class="text-destructive text-sm" role="alert">{{ error }}</p>
   <p v-else-if="empty" class="text-muted-foreground text-sm">
-    {{ emptyText ?? '표시할 내용이 없습니다.' }}
+    {{ emptyText ?? t('common.empty') }}
   </p>
   <slot v-else />
 </template>

@@ -1,0 +1,26 @@
+/** The sign-in page (views/login.vue, lib/sign-in.ts). */
+export const login = {
+  title: 'Sign in',
+  description: 'Sign in to the team dashboard.',
+  username: 'User name',
+  password: 'Password',
+  submit: 'Sign in',
+  submitting: 'Signing in…',
+  continueWith: 'Continue with {provider}',
+  redirecting: 'Redirecting…',
+  or: 'or',
+  noMethods: 'No sign-in method is available. Ask the operator to check the server.',
+  optionsFailed: 'The sign-in options could not be loaded. Reload the page to try again.',
+  failed: 'Signing in failed.',
+  failedStatus: 'Signing in failed ({status}).',
+  wrongPassword: 'The user name or password is wrong.',
+  methodOff: 'This sign-in method is switched off.',
+  tooMany: 'Too many attempts. Wait a minute and try again.',
+  idpDown: 'The identity provider could not be reached. Try again later.',
+  notAllowed: 'This account may not sign in. Ask an admin to add you.',
+  callbackMoved:
+    'The identity provider uses an old callback address. Ask the operator to update it.',
+  cancelled: 'Signing in was cancelled.',
+  unfinished: 'Signing in did not finish. Try again.',
+  notStarted: 'Signing in did not start. Try again.',
+};

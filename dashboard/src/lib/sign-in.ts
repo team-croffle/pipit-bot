@@ -5,6 +5,8 @@
  * client would add a dependency to every page's bundle for them.
  */
 
+import { t } from '@/i18n';
+
 export type SignInMethod = 'password' | 'oidc' | 'discord' | 'github';
 
 export interface OfferedMethod {
@@ -46,19 +48,19 @@ export async function fetchMethods(): Promise<OfferedMethod[]> {
   return ((await response.json()) as { methods: OfferedMethod[] }).methods;
 }
 
-/** English, like the rest of the sign-in page. */
+/** In the page's language (the browser's, before anyone has signed in). */
 export function describeStatus(status: number): string {
   switch (status) {
     case 401:
-      return 'The user name or password is wrong.';
+      return t('login.wrongPassword');
     case 403:
-      return 'This sign-in method is switched off.';
+      return t('login.methodOff');
     case 429:
-      return 'Too many attempts. Wait a minute and try again.';
+      return t('login.tooMany');
     case 502:
-      return 'The identity provider could not be reached. Try again later.';
+      return t('login.idpDown');
     default:
-      return `Signing in failed (${status}).`;
+      return t('login.failedStatus', { status });
   }
 }
 
@@ -66,13 +68,13 @@ export function describeStatus(status: number): string {
 export function describeError(code: string): string {
   switch (code) {
     case 'not_allowed':
-      return 'This account may not sign in. Ask an admin to add you.';
+      return t('login.notAllowed');
     case 'callback_moved':
-      return 'The identity provider uses an old callback address. Ask the operator to update it.';
+      return t('login.callbackMoved');
     case 'access_denied':
-      return 'Signing in was cancelled.';
+      return t('login.cancelled');
     default:
-      return 'Signing in did not finish. Try again.';
+      return t('login.unfinished');
   }
 }
 
@@ -105,7 +107,7 @@ export async function signInWithProvider(provider: SignInMethod, next: string): 
   }
   const body = (await response.json()) as { url?: string };
   if (!body.url) {
-    throw new Error('Signing in did not start. Try again.');
+    throw new Error(t('login.notStarted'));
   }
   window.location.assign(body.url);
 }

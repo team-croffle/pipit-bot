@@ -6,6 +6,10 @@ export interface DashboardIdentity {
   idpGroups?: string[];
   /** Given on the dashboard. */
   localGroups?: string[];
+  /** The person's own dashboard language; null follows the server's default. */
+  locale?: 'en' | 'ko' | null;
+  /** The server's dashboard default; null leaves it to the browser. */
+  dashboardLanguage?: 'en' | 'ko' | null;
   canWriteSettings: boolean;
   canControlPlayback: boolean;
   /** The linked Discord account (GitHub page → accounts), for personal playlists. */

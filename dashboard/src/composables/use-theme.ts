@@ -1,6 +1,8 @@
 import { useColorMode } from '@vueuse/core';
 import { computed } from 'vue';
 
+import { t } from '@/i18n';
+
 export type ThemeChoice = 'auto' | 'light' | 'dark';
 
 /**
@@ -16,9 +18,9 @@ export function useTheme() {
   });
 
   const choices: { value: ThemeChoice; label: string }[] = [
-    { value: 'light', label: '라이트' },
-    { value: 'dark', label: '다크' },
-    { value: 'auto', label: '시스템' },
+    { value: 'light', label: t('common.themeLightShort') },
+    { value: 'dark', label: t('common.themeDarkShort') },
+    { value: 'auto', label: t('common.themeAutoShort') },
   ];
 
   const current = computed<ThemeChoice>(() => mode.value as ThemeChoice);
