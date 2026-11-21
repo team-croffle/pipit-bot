@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { onMounted } from 'vue';
 
+  import FeatureLanguageSelect from '@/components/common/feature-language-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import ChannelRestriction from '@/components/music/channel-restriction.vue';
@@ -24,7 +25,11 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="음악" description="재생 제어, 재생목록, 재생 옵션" />
+    <PageHeader title="음악" description="재생 제어, 재생목록, 재생 옵션">
+      <template #actions>
+        <FeatureLanguageSelect feature="music" :read-only="!me.canWriteSettings" />
+      </template>
+    </PageHeader>
 
     <Tabs default-value="control" class="gap-5">
       <TabsList>

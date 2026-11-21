@@ -4,6 +4,7 @@
 
   import { fetchJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
+  import FeatureLanguageSelect from '@/components/common/feature-language-select.vue';
   import PageHeader from '@/components/common/page-header.vue';
   import StateBlock from '@/components/common/state-block.vue';
   import InviteStatsCard from '@/components/invites/invite-stats-card.vue';
@@ -78,7 +79,11 @@
     <PageHeader
       title="초대 로거"
       description="초대 코드별 유입, 입장·퇴장 안내와 기록, 가입 시 자동 역할 부여"
-    />
+    >
+      <template #actions>
+        <FeatureLanguageSelect feature="memberEvents" :read-only="readOnly" />
+      </template>
+    </PageHeader>
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
       읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
