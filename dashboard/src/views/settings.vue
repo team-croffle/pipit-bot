@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
   import { RouterLink } from 'vue-router';
 
   import { fetchJson, putJson } from '@/api';
@@ -32,16 +33,17 @@
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
+  const { t } = useI18n();
 
   const { states, loadError, set, load } = useFeatures();
   const busy = ref<Feature | null>(null);
   const failure = ref('');
 
   /** Not built yet — shown so the list reads as the whole plan. */
-  const planned = [
-    { label: '캘린더 연동', to: '/calendar', version: 'v0.9' },
-    { label: '투표 연동', to: '/polls', version: 'v0.10' },
-  ];
+  const planned = computed(() => [
+    { key: 'calendar', label: t('settings.plannedCalendar'), to: '/calendar', version: 'v0.9' },
+    { key: 'polls', label: t('settings.plannedPolls'), to: '/polls', version: 'v0.10' },
+  ]);
 
   async function toggle(feature: Feature, on: boolean): Promise<void> {
     busy.value = feature;
@@ -64,8 +66,7 @@
       auditSettings.value = await fetchJson<AuditSettingsAnswer>('/api/settings/audit');
       auditError.value = '';
     } catch (cause) {
-      auditError.value =
-        cause instanceof Error ? cause.message : '감사 설정을 불러오지 못했습니다.';
+      auditError.value = cause instanceof Error ? cause.message : t('settings.auditLoadFailed');
     }
   }
 
@@ -77,8 +78,7 @@
       });
       auditError.value = '';
     } catch (cause) {
-      auditError.value =
-        cause instanceof Error ? cause.message : '감사 설정을 저장하지 못했습니다.';
+      auditError.value = cause instanceof Error ? cause.message : t('settings.auditSaveFailed');
     } finally {
       auditBusy.value = false;
     }
@@ -94,10 +94,10 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="설정" description="기본 동작, 채널, 기능별 on/off" />
+    <PageHeader :title="t('settings.title')" :description="t('settings.description')" />
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
-      읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
+      {{ t('settings.readOnly') }}
     </p>
 
     <div class="flex flex-col gap-5">
@@ -105,13 +105,15 @@
         <CardContent class="flex flex-col">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <p class="text-sm font-medium">명령 채널 제한</p>
+              <p class="text-sm font-medium">{{ t('settings.commandChannels') }}</p>
               <p class="text-muted-foreground mt-1 text-xs">
-                기능별로 나뉘어 각 기능 페이지에서 지정합니다. 음악은
-                <RouterLink to="/music" class="underline underline-offset-2">
-                  음악 페이지
-                </RouterLink>
-                의 재생 옵션 탭에서 설정하세요.
+                <I18nT keypath="settings.commandChannelsBody" scope="global">
+                  <template #link>
+                    <RouterLink to="/music" class="underline underline-offset-2">{{
+                      t('settings.musicPage')
+                    }}</RouterLink>
+                  </template>
+                </I18nT>
               </p>
             </div>
           </div>
@@ -120,11 +122,8 @@
 
       <Card>
         <CardHeader>
-          <CardTitle class="text-base">기능별 on/off</CardTitle>
-          <CardDescription>
-            기능 단위로 켜고 끕니다. 끄면 그 기능의 디스코드 명령도 사라집니다(디스코드에 반영되는
-            데 잠시 걸릴 수 있어요).
-          </CardDescription>
+          <CardTitle class="text-base">{{ t('settings.featuresTitle') }}</CardTitle>
+          <CardDescription>{{ t('settings.featuresDescription') }}</CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col">
           <StateBlock :loading="!states && !loadError" :error="loadError">
@@ -153,7 +152,7 @@
               </div>
               <div
                 v-for="item in planned"
-                :key="item.label"
+                :key="item.key"
                 class="flex items-center justify-between gap-4 border-b py-3 last:border-b-0 last:pb-0"
               >
                 <RouterLink
@@ -163,7 +162,9 @@
                   {{ item.label }}
                 </RouterLink>
                 <div class="flex shrink-0 items-center gap-2.5">
-                  <Badge variant="secondary">{{ item.version }} 예정</Badge>
+                  <Badge variant="secondary">{{
+                    t('common.plannedBadge', { version: item.version })
+                  }}</Badge>
                   <Switch disabled />
                 </div>
               </div>
@@ -181,11 +182,8 @@
 
       <Card data-audit-settings>
         <CardHeader>
-          <CardTitle class="text-base">감사 로그</CardTitle>
-          <CardDescription>
-            기본으로 음악 기록은 누가 어떤 기능을 썼는지만 남깁니다. 곡 제목도 요청 내용도 남기지
-            않습니다.
-          </CardDescription>
+          <CardTitle class="text-base">{{ t('settings.auditTitle') }}</CardTitle>
+          <CardDescription>{{ t('settings.auditDescription') }}</CardDescription>
         </CardHeader>
         <CardContent class="flex flex-col">
           <StateBlock
@@ -194,22 +192,21 @@
           >
             <div class="flex items-center justify-between gap-4">
               <div class="min-w-0">
-                <p class="text-sm font-medium">음악 요청 기록</p>
+                <p class="text-sm font-medium">{{ t('settings.musicRequests') }}</p>
                 <p class="text-muted-foreground mt-0.5 text-xs">
-                  켜면 그때부터 곡 준비 기록에 요청한 내용과 준비된 곡 제목을 함께 남깁니다. 끄면
-                  다시 기능 사용만 남고, 이미 남은 기록은 바뀌지 않습니다.
+                  {{ t('settings.musicRequestsHelp') }}
                 </p>
                 <p
                   v-if="states && !states.audit"
                   class="text-warning mt-1 text-xs"
                   data-audit-off-note
                 >
-                  감사 로깅이 꺼져 있어 지금은 아무것도 남지 않습니다.
+                  {{ t('settings.auditOff') }}
                 </p>
               </div>
               <Switch
                 data-audit-music-requests
-                aria-label="음악 요청 기록"
+                :aria-label="t('settings.musicRequests')"
                 :model-value="auditSettings?.settings.musicRequests ?? false"
                 :disabled="readOnly || auditBusy"
                 @update:model-value="(value) => setMusicRequests(value === true)"
@@ -234,12 +231,12 @@
 
       <Card>
         <CardHeader>
-          <CardTitle class="text-base">블로그 RSS 알림</CardTitle>
-          <CardDescription>
-            등록한 여러 블로그의 새 글을 채널 하나로 모아 링크와 함께 안내합니다.
-          </CardDescription>
+          <CardTitle class="text-base">{{ t('settings.rssTitle') }}</CardTitle>
+          <CardDescription>{{ t('settings.rssDescription') }}</CardDescription>
           <CardAction>
-            <Badge variant="secondary">v0.10.0 예정</Badge>
+            <Badge variant="secondary">{{
+              t('common.plannedBadge', { version: 'v0.10.0' })
+            }}</Badge>
           </CardAction>
         </CardHeader>
         <CardContent class="flex flex-col gap-4">
@@ -247,21 +244,23 @@
             <Table class="min-w-120">
               <TableHeader>
                 <TableRow>
-                  <TableHead>블로그</TableHead>
-                  <TableHead>RSS 주소</TableHead>
-                  <TableHead class="w-28">상태</TableHead>
+                  <TableHead>{{ t('settings.rssBlog') }}</TableHead>
+                  <TableHead>{{ t('settings.rssUrl') }}</TableHead>
+                  <TableHead class="w-28">{{ t('settings.rssStatus') }}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow>
                   <TableCell class="text-muted-foreground" colspan="3">
-                    등록된 피드가 없습니다.
+                    {{ t('settings.rssEmpty') }}
                   </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
           </div>
-          <Button variant="outline" size="sm" class="self-start" disabled>피드 추가</Button>
+          <Button variant="outline" size="sm" class="self-start" disabled>{{
+            t('settings.rssAdd')
+          }}</Button>
         </CardContent>
       </Card>
     </div>

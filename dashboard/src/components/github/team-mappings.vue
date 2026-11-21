@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Trash2, TriangleAlert } from 'lucide-vue-next';
   import { ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import RoleSelect from '@/components/common/role-select.vue';
@@ -10,7 +11,7 @@
   import type { DiscordRole, DiscordRoleList, GithubTeamMapping } from '@/types';
 
   /**
-   * The rows of the "팀 → 역할" card: a GitHub team (`org/slug`) and the guild role
+   * The rows of the "Team → role" card: a GitHub team (`org/slug`) and the guild role
    * that is mentioned when a review is requested from that team.
    *
    * The card owns the role list because nothing else on the page needs it. It is
@@ -20,6 +21,7 @@
    */
   const props = defineProps<{ modelValue: GithubTeamMapping[]; readOnly: boolean }>();
   const emit = defineEmits<{ 'update:modelValue': [GithubTeamMapping[]] }>();
+  const { t } = useI18n();
 
   const roles = ref<DiscordRole[]>([]);
   const rolesLoading = ref(false);
@@ -75,7 +77,7 @@
   }
 
   /**
-   * A role nobody may mention only pings from a sender with "모두 멘션". Silent
+   * A role nobody may mention only pings from a sender with "Mention everyone". Silent
    * failure here is the whole reason the flag travels with the list, so the row
    * says so before the mapping is saved.
    */
@@ -92,7 +94,7 @@
 <template>
   <div class="flex flex-col gap-3">
     <p v-if="modelValue.length === 0" class="text-muted-foreground text-sm">
-      매핑된 팀이 없습니다. 팀 리뷰 요청이 오면 여기서 고른 역할을 부릅니다.
+      {{ t('github.teams.empty') }}
     </p>
     <div
       v-for="(row, index) in modelValue"
@@ -101,7 +103,7 @@
       data-team-row
     >
       <div class="flex flex-col gap-1.5">
-        <Label :for="`team-name-${index}`" class="sr-only">GitHub 팀</Label>
+        <Label :for="`team-name-${index}`" class="sr-only">{{ t('github.teams.team') }}</Label>
         <Input
           :id="`team-name-${index}`"
           :model-value="row.githubTeam"
@@ -112,10 +114,10 @@
           spellcheck="false"
           @update:model-value="update(index, { githubTeam: String($event) })"
         />
-        <p class="text-muted-foreground text-xs">조직/팀-슬러그 — 조직은 저장소 소유자입니다</p>
+        <p class="text-muted-foreground text-xs">{{ t('github.teams.teamHint') }}</p>
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label :for="`team-role-${index}`" class="sr-only">디스코드 역할</Label>
+        <Label :for="`team-role-${index}`" class="sr-only">{{ t('github.teams.role') }}</Label>
         <RoleSelect
           :id="`team-role-${index}`"
           :model-value="row.discordRoleId"
@@ -134,7 +136,7 @@
         >
           <TriangleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <span>
-            이 역할은 멘션이 허용돼 있지 않고 봇에 '모두 멘션' 권한이 없어 알림이 가지 않습니다.
+            {{ t('github.teams.cannotPing') }}
           </span>
         </p>
       </div>
@@ -143,17 +145,17 @@
         size="icon"
         class="justify-self-end"
         :disabled="readOnly"
-        aria-label="팀 매핑 삭제"
+        :aria-label="t('github.teams.remove')"
         @click="remove(index)"
       >
         <Trash2 />
       </Button>
     </div>
     <p v-if="rolesFailed" class="text-muted-foreground text-xs">
-      역할 목록을 가져오지 못했습니다 — 역할 ID를 직접 입력하세요.
+      {{ t('github.teams.rolesFailed') }}
     </p>
     <p v-else-if="rolesEmpty && modelValue.length > 0" class="text-muted-foreground text-xs">
-      가져온 역할이 없습니다 — 역할 ID를 직접 입력하세요.
+      {{ t('github.teams.rolesEmpty') }}
     </p>
   </div>
 </template>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import { Search } from 'lucide-vue-next';
+  import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
   import { Input } from '@/components/ui/input';
@@ -11,19 +13,21 @@
     SelectValue,
   } from '@/components/ui/select';
   import type { AuditPeriod } from '@/composables/use-audit-log';
-  import { CATEGORIES, CATEGORY_LABEL } from '@/lib/audit-labels';
+  import { CATEGORIES, categoryLabel } from '@/lib/audit-labels';
   import type { AuditCategory } from '@/types';
 
   const categories = defineModel<AuditCategory[]>('categories', { required: true });
   const period = defineModel<AuditPeriod>('period', { required: true });
   const search = defineModel<string>('search', { required: true });
 
-  const PERIODS: { value: AuditPeriod; label: string }[] = [
-    { value: 'today', label: '오늘' },
-    { value: '7d', label: '최근 7일' },
-    { value: '30d', label: '최근 30일' },
-    { value: '90d', label: '최근 90일' },
-  ];
+  const { t } = useI18n();
+
+  const PERIODS = computed<{ value: AuditPeriod; label: string }[]>(() => [
+    { value: 'today', label: t('logs.filters.today') },
+    { value: '7d', label: t('logs.filters.last7') },
+    { value: '30d', label: t('logs.filters.last30') },
+    { value: '90d', label: t('logs.filters.last90') },
+  ]);
 
   function toggle(category: AuditCategory): void {
     categories.value = categories.value.includes(category)
@@ -34,7 +38,7 @@
 
 <template>
   <div class="flex flex-col gap-3" data-audit-filters>
-    <div class="flex flex-wrap gap-2" role="group" aria-label="분류">
+    <div class="flex flex-wrap gap-2" role="group" :aria-label="t('logs.filters.categories')">
       <Button
         size="sm"
         :variant="categories.length === 0 ? 'default' : 'outline'"
@@ -42,7 +46,7 @@
         data-audit-category="all"
         @click="categories = []"
       >
-        전체
+        {{ t('logs.filters.all') }}
       </Button>
       <Button
         v-for="category in CATEGORIES"
@@ -53,12 +57,16 @@
         :data-audit-category="category"
         @click="toggle(category)"
       >
-        {{ CATEGORY_LABEL[category] }}
+        {{ categoryLabel(category) }}
       </Button>
     </div>
     <div class="flex flex-col gap-2 sm:flex-row">
       <Select v-model="period">
-        <SelectTrigger class="w-full sm:w-40" aria-label="기간" data-audit-period>
+        <SelectTrigger
+          class="w-full sm:w-40"
+          :aria-label="t('logs.filters.period')"
+          data-audit-period
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -80,8 +88,8 @@
           v-model="search"
           class="pl-8"
           type="search"
-          placeholder="행동, 사람, 대상, 내용으로 검색"
-          aria-label="검색"
+          :placeholder="t('logs.filters.searchPlaceholder')"
+          :aria-label="t('logs.filters.search')"
           data-audit-search
         />
       </div>

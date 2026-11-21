@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { useI18n } from 'vue-i18n';
+
   import { Badge } from '@/components/ui/badge';
   import {
     Table,
@@ -10,15 +12,16 @@
   } from '@/components/ui/table';
   import {
     actionLabel,
-    CATEGORY_LABEL,
+    categoryLabel,
     detailLabel,
-    OUTCOME_LABEL,
+    outcomeLabel,
     targetLabel,
     timestamp,
   } from '@/lib/audit-labels';
   import type { AuditEntry } from '@/types';
 
   defineProps<{ entries: AuditEntry[] }>();
+  const { t } = useI18n();
 
   function outcomeVariant(outcome: AuditEntry['outcome']): 'secondary' | 'destructive' | 'outline' {
     if (outcome === 'failed') {
@@ -34,12 +37,12 @@
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead class="w-44 text-center">시각</TableHead>
-          <TableHead class="w-28 text-center">기능</TableHead>
-          <TableHead class="text-center">수행 작업</TableHead>
-          <TableHead class="text-center">사용자</TableHead>
-          <TableHead class="text-center">대상 · 내용</TableHead>
-          <TableHead class="w-28 text-center">결과</TableHead>
+          <TableHead class="w-44 text-center">{{ t('logs.columns.time') }}</TableHead>
+          <TableHead class="w-28 text-center">{{ t('logs.columns.feature') }}</TableHead>
+          <TableHead class="text-center">{{ t('logs.columns.action') }}</TableHead>
+          <TableHead class="text-center">{{ t('logs.columns.user') }}</TableHead>
+          <TableHead class="text-center">{{ t('logs.columns.target') }}</TableHead>
+          <TableHead class="w-28 text-center">{{ t('logs.columns.outcome') }}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -53,7 +56,7 @@
             {{ timestamp(entry.at) }}
           </TableCell>
           <TableCell class="text-center">
-            <Badge variant="outline">{{ CATEGORY_LABEL[entry.category] ?? entry.category }}</Badge>
+            <Badge variant="outline">{{ categoryLabel(entry.category) }}</Badge>
           </TableCell>
           <TableCell class="font-medium">{{ actionLabel(entry.action) }}</TableCell>
           <TableCell class="max-w-40 truncate">{{ entry.actor?.name ?? '—' }}</TableCell>
@@ -70,7 +73,7 @@
           </TableCell>
           <TableCell class="text-center">
             <Badge :variant="outcomeVariant(entry.outcome)">{{
-              OUTCOME_LABEL[entry.outcome]
+              outcomeLabel(entry.outcome)
             }}</Badge>
           </TableCell>
         </TableRow>
@@ -88,11 +91,11 @@
       <div class="flex items-center justify-between gap-2">
         <span class="min-w-0 truncate font-medium">{{ actionLabel(entry.action) }}</span>
         <Badge :variant="outcomeVariant(entry.outcome)" class="shrink-0">
-          {{ OUTCOME_LABEL[entry.outcome] }}
+          {{ outcomeLabel(entry.outcome) }}
         </Badge>
       </div>
       <p class="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-        <span>{{ CATEGORY_LABEL[entry.category] ?? entry.category }}</span>
+        <span>{{ categoryLabel(entry.category) }}</span>
         <span v-if="entry.actor">· {{ entry.actor.name }}</span>
         <span class="tnum">· {{ timestamp(entry.at) }}</span>
       </p>

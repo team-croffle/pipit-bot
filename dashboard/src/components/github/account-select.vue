@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Input } from '@/components/ui/input';
   import {
@@ -19,7 +20,7 @@
    * two halves of a mapping row read as a pair, and only one of them looking like a
    * list made the other seem to have none. But the list still is not authoritative —
    * an account can be mapped before the person joins the organisation, and the App
-   * credentials are optional entirely — so "직접 입력" stays as a way out.
+   * credentials are optional entirely — so "Type it" stays as a way out.
    */
   const props = defineProps<{
     modelValue: string;
@@ -30,6 +31,7 @@
   }>();
 
   const emit = defineEmits<{ 'update:modelValue': [string]; open: [] }>();
+  const { t } = useI18n();
 
   const current = computed(() =>
     props.members.find((member) => member.login.toLowerCase() === props.modelValue.toLowerCase()),
@@ -58,14 +60,14 @@
       :id="id"
       :model-value="modelValue"
       :disabled="disabled"
-      placeholder="GitHub 계정"
+      :placeholder="t('github.account.placeholder')"
       class="font-gothic"
       autocomplete="off"
       @update:model-value="emit('update:modelValue', String($event))"
     />
     <Select v-else v-model="selected" :disabled="disabled" @update:open="onOpen">
       <SelectTrigger :id="id" class="w-full min-w-0">
-        <SelectValue placeholder="GitHub 계정 선택">
+        <SelectValue :placeholder="t('github.account.choose')">
           <span v-if="current" class="flex min-w-0 items-center gap-2">
             <img
               v-if="current.avatarUrl"
@@ -77,7 +79,7 @@
           </span>
           <span v-else-if="modelValue" class="font-gothic truncate">{{ modelValue }}</span>
           <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
-          <span v-else>GitHub 계정 선택</span>
+          <span v-else>{{ t('github.account.choose') }}</span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -85,7 +87,7 @@
           {{ PICKER_TEXT.loading }}
         </div>
         <div v-else-if="members.length === 0" class="text-muted-foreground px-2 py-1.5 text-sm">
-          가져온 계정이 없습니다 — 직접 입력하세요.
+          {{ t('github.account.none') }}
         </div>
         <SelectItem v-for="member in members" :key="member.login" :value="member.login">
           <span class="flex min-w-0 items-center gap-2">

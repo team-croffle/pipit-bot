@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { fetchJson, postJson, putJson } from '@/api';
+import { t } from '@/i18n';
 import type { PublishPanelResult, ReactionRolePanel, ReactionRoleSettings } from '@/types';
 
 export function emptyEmbed() {
@@ -60,7 +61,7 @@ export function useReactionRoles() {
       guildId.value = body.guildId ?? null;
       loadError.value = body.loadError ?? '';
     } catch (cause) {
-      report(cause, '설정을 불러오지 못했습니다.');
+      report(cause, t('reactionRoles.loadFailed'));
     } finally {
       loading.value = false;
     }
@@ -75,11 +76,11 @@ export function useReactionRoles() {
         panels: panels.value,
       });
       panels.value = body.panels;
-      saved.value = '저장했습니다.';
+      saved.value = t('reactionRoles.saved');
       loadError.value = '';
       return true;
     } catch (cause) {
-      report(cause, '저장하지 못했습니다.');
+      report(cause, t('reactionRoles.saveFailed'));
       return false;
     } finally {
       busy.value = false;
@@ -102,15 +103,16 @@ export function useReactionRoles() {
       );
       const notes = [...result.warnings];
       if (result.failedEmoji.length > 0) {
-        notes.unshift(
-          `${result.failedEmoji.join(' ')} 은(는) 붙이지 못했습니다. 서버에서 지워진 이모지인지 확인해 주세요.`,
-        );
+        notes.unshift(t('reactionRoles.emojiFailed', { emoji: result.failedEmoji.join(' ') }));
       }
 
-      saved.value = notes.length > 0 ? `발행했지만 ${notes.join(' ')}` : '발행했습니다.';
+      saved.value =
+        notes.length > 0
+          ? t('reactionRoles.publishedBut', { notes: notes.join(' ') })
+          : t('reactionRoles.publishDone');
     } catch (cause) {
       saved.value = '';
-      report(cause, '발행하지 못했습니다.');
+      report(cause, t('reactionRoles.publishFailed'));
     } finally {
       busy.value = false;
     }

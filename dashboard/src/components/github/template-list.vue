@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import TemplateEditor from '@/components/github/template-editor.vue';
   import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,8 @@
   }>();
 
   const emit = defineEmits<{ 'update:templates': [templates: GithubEventTemplates] }>();
+
+  const { t } = useI18n();
 
   const editing = ref<GithubEventKey | null>(null);
 
@@ -69,7 +72,7 @@
       .map((text) => renderTemplate(text, values))
       .filter(Boolean);
 
-    return parts.length > 0 ? parts.join(' — ') : '(비어 있음)';
+    return parts.length > 0 ? parts.join(' — ') : t('github.list.empty');
   }
 
   function fieldCount(key: GithubEventKey): number {
@@ -78,7 +81,8 @@
 
   const rows = computed(() =>
     eventLabels.map((event) => ({
-      ...event,
+      key: event.key,
+      label: event.label,
       inherited: props.templates[event.key] === undefined,
       summary: summary(event.key),
       fields: fieldCount(event.key),
@@ -107,9 +111,9 @@
     <Table class="min-w-160">
       <TableHeader>
         <TableRow>
-          <TableHead class="w-56">이벤트</TableHead>
-          <TableHead>미리보기</TableHead>
-          <TableHead class="w-28">상태</TableHead>
+          <TableHead class="w-56">{{ t('github.list.event') }}</TableHead>
+          <TableHead>{{ t('github.list.preview') }}</TableHead>
+          <TableHead class="w-28">{{ t('github.list.status') }}</TableHead>
           <TableHead class="w-20" />
         </TableRow>
       </TableHeader>
@@ -118,15 +122,19 @@
           <TableCell class="font-medium">{{ row.label }}</TableCell>
           <TableCell class="text-muted-foreground">
             <span class="line-clamp-1">{{ row.summary }}</span>
-            <span v-if="row.fields > 0" class="text-xs">필드 {{ row.fields }}개</span>
+            <span v-if="row.fields > 0" class="text-xs">{{
+              t('github.list.fields', { count: row.fields }, row.fields)
+            }}</span>
           </TableCell>
           <TableCell>
             <Badge :variant="row.inherited ? 'secondary' : 'default'">
-              {{ row.inherited ? '기본값' : '재정의' }}
+              {{ row.inherited ? t('github.list.default') : t('github.list.overridden') }}
             </Badge>
           </TableCell>
           <TableCell class="text-right">
-            <Button variant="outline" size="sm" @click="open(row.key)">편집</Button>
+            <Button variant="outline" size="sm" @click="open(row.key)">{{
+              t('github.edit')
+            }}</Button>
           </TableCell>
         </TableRow>
       </TableBody>

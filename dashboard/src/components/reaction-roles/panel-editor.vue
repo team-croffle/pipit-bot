@@ -7,6 +7,7 @@
    * the message.
    */
   import { ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import EmbedForm from '@/components/common/embed-form.vue';
   import EmbedPreview from '@/components/common/embed-preview.vue';
@@ -26,6 +27,8 @@
     panel: ReactionRolePanel;
     readOnly: boolean;
   }>();
+
+  const { t } = useI18n();
 
   const emit = defineEmits<{
     'update:open': [open: boolean];
@@ -54,30 +57,34 @@
   <Dialog :open="open" @update:open="emit('update:open', $event)">
     <DialogScrollContent class="sm:max-w-3xl">
       <DialogHeader>
-        <DialogTitle>{{ panel.name || '패널' }} 메시지</DialogTitle>
-        <DialogDescription>
-          봇이 채널에 올릴 메시지입니다. 여기에 쓴 그대로 발행됩니다.
-        </DialogDescription>
+        <DialogTitle>{{
+          t('reactionRoles.editor.title', { name: panel.name || t('reactionRoles.editor.panel') })
+        }}</DialogTitle>
+        <DialogDescription>{{ t('reactionRoles.editor.description') }}</DialogDescription>
       </DialogHeader>
 
       <div class="flex flex-col gap-5">
         <EmbedForm :draft="draft" :read-only="readOnly" :id-prefix="`panel-${panel.id}`">
           <template #content-hint>
             <p class="text-muted-foreground text-xs">
-              임베드 위에 붙는 평문 줄입니다. 패널은 아무도 멘션하지 않습니다.
+              {{ t('reactionRoles.editor.contentHint') }}
             </p>
           </template>
         </EmbedForm>
 
         <div class="flex flex-col gap-2">
-          <p class="text-sm font-medium">미리보기</p>
+          <p class="text-sm font-medium">{{ t('reactionRoles.editor.preview') }}</p>
           <EmbedPreview :template="draft" />
         </div>
       </div>
 
       <DialogFooter class="gap-2">
-        <Button variant="outline" @click="emit('update:open', false)">취소</Button>
-        <Button :disabled="readOnly" @click="emit('save', draft)">적용</Button>
+        <Button variant="outline" @click="emit('update:open', false)">{{
+          t('reactionRoles.editor.cancel')
+        }}</Button>
+        <Button :disabled="readOnly" @click="emit('save', draft)">{{
+          t('reactionRoles.editor.apply')
+        }}</Button>
       </DialogFooter>
     </DialogScrollContent>
   </Dialog>

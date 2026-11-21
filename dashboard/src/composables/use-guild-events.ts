@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { fetchJson, putJson } from '@/api';
+import { t } from '@/i18n';
 import type { GuildEventSettings } from '@/types';
 
 export function emptyGuildEventSettings(): GuildEventSettings {
@@ -34,7 +35,7 @@ export function useGuildEvents() {
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      error.value = cause instanceof Error ? cause.message : '설정을 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('guildEvents.loadFailed');
     } finally {
       loading.value = false;
     }
@@ -48,10 +49,10 @@ export function useGuildEvents() {
         ...settings.value,
         ...patch,
       });
-      saved.value = '저장했습니다.';
+      saved.value = t('guildEvents.saved');
       loadError.value = '';
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('guildEvents.saveFailed');
     }
   }
 

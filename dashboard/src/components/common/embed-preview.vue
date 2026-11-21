@@ -7,10 +7,14 @@
    * leaves it out.
    */
   import { computed } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
 
   import EmojiText from '@/components/common/emoji-text.vue';
   import MarkdownText from '@/components/common/markdown-text.vue';
+  import { intlLocale } from '@/i18n';
   import type { EmbedTemplate } from '@/types';
+
+  const { t } = useI18n();
 
   const props = defineProps<{
     template: EmbedTemplate;
@@ -45,13 +49,14 @@
       fields.value.length === 0,
   );
 
-  const stamp = new Date().toLocaleString();
+  const now = new Date();
+  const stamp = computed(() => now.toLocaleString(intlLocale()));
 </script>
 
 <template>
   <div class="flex flex-col gap-2">
     <p v-if="empty" class="text-muted-foreground text-sm">
-      아직 보낼 내용이 없습니다 — 문구를 채우면 여기에 미리보기가 나타납니다.
+      {{ t('embed.previewEmpty') }}
     </p>
     <!-- Markdown only where Discord renders it: the plain line, the description and
          field values. Title, field names and footer are plain text in Discord — a
@@ -92,9 +97,11 @@
     </template>
     <slot name="note">
       <p class="text-muted-foreground text-xs">
-        <code>:이름:</code> 은 발송할 때 서버 이모지로 바뀝니다. 알림 줄·내용·필드 값은 디스코드
-        마크다운으로 표시되고, 제목·필드 이름·꼬리말은 디스코드가 마크다운을 렌더하지 않아 쓴 그대로
-        나옵니다.
+        <I18nT keypath="embed.previewNote" scope="global">
+          <template #code>
+            <code>{{ t('embed.emojiName') }}</code>
+          </template>
+        </I18nT>
       </p>
     </slot>
   </div>

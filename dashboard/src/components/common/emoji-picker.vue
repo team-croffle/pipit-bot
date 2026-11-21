@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Smile } from 'lucide-vue-next';
   import { computed, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
   import {
@@ -20,6 +21,7 @@
    * it sends, which is what keeps the editor readable.
    */
   const emit = defineEmits<{ pick: [text: string] }>();
+  const { t } = useI18n();
 
   const { emojis, loading, failed, load } = useGuildEmojis();
   const { groups, loading: unicodeLoading, load: loadUnicode } = useUnicodeEmojis();
@@ -97,8 +99,8 @@
         variant="outline"
         size="icon"
         :disabled="disabled"
-        aria-label="이모지 넣기"
-        title="이모지 넣기"
+        :aria-label="t('embed.emoji.insert')"
+        :title="t('embed.emoji.insert')"
       >
         <Smile />
       </Button>
@@ -108,18 +110,20 @@
          stutter. -->
     <DropdownMenuContent align="end" class="w-90 p-0">
       <div class="bg-popover sticky top-0 z-10 border-b p-2">
-        <Input v-model="query" placeholder="이모지 검색…" class="h-8" />
+        <Input v-model="query" :placeholder="t('embed.emoji.search')" class="h-8" />
       </div>
 
       <div class="max-h-80 overflow-y-auto p-3">
         <section class="mb-4">
-          <p class="text-muted-foreground mb-2 text-xs font-medium">서버 이모지</p>
-          <p v-if="loading" class="text-muted-foreground text-xs">불러오는 중…</p>
+          <p class="text-muted-foreground mb-2 text-xs font-medium">
+            {{ t('embed.emoji.server') }}
+          </p>
+          <p v-if="loading" class="text-muted-foreground text-xs">{{ t('embed.emoji.loading') }}</p>
           <p v-else-if="failed" class="text-muted-foreground text-xs">
-            서버 이모지를 불러오지 못했습니다.
+            {{ t('embed.emoji.serverFailed') }}
           </p>
           <p v-else-if="serverEmojis.length === 0" class="text-muted-foreground text-xs">
-            {{ needle ? '검색 결과가 없습니다.' : '이 서버에는 커스텀 이모지가 없습니다.' }}
+            {{ needle ? t('embed.emoji.noResults') : t('embed.emoji.noCustom') }}
           </p>
           <div v-else class="grid grid-cols-8 gap-1">
             <button
@@ -137,8 +141,8 @@
 
         <section v-if="botEmojis.length > 0" class="mb-4">
           <p class="text-muted-foreground mb-2 text-xs font-medium">
-            봇 이모지
-            <span class="font-normal">— 봇이 있는 모든 서버에서 사용</span>
+            {{ t('embed.emoji.bot') }}
+            <span class="font-normal">{{ t('embed.emoji.botHint') }}</span>
           </p>
           <div class="grid grid-cols-8 gap-1">
             <button
@@ -155,7 +159,9 @@
         </section>
 
         <section>
-          <p class="text-muted-foreground mb-2 text-xs font-medium">기본 이모지</p>
+          <p class="text-muted-foreground mb-2 text-xs font-medium">
+            {{ t('embed.emoji.standard') }}
+          </p>
 
           <div v-if="!needle && groups.length > 0" class="mb-2 flex flex-wrap gap-1">
             <button
@@ -174,9 +180,11 @@
             </button>
           </div>
 
-          <p v-if="unicodeLoading" class="text-muted-foreground text-xs">불러오는 중…</p>
+          <p v-if="unicodeLoading" class="text-muted-foreground text-xs">
+            {{ t('embed.emoji.loading') }}
+          </p>
           <p v-else-if="visible.emojis.length === 0" class="text-muted-foreground text-xs">
-            검색 결과가 없습니다.
+            {{ t('embed.emoji.noResults') }}
           </p>
           <div v-else class="grid grid-cols-8 gap-1">
             <button
@@ -191,7 +199,7 @@
             </button>
           </div>
           <p v-if="visible.truncated" class="text-muted-foreground mt-2 text-[0.65rem]">
-            상위 {{ SEARCH_LIMIT }}개만 표시합니다 — 검색어를 더 좁혀 보세요.
+            {{ t('embed.emoji.truncated', { limit: SEARCH_LIMIT }) }}
           </p>
         </section>
       </div>

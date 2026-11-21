@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import {
     Select,
@@ -20,6 +21,7 @@
   }>();
 
   const emit = defineEmits<{ 'update:modelValue': [string]; open: [] }>();
+  const { t } = useI18n();
 
   const selected = computed({
     get: () => props.modelValue || EMPTY,
@@ -36,7 +38,7 @@
 <template>
   <Select v-model="selected" :disabled="disabled" @update:open="$event && emit('open')">
     <SelectTrigger :id="id" class="w-full min-w-0">
-      <SelectValue placeholder="멤버 선택">
+      <SelectValue :placeholder="t('pickers.memberPlaceholder')">
         <span v-if="current" class="flex min-w-0 items-center gap-2">
           <img
             v-if="current.avatarUrl"
@@ -49,7 +51,7 @@
         <!-- A mapping saved before the member list loaded still has to render. -->
         <span v-else-if="modelValue" class="font-gothic truncate">{{ modelValue }}</span>
         <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
-        <span v-else>멤버 선택</span>
+        <span v-else>{{ t('pickers.memberPlaceholder') }}</span>
       </SelectValue>
     </SelectTrigger>
     <SelectContent>
@@ -57,7 +59,7 @@
         {{ PICKER_TEXT.loading }}
       </div>
       <div v-else-if="members.length === 0" class="text-muted-foreground px-2 py-1.5 text-sm">
-        가져온 멤버가 없습니다.
+        {{ t('pickers.noMembers') }}
       </div>
       <SelectItem v-for="member in members" :key="member.id" :value="member.id">
         <span class="flex min-w-0 items-center gap-2">

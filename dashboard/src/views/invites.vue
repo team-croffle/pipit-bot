@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Plus, Trash2 } from 'lucide-vue-next';
   import { onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
@@ -19,6 +20,7 @@
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
+  const { t } = useI18n();
 
   const { settings, loading, error, saved, loadError, load, save } = useGuildEvents();
   const channels = ref<DiscordChannel[]>([]);
@@ -76,30 +78,26 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader
-      title="초대 로거"
-      description="초대 코드별 유입, 입장·퇴장 안내와 기록, 가입 시 자동 역할 부여"
-    >
+    <PageHeader :title="t('invites.title')" :description="t('invites.description')">
       <template #actions>
         <FeatureLanguageSelect feature="memberEvents" :read-only="readOnly" />
       </template>
     </PageHeader>
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
-      읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
+      {{ t('invites.readOnly') }}
     </p>
 
     <StateBlock :loading="loading">
       <div class="flex flex-col gap-5">
         <Alert v-if="loadError" variant="destructive">
-          <AlertTitle>저장된 설정 파일을 읽지 못했습니다</AlertTitle>
+          <AlertTitle>{{ t('invites.loadErrorTitle') }}</AlertTitle>
           <AlertDescription>
-            봇이 기본값으로 동작하고 있습니다. 지금 저장하면 기본값이 파일을 덮어씁니다 — 서버의
-            사본을 먼저 확인하세요. {{ loadError }}
+            {{ t('invites.loadErrorBody', { error: loadError }) }}
           </AlertDescription>
         </Alert>
         <Alert v-if="error" variant="destructive">
-          <AlertTitle>문제가 발생했습니다</AlertTitle>
+          <AlertTitle>{{ t('invites.errorTitle') }}</AlertTitle>
           <AlertDescription>{{ error }}</AlertDescription>
         </Alert>
         <Alert v-else-if="saved">
@@ -110,31 +108,30 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">채널</CardTitle>
+            <CardTitle class="text-base">{{ t('invites.channels.title') }}</CardTitle>
             <CardDescription>
-              안내 채널에는 아래의 입장·퇴장 메시지가, 기록 채널에는 누가 어떤 초대로 들어왔고
-              얼마나 머물렀는지만 담은 한 줄이 남습니다(알림 없음).
+              {{ t('invites.channels.description') }}
             </CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4 sm:grid-cols-2">
             <div class="flex min-w-0 flex-col gap-2">
-              <Label for="log-channel">안내 채널</Label>
+              <Label for="log-channel">{{ t('invites.channels.log') }}</Label>
               <ChannelSelect
                 id="log-channel"
                 v-model="settings.logChannelId"
                 :channels="channels"
-                placeholder="지정 안 함"
+                :placeholder="t('invites.channels.none')"
                 :empty-value="null"
                 :disabled="readOnly"
               />
             </div>
             <div class="flex min-w-0 flex-col gap-2" data-record-channel>
-              <Label for="record-channel">기록 채널</Label>
+              <Label for="record-channel">{{ t('invites.channels.record') }}</Label>
               <ChannelSelect
                 id="record-channel"
                 v-model="settings.recordChannelId"
                 :channels="channels"
-                placeholder="지정 안 함"
+                :placeholder="t('invites.channels.none')"
                 :empty-value="null"
                 :disabled="readOnly"
               />
@@ -144,20 +141,22 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">입장 / 퇴장 메시지</CardTitle>
+            <CardTitle class="text-base">{{ t('invites.messages.title') }}</CardTitle>
             <CardDescription>
-              자리표시자: <code>{user}</code> <code>{username}</code> <code>{inviter}</code>
-              <code>{invite}</code>. 여러 줄을 넣으면 그중 하나를 무작위로 고릅니다.
+              {{ t('invites.messages.placeholders') }} <code>{user}</code> <code>{username}</code>
+              <code>{inviter}</code> <code>{invite}</code>{{ t('invites.messages.random') }}
             </CardDescription>
           </CardHeader>
           <CardContent class="flex flex-col gap-5">
             <div class="flex flex-col gap-2">
-              <Label>입장 메시지</Label>
+              <Label>{{ t('invites.messages.join') }}</Label>
               <div v-for="(_, index) in joinMessages" :key="`join-${index}`" class="flex gap-2">
                 <Textarea
                   v-model="joinMessages[index]"
                   :disabled="readOnly"
-                  placeholder="{user} 님이 들어왔습니다 ({inviter} 초대)"
+                  :placeholder="
+                    t('invites.messages.joinPlaceholder', { user: '{user}', inviter: '{inviter}' })
+                  "
                   rows="2"
                   class="flex-1"
                 />
@@ -165,7 +164,7 @@
                   variant="ghost"
                   size="icon"
                   :disabled="readOnly"
-                  aria-label="입장 메시지 삭제"
+                  :aria-label="t('invites.messages.joinDelete')"
                   @click="removeMessage('join', index)"
                 >
                   <Trash2 />
@@ -179,17 +178,17 @@
                 @click="addMessage('join')"
               >
                 <Plus />
-                입장 메시지 추가
+                {{ t('invites.messages.joinAdd') }}
               </Button>
             </div>
 
             <div class="flex flex-col gap-2">
-              <Label>퇴장 메시지</Label>
+              <Label>{{ t('invites.messages.leave') }}</Label>
               <div v-for="(_, index) in leaveMessages" :key="`leave-${index}`" class="flex gap-2">
                 <Textarea
                   v-model="leaveMessages[index]"
                   :disabled="readOnly"
-                  placeholder="{username} 님이 나갔습니다"
+                  :placeholder="t('invites.messages.leavePlaceholder', { username: '{username}' })"
                   rows="2"
                   class="flex-1"
                 />
@@ -197,7 +196,7 @@
                   variant="ghost"
                   size="icon"
                   :disabled="readOnly"
-                  aria-label="퇴장 메시지 삭제"
+                  :aria-label="t('invites.messages.leaveDelete')"
                   @click="removeMessage('leave', index)"
                 >
                   <Trash2 />
@@ -211,7 +210,7 @@
                 @click="addMessage('leave')"
               >
                 <Plus />
-                퇴장 메시지 추가
+                {{ t('invites.messages.leaveAdd') }}
               </Button>
             </div>
           </CardContent>
@@ -219,12 +218,12 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">가입 시 역할 부여</CardTitle>
-            <CardDescription>새로 들어온 멤버에게 자동으로 부여할 역할입니다.</CardDescription>
+            <CardTitle class="text-base">{{ t('invites.joinRoles.title') }}</CardTitle>
+            <CardDescription>{{ t('invites.joinRoles.description') }}</CardDescription>
           </CardHeader>
           <CardContent>
             <p v-if="roles.length === 0" class="text-muted-foreground text-sm">
-              가져온 역할이 없습니다.
+              {{ t('invites.joinRoles.none') }}
             </p>
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div v-for="role in roles" :key="role.id" class="flex items-center gap-2.5">
@@ -245,7 +244,7 @@
         <div
           class="bg-background sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
         >
-          <Button :disabled="readOnly" @click="onSave">저장</Button>
+          <Button :disabled="readOnly" @click="onSave">{{ t('invites.save') }}</Button>
         </div>
       </div>
     </StateBlock>

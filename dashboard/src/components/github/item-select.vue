@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, onBeforeUnmount, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@
   import type { GithubOpenItem, GithubOpenItemList } from '@/types';
 
   /**
-   * Picks an open pull request or issue of one repository, with "직접 입력" as the
+   * Picks an open pull request or issue of one repository, with "Type it" as the
    * way out — the same shape as the repository and account pickers.
    *
    * WHY the escape hatch: the list only holds open items (a reminder for a closed
@@ -39,11 +40,12 @@
 
   const FULL_NAME = /^[\w.-]+\/[\w.-]+$/;
   const KIND_LABEL = { pull: 'PR', issue: 'Issue' } as const;
+  const { t } = useI18n();
+  // Resource keys, read when the hint renders so a change of language shows.
   const REASON_HINT = {
-    'no-credentials':
-      'GitHub App 자격증명이 없어 목록을 불러올 수 없습니다 — 번호를 직접 입력하세요.',
-    'not-installed': '이 저장소는 App에 설치돼 있지 않습니다 — 번호를 직접 입력하세요.',
-    'request-failed': '목록을 가져오지 못했습니다 — 번호를 직접 입력하세요.',
+    'no-credentials': 'github.item.noCredentials',
+    'not-installed': 'github.item.notInstalled',
+    'request-failed': 'github.item.requestFailed',
   } as const;
 
   const repoName = computed(() => props.repo.trim());
@@ -51,7 +53,7 @@
 
   const list = ref<GithubOpenItemList | null>(null);
   const loading = ref(false);
-  // The person chose "직접 입력" although a list is there.
+  // The person chose "Type it" although a list is there.
   const chosenManual = ref(false);
   // What the manual input shows — kept apart from the model so a half-typed or
   // invalid value (which the model carries as '') is not wiped while typing.
@@ -126,13 +128,13 @@
       return null;
     }
     if (!listable.value) {
-      return '저장소를 owner/name으로 고르면 열린 항목을 불러옵니다';
+      return t('github.item.needFullName');
     }
     if (list.value && !list.value.available) {
-      return REASON_HINT[list.value.reason ?? 'request-failed'];
+      return t(REASON_HINT[list.value.reason ?? 'request-failed']);
     }
     if (list.value && items.value.length === 0) {
-      return '열린 PR·Issue가 없습니다 — 번호를 직접 입력하세요.';
+      return t('github.item.noneOpen');
     }
 
     return null;
@@ -188,13 +190,15 @@
     />
     <Select v-else v-model="selected" :disabled="disabled || !repoName || loading">
       <SelectTrigger :id="id" class="w-full min-w-0">
-        <SelectValue placeholder="PR · Issue 선택">
+        <SelectValue :placeholder="t('github.item.choose')">
           <span v-if="current" class="truncate">
             <span class="font-gothic">#{{ current.number }}</span> · {{ current.title }}
           </span>
-          <span v-else-if="!repoName" class="text-muted-foreground">저장소를 먼저 고르세요</span>
+          <span v-else-if="!repoName" class="text-muted-foreground">{{
+            t('github.item.repoFirst')
+          }}</span>
           <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
-          <span v-else>PR · Issue 선택</span>
+          <span v-else>{{ t('github.item.choose') }}</span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -204,7 +208,9 @@
               <span class="font-gothic">#{{ item.number }}</span> · {{ item.title }}
             </span>
             <Badge variant="secondary" data-item-kind>{{ KIND_LABEL[item.kind] }}</Badge>
-            <Badge v-if="item.draft" variant="outline" data-item-draft>초안</Badge>
+            <Badge v-if="item.draft" variant="outline" data-item-draft>{{
+              t('github.item.draft')
+            }}</Badge>
           </span>
         </SelectItem>
         <SelectItem :value="MANUAL">{{ PICKER_TEXT.manual }}</SelectItem>
@@ -221,7 +227,7 @@
       {{ PICKER_TEXT.back }}
     </button>
     <p v-else-if="list?.truncated" class="text-muted-foreground text-xs" data-item-hint>
-      최근 100건만 표시됩니다 — 없는 번호는 직접 입력하세요.
+      {{ t('github.item.truncated') }}
     </p>
   </div>
 </template>

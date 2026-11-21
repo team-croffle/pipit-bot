@@ -1,0 +1,58 @@
+import type { users as en } from '../en/users';
+
+/** 사용자 페이지와 그 대화상자. */
+export const users: typeof en = {
+  title: '사용자',
+  description: '대시보드에 들어오는 사람과 로그인 방법, 권한',
+  readOnly: '읽기 전용 계정입니다 — 사용자를 바꿀 수 없습니다.',
+  cardDescription:
+    '관리자 권한은 그룹입니다. 여기서 주거나 빼고, SSO 그룹으로 받은 권한은 ID 제공자에서 바꿉니다. GitHub 로그인·디스코드 계정은 멘션과 개인 재생목록·결산에 쓰입니다.',
+  add: '사용자 추가',
+  empty: '사용자가 없습니다.',
+  loadFailed: '사용자를 불러오지 못했습니다.',
+  changeFailed: '바꾸지 못했습니다.',
+  admin: '관리자',
+  me: '나',
+  noMethods: '로그인 수단 없음',
+  discordLinked: '· 디스코드 연결됨',
+  adminAria: '{name} 관리자',
+  editAria: '{name} 편집',
+  lockProvider: 'ID 제공자 그룹으로 관리자 — 그쪽에서 바꿉니다',
+  lockSelf: '자기 자신의 관리자 권한은 뺄 수 없습니다',
+  method: {
+    password: '비밀번호',
+  },
+  passwordLength: '8자 이상이어야 합니다.',
+  passwordKinds: '대문자·소문자·숫자·기호 중 두 종류 이상을 섞어 주세요.',
+  addDialog: {
+    description: '비밀번호로 로그인하는 계정을 만듭니다.',
+    username: '사용자 이름',
+    usernameHint: '3–30자, 영문·숫자·',
+    usernameOr: '·',
+    password: '비밀번호',
+    passwordHint: '8자 이상, 대문자·소문자·숫자·기호 중 두 종류 이상',
+    admin: '관리자(쓰기 권한)',
+    cancel: '취소',
+    adding: '추가하는 중…',
+    submit: '추가',
+    failed: '추가하지 못했습니다.',
+  },
+  editDialog: {
+    description:
+      'GitHub 로그인과 디스코드 계정은 멘션·개인 재생목록·내 결산이 이 사람을 찾는 데 씁니다.',
+    github: 'GitHub 로그인',
+    none: '없음',
+    discord: '디스코드 계정',
+    unlink: '연결 해제',
+    saveLinks: '연결 저장',
+    resetPassword: '비밀번호 재설정',
+    addPassword: '비밀번호 로그인 추가',
+    set: '설정',
+    passwordNote: '설정하면 이 사람의 로그인 세션이 모두 끊깁니다.',
+    adminNoDelete: '관리자는 삭제할 수 없습니다 — 먼저 관리자 권한을 빼세요.',
+    selfNoDelete: '자기 자신은 삭제할 수 없습니다.',
+    delete: '사용자 삭제',
+    confirmDelete: '정말 삭제',
+    failed: '저장하지 못했습니다.',
+  },
+};

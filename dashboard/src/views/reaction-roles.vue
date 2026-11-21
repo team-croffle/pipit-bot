@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ExternalLink, Plus, Send, Trash2 } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import ChannelSelect from '@/components/common/channel-select.vue';
@@ -30,6 +31,7 @@
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
+  const { t } = useI18n();
 
   const { panels, guildId, loading, error, saved, busy, loadError, load, save, publish } =
     useReactionRoles();
@@ -87,31 +89,30 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="리액션 롤" description="봇이 올린 메시지에 반응하면 역할이 부여됩니다">
+    <PageHeader :title="t('reactionRoles.title')" :description="t('reactionRoles.description')">
       <template #actions>
         <FeatureLanguageSelect feature="reactionRoles" :read-only="readOnly" />
         <Button :disabled="readOnly || busy" @click="addPanel">
           <Plus />
-          패널 추가
+          {{ t('reactionRoles.addPanel') }}
         </Button>
       </template>
     </PageHeader>
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
-      읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
+      {{ t('reactionRoles.readOnly') }}
     </p>
 
     <StateBlock :loading="loading">
       <div class="flex flex-col gap-5">
         <Alert v-if="loadError" variant="destructive">
-          <AlertTitle>저장된 설정 파일을 읽지 못했습니다</AlertTitle>
+          <AlertTitle>{{ t('reactionRoles.loadErrorTitle') }}</AlertTitle>
           <AlertDescription>
-            봇이 기본값으로 동작하고 있습니다. 지금 저장하면 기본값이 파일을 덮어씁니다 — 서버의
-            사본을 먼저 확인하세요. {{ loadError }}
+            {{ t('reactionRoles.loadErrorBody', { error: loadError }) }}
           </AlertDescription>
         </Alert>
         <Alert v-if="error" variant="destructive">
-          <AlertTitle>문제가 발생했습니다</AlertTitle>
+          <AlertTitle>{{ t('reactionRoles.problem') }}</AlertTitle>
           <AlertDescription>{{ error }}</AlertDescription>
         </Alert>
         <Alert v-else-if="saved">
@@ -119,24 +120,25 @@
         </Alert>
 
         <p v-if="panels.length === 0" class="text-muted-foreground text-sm">
-          패널이 없습니다. 패널을 추가하면 봇이 그 메시지를 직접 올리고, 반응에 따라 역할을
-          부여합니다.
+          {{ t('reactionRoles.empty') }}
         </p>
 
         <Card v-for="panel in panels" :key="panel.id">
           <CardHeader>
             <CardTitle class="text-base">
-              {{ panel.name || '이름 없는 패널' }}
+              {{ panel.name || t('reactionRoles.unnamed') }}
             </CardTitle>
             <CardDescription>
               <template v-if="panel.messageId">
-                발행됨 — 고치고 다시 발행하면 같은 메시지가 수정됩니다.
+                {{ t('reactionRoles.publishedNote') }}
               </template>
-              <template v-else>아직 발행하지 않았습니다.</template>
+              <template v-else>{{ t('reactionRoles.notPublished') }}</template>
             </CardDescription>
             <CardAction class="flex items-center gap-2">
-              <Badge v-if="panel.messageId" variant="outline">발행됨</Badge>
-              <Badge v-else variant="secondary">미발행</Badge>
+              <Badge v-if="panel.messageId" variant="outline">{{
+                t('reactionRoles.published')
+              }}</Badge>
+              <Badge v-else variant="secondary">{{ t('reactionRoles.unpublished') }}</Badge>
               <Button
                 v-if="panel.messageId && guildId"
                 variant="ghost"
@@ -145,7 +147,7 @@
                 :href="messageUrl(panel)"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="디스코드에서 메시지 보기"
+                :aria-label="t('reactionRoles.viewMessage')"
               >
                 <ExternalLink />
               </Button>
@@ -153,7 +155,7 @@
                 variant="ghost"
                 size="icon"
                 :disabled="readOnly || busy"
-                aria-label="패널 삭제"
+                :aria-label="t('reactionRoles.deletePanel')"
                 @click="removePanel(panel.id)"
               >
                 <Trash2 />
@@ -164,21 +166,25 @@
           <CardContent class="flex flex-col gap-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="flex flex-col gap-1.5">
-                <Label :for="`rr-name-${panel.id}`" class="text-xs">패널 이름</Label>
+                <Label :for="`rr-name-${panel.id}`" class="text-xs">{{
+                  t('reactionRoles.panelName')
+                }}</Label>
                 <Input
                   :id="`rr-name-${panel.id}`"
                   v-model="panel.name"
                   :disabled="readOnly"
-                  placeholder="관리용 이름 — 디스코드에는 보이지 않습니다"
+                  :placeholder="t('reactionRoles.panelNamePlaceholder')"
                 />
               </div>
               <div class="flex flex-col gap-1.5">
-                <Label :for="`rr-channel-${panel.id}`" class="text-xs">채널</Label>
+                <Label :for="`rr-channel-${panel.id}`" class="text-xs">{{
+                  t('reactionRoles.channel')
+                }}</Label>
                 <ChannelSelect
                   :id="`rr-channel-${panel.id}`"
                   v-model="panel.channelId"
                   :channels="channels"
-                  placeholder="채널 선택"
+                  :placeholder="t('reactionRoles.channelPlaceholder')"
                   :empty-value="''"
                   :disabled="readOnly"
                 />
@@ -187,14 +193,14 @@
 
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center justify-between gap-3">
-                <Label class="text-xs">메시지</Label>
+                <Label class="text-xs">{{ t('reactionRoles.message') }}</Label>
                 <Button
                   variant="outline"
                   size="sm"
                   :disabled="readOnly"
                   @click="editing = panel.id"
                 >
-                  메시지 편집
+                  {{ t('reactionRoles.editMessage') }}
                 </Button>
               </div>
               <p class="text-muted-foreground text-sm">
@@ -204,17 +210,16 @@
                 <template
                   v-if="!panel.embed.title && !panel.embed.description && !panel.embed.content"
                 >
-                  아직 비어 있습니다.
+                  {{ t('reactionRoles.messageEmpty') }}
                 </template>
               </p>
             </div>
 
             <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
               <Label :for="`rr-single-${panel.id}`" class="flex-col items-start gap-1">
-                <span class="text-sm">반응 수 1로 유지</span>
+                <span class="text-sm">{{ t('reactionRoles.singleReaction') }}</span>
                 <span class="text-muted-foreground text-xs font-normal">
-                  누른 사람의 반응을 바로 떼어내고, 역할은 누를 때마다 부여·해제를 오갑니다. 봇에게
-                  "메시지 관리" 권한이 필요합니다.
+                  {{ t('reactionRoles.singleReactionHelp') }}
                 </span>
               </Label>
               <Switch
@@ -226,14 +231,14 @@
 
             <div class="flex flex-col gap-2">
               <div class="flex items-center justify-between gap-3">
-                <Label class="text-xs">이모지 → 역할</Label>
+                <Label class="text-xs">{{ t('reactionRoles.emojiToRole') }}</Label>
                 <Button variant="outline" size="sm" :disabled="readOnly" @click="addOption(panel)">
                   <Plus />
-                  추가
+                  {{ t('reactionRoles.add') }}
                 </Button>
               </div>
               <p v-if="panel.options.length === 0" class="text-muted-foreground text-sm">
-                역할이 없습니다. 하나 이상 있어야 발행할 수 있습니다.
+                {{ t('reactionRoles.noOptions') }}
               </p>
               <div
                 v-for="(option, index) in panel.options"
@@ -249,15 +254,15 @@
                 <OptionSelect
                   v-model="option.roleId"
                   :options="roles"
-                  placeholder="역할 선택"
+                  :placeholder="t('reactionRoles.rolePlaceholder')"
                   :disabled="readOnly"
-                  :aria-label="`${index + 1}번째 역할`"
+                  :aria-label="t('reactionRoles.roleN', { n: index + 1 })"
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   :disabled="readOnly"
-                  :aria-label="`${index + 1}번째 역할 삭제`"
+                  :aria-label="t('reactionRoles.deleteRoleN', { n: index + 1 })"
                   @click="removeOption(panel, index)"
                 >
                   <Trash2 />
@@ -274,10 +279,12 @@
             </div>
 
             <div class="flex justify-end gap-2">
-              <Button variant="outline" :disabled="readOnly || busy" @click="save()">저장</Button>
+              <Button variant="outline" :disabled="readOnly || busy" @click="save()">{{
+                t('reactionRoles.save')
+              }}</Button>
               <Button :disabled="!canPublish(panel)" @click="publish(panel.id)">
                 <Send />
-                {{ panel.messageId ? '다시 발행' : '발행' }}
+                {{ panel.messageId ? t('reactionRoles.republish') : t('reactionRoles.publish') }}
               </Button>
             </div>
           </CardContent>

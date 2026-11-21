@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
 
   import EmbedForm from '@/components/common/embed-form.vue';
   import EmbedPreview from '@/components/github/embed-preview.vue';
@@ -12,7 +13,7 @@
     DialogScrollContent,
     DialogTitle,
   } from '@/components/ui/dialog';
-  import { actorLabels, cloneTemplate, variableHints } from '@/lib/github-templates';
+  import { actorLabel, cloneTemplate, variableHint } from '@/lib/github-templates';
   import type { EmbedTemplate, GithubEventKey } from '@/types';
 
   const props = defineProps<{
@@ -34,6 +35,8 @@
     reset: [];
   }>();
 
+  const { t } = useI18n();
+
   const draft = ref<EmbedTemplate>(cloneTemplate(props.template));
 
   // Reopening on another event has to start from that event's wording, not from
@@ -48,12 +51,14 @@
     { immediate: true },
   );
 
-  const actorHint = computed(() => actorLabels[props.eventKey]);
+  const actorHint = computed(() => actorLabel(props.eventKey));
+  // The branch syntax is data (`{name|…|…}`); only the two branch names are copy.
+  const branchExample = computed(
+    () => `{name|${t('github.editor.whenSet')}|${t('github.editor.whenUnset')}}`,
+  );
 
   function hintFor(name: string): string {
-    return name === 'actor'
-      ? `${variableHints.actor} — ${actorHint.value}`
-      : (variableHints[name] ?? '');
+    return name === 'actor' ? `${variableHint('actor')} — ${actorHint.value}` : variableHint(name);
   }
 </script>
 
@@ -61,9 +66,9 @@
   <Dialog :open="open" @update:open="emit('update:open', $event)">
     <DialogScrollContent class="sm:max-w-3xl">
       <DialogHeader>
-        <DialogTitle>{{ eventLabel }} 문구</DialogTitle>
+        <DialogTitle>{{ t('github.editor.title', { event: eventLabel }) }}</DialogTitle>
         <DialogDescription>
-          이 이벤트가 도착했을 때 보낼 메시지입니다. 아래 변수만 쓸 수 있습니다.
+          {{ t('github.editor.description') }}
         </DialogDescription>
       </DialogHeader>
 
@@ -72,12 +77,12 @@
           :draft="draft"
           :read-only="readOnly"
           :id-prefix="`tpl-${eventKey}`"
-          title-hint="제목에는 PR·Issue 링크가 자동으로 걸립니다."
+          :title-hint="t('github.editor.titleHint')"
           content-placeholder="{mentions}"
         >
           <template #chips="{ insert }">
             <div class="bg-muted/40 flex flex-col gap-2 rounded-lg border p-3">
-              <p class="text-muted-foreground text-xs">사용 가능한 변수 — 눌러서 넣기</p>
+              <p class="text-muted-foreground text-xs">{{ t('github.editor.chips') }}</p>
               <div class="flex flex-wrap gap-1.5">
                 <button
                   v-for="name in variables"
@@ -92,16 +97,27 @@
                 </button>
               </div>
               <p class="text-muted-foreground text-xs">
-                <code>{{ '{actor}' }}</code> 는 이 이벤트에서
-                <strong>{{ actorHint }}</strong> 입니다. <code>{name|있을 때|없을 때}</code> 로 값
-                유무에 따라 문구를 바꾸고, 분기 안의 <code>{}</code> 자리에 값이 들어갑니다.
+                <I18nT keypath="github.editor.actorHint" scope="global">
+                  <template #actorVar>
+                    <code>{{ '{actor}' }}</code>
+                  </template>
+                  <template #actor>
+                    <strong>{{ actorHint }}</strong>
+                  </template>
+                  <template #branch>
+                    <code>{{ branchExample }}</code>
+                  </template>
+                  <template #value>
+                    <code>{}</code>
+                  </template>
+                </I18nT>
               </p>
             </div>
           </template>
         </EmbedForm>
 
         <div class="flex flex-col gap-2">
-          <p class="text-sm font-medium">미리보기</p>
+          <p class="text-sm font-medium">{{ t('github.editor.preview') }}</p>
           <EmbedPreview
             :template="draft"
             :variables="variables"
@@ -118,11 +134,15 @@
           :disabled="readOnly || inherited"
           @click="emit('reset')"
         >
-          기본값으로 되돌리기
+          {{ t('github.editor.reset') }}
         </Button>
         <div class="flex gap-2">
-          <Button variant="outline" @click="emit('update:open', false)">취소</Button>
-          <Button :disabled="readOnly" @click="emit('save', draft)">적용</Button>
+          <Button variant="outline" @click="emit('update:open', false)">{{
+            t('github.editor.cancel')
+          }}</Button>
+          <Button :disabled="readOnly" @click="emit('save', draft)">{{
+            t('github.editor.apply')
+          }}</Button>
         </div>
       </DialogFooter>
     </DialogScrollContent>
