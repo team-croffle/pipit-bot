@@ -64,7 +64,7 @@ Discussion of a specific worker implementation does not belong in this repositor
   track is never shown — decision 025). Storage modules keep their rows in memory and write through; feature code never
   touches the driver. A file from before is moved in once with `migrateFile` and kept as `*.migrated`.
 - Runtime settings persist as JSON under `data/` (`runtime-config.json`, `guild-events.json`, `github-notify.json` —
-  routing and the `teams` team-to-role map —, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`). No hard-coded settings in source; every loader tolerates a missing file
+  routing and the `teams` team-to-role map —, `playback-options.json`, `features.json`, `audit-settings.json`, `music-recap.json`, `auth-settings.json`, `language.json`). No hard-coded settings in source; every loader tolerates a missing file
   and reports a damaged one (`loadSettingsFile`).
 - GitHub notifications: one public route `POST /webhooks/github` with `X-Hub-Signature-256` verification; everything
   substituted into a message is sanitized (`sanitizeGithubText`), only mapped Discord ids may ping, embeds carry the
@@ -80,7 +80,10 @@ Discussion of a specific worker implementation does not belong in this repositor
 - Loading, error and empty states are never omitted (`StateBlock`).
 - Whitespace, hierarchy and readability over decoration; new UI matches the existing pages. shadcn-vue components are
   vendored under `dashboard/src/components/ui/` — add through `shadcn-vue add`, do not hand-edit them.
-- Korean UI copy; server-side messages and delivery-log details in English.
+- Copy lives in resources, English and Korean (bot: `src/lib/i18n/locales/{en,ko}/`, i18next; a result carries a
+  phrase beside its English message — `i18n/phrase.ts`). English is the default; the language settings
+  (`data/language.json`) and each person's Discord language decide what is shown. New copy goes into the resources from
+  the start. Logs, the audit log and delivery-log details stay English.
 
 ## 5. Commits, review, PRs
 
