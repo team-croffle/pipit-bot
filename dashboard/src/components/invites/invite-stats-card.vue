@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson } from '@/api';
   import StateBlock from '@/components/common/state-block.vue';
@@ -14,7 +15,10 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
+  import { intlLocale } from '@/i18n';
   import type { InviteRow, InvitesResponse } from '@/types';
+
+  const { t } = useI18n();
 
   const invites = ref<InviteRow[]>([]);
   const canListInvites = ref(true);
@@ -24,14 +28,18 @@
   const loading = ref(true);
 
   function when(at: string | null): string {
-    return at ? new Date(at).toLocaleString() : '—';
+    return at ? new Date(at).toLocaleString(intlLocale()) : '—';
   }
 
   function expiry(row: InviteRow): string {
     if (!row.active) {
-      return '사라짐';
+      return t('invites.stats.gone');
     }
-    return row.expiresAt ? `${new Date(row.expiresAt).toLocaleDateString()} 만료` : '만료 없음';
+    return row.expiresAt
+      ? t('invites.stats.expires', {
+          date: new Date(row.expiresAt).toLocaleDateString(intlLocale()),
+        })
+      : t('invites.stats.noExpiry');
   }
 
   function serverUses(row: InviteRow): string {
@@ -50,7 +58,7 @@
       loadError.value = body.loadError ?? '';
     } catch (cause) {
       if (!(cause instanceof Error && cause.message.startsWith('Redirecting to login'))) {
-        error.value = cause instanceof Error ? cause.message : '초대 목록을 불러오지 못했습니다.';
+        error.value = cause instanceof Error ? cause.message : t('invites.stats.loadFailed');
       }
     } finally {
       loading.value = false;
@@ -61,17 +69,16 @@
 <template>
   <Card data-invite-stats>
     <CardHeader>
-      <CardTitle class="text-base">초대 코드별 유입</CardTitle>
+      <CardTitle class="text-base">{{ t('invites.stats.title') }}</CardTitle>
       <CardDescription>
-        봇이 본 입장 수를 코드별로 셉니다. 초대가 사라져도 수는 남습니다.
+        {{ t('invites.stats.description') }}
       </CardDescription>
     </CardHeader>
     <CardContent class="flex flex-col gap-3">
       <Alert v-if="!loading && (!canListInvites || !hasUseCounts)" data-invite-warning>
         <AlertDescription>
-          봇에게 <b>서버 관리</b> 권한이 없어 초대의 사용 횟수를 볼 수 없습니다. 이 상태로는 새
-          멤버가 어떤 초대로 들어왔는지 알 수 없어 유입이 세어지지 않습니다. 봇 역할에 서버 관리
-          권한을 주세요.
+          {{ t('invites.stats.warningBefore') }}<b>{{ t('invites.stats.manageServer') }}</b
+          >{{ t('invites.stats.warningAfter') }}
         </AlertDescription>
       </Alert>
       <p v-if="loadError" class="text-destructive text-sm" role="alert">{{ loadError }}</p>
@@ -79,18 +86,18 @@
         :loading="loading"
         :error="error"
         :empty="invites.length === 0"
-        empty-text="아직 기록된 초대가 없습니다."
+        :empty-text="t('invites.stats.empty')"
       >
         <div class="hidden overflow-x-auto md:block">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>코드</TableHead>
-                <TableHead>만든 사람</TableHead>
-                <TableHead class="text-right">유입</TableHead>
-                <TableHead class="text-right">사용</TableHead>
-                <TableHead>최근 유입</TableHead>
-                <TableHead>상태</TableHead>
+                <TableHead>{{ t('invites.stats.code') }}</TableHead>
+                <TableHead>{{ t('invites.stats.inviter') }}</TableHead>
+                <TableHead class="text-right">{{ t('invites.stats.joins') }}</TableHead>
+                <TableHead class="text-right">{{ t('invites.stats.uses') }}</TableHead>
+                <TableHead>{{ t('invites.stats.lastJoin') }}</TableHead>
+                <TableHead>{{ t('invites.stats.status') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,14 +127,18 @@
           >
             <div class="flex items-center justify-between gap-2">
               <span class="truncate font-mono">{{ row.code }}</span>
-              <span class="tnum shrink-0 font-medium">유입 {{ row.joins }}</span>
+              <span class="tnum shrink-0 font-medium">{{
+                t('invites.stats.joinsCount', { count: row.joins })
+              }}</span>
             </div>
             <p class="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
-              <span>{{ row.inviterName ?? '만든 사람 모름' }}</span>
-              <span>· 사용 {{ serverUses(row) }}</span>
+              <span>{{ row.inviterName ?? t('invites.stats.unknownInviter') }}</span>
+              <span>{{ t('invites.stats.usesCount', { uses: serverUses(row) }) }}</span>
               <span>· {{ expiry(row) }}</span>
             </p>
-            <p class="text-muted-foreground tnum text-xs">최근 유입 {{ when(row.lastJoinAt) }}</p>
+            <p class="text-muted-foreground tnum text-xs">
+              {{ t('invites.stats.lastJoinAt', { at: when(row.lastJoinAt) }) }}
+            </p>
           </li>
         </ul>
       </StateBlock>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import {
     Select,
@@ -32,14 +33,14 @@
 
   const emit = defineEmits<{ 'update:modelValue': [string | null] }>();
 
-  const UNCATEGORIZED = '카테고리 없음';
+  const { t } = useI18n();
   // Both of our empty shapes (null and '') ride through the Select as EMPTY and
   // are mapped back on the way out.
 
   const groups = computed(() => {
     const result: { category: string; channels: DiscordChannel[] }[] = [];
     for (const channel of props.channels) {
-      const category = channel.category ?? UNCATEGORIZED;
+      const category = channel.category ?? t('pickers.uncategorized');
       const last = result.at(-1);
       if (last?.category === category) {
         last.channels.push(channel);
@@ -61,14 +62,14 @@
 
   const label = computed(() => {
     const current = props.channels.find((channel) => channel.id === props.modelValue);
-    return current ? `#${current.name}` : (props.placeholder ?? '선택');
+    return current ? `#${current.name}` : (props.placeholder ?? t('pickers.choose'));
   });
 </script>
 
 <template>
   <Select v-model="selected" :disabled="disabled">
     <SelectTrigger :id="id" class="w-full min-w-0">
-      <SelectValue :placeholder="placeholder ?? '선택'">{{ label }}</SelectValue>
+      <SelectValue :placeholder="placeholder ?? t('pickers.choose')">{{ label }}</SelectValue>
     </SelectTrigger>
     <SelectContent>
       <SelectItem v-if="placeholder" :value="EMPTY">{{ placeholder }}</SelectItem>
@@ -81,7 +82,7 @@
           :disabled="!channel.canPost"
           :data-channel-option="channel.id"
         >
-          #{{ channel.name }}{{ channel.canPost ? '' : ' — 봇이 글을 쓸 수 없음' }}
+          #{{ channel.name }}{{ channel.canPost ? '' : t('pickers.cannotPost') }}
         </SelectItem>
       </SelectGroup>
     </SelectContent>

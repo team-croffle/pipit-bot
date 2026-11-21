@@ -1,0 +1,61 @@
+/** The invite logger page and its invite statistics. */
+export const invites = {
+  title: 'Invite logger',
+  description:
+    'Joins per invite code, join and leave announcements and records, roles given on joining',
+  readOnly: 'This account is read-only — settings cannot be changed.',
+  loadErrorTitle: 'The saved settings file could not be read',
+  loadErrorBody:
+    'The bot is running on the defaults. Saving now overwrites the file with the defaults — check the copy on the server first. {error}',
+  errorTitle: 'Something went wrong',
+  channels: {
+    title: 'Channels',
+    description:
+      'The announcement channel gets the join and leave messages below; the record channel gets one line holding only who came in through which invite and how long they stayed (no notification).',
+    log: 'Announcement channel',
+    record: 'Record channel',
+    none: 'Not set',
+  },
+  messages: {
+    title: 'Join / leave messages',
+    placeholders: 'Placeholders:',
+    random: '. With several lines, one of them is picked at random.',
+    join: 'Join messages',
+    joinPlaceholder: '{user} joined (invited by {inviter})',
+    joinDelete: 'Delete join message',
+    joinAdd: 'Add join message',
+    leave: 'Leave messages',
+    leavePlaceholder: '{username} left',
+    leaveDelete: 'Delete leave message',
+    leaveAdd: 'Add leave message',
+  },
+  joinRoles: {
+    title: 'Roles on joining',
+    description: 'Roles given automatically to new members.',
+    none: 'No roles were fetched.',
+  },
+  save: 'Save',
+  stats: {
+    title: 'Joins per invite code',
+    description: 'Counts the joins the bot saw, per code. The count stays when an invite is gone.',
+    warningBefore: 'The bot lacks the ',
+    manageServer: 'Manage Server',
+    warningAfter:
+      " permission, so it cannot see how often invites were used. Without it the bot cannot tell which invite a new member came through, and joins are not counted. Give the bot's role the Manage Server permission.",
+    empty: 'No invites recorded yet.',
+    loadFailed: 'The invites could not be loaded.',
+    code: 'Code',
+    inviter: 'Created by',
+    joins: 'Joins',
+    uses: 'Uses',
+    lastJoin: 'Last join',
+    status: 'Status',
+    gone: 'Gone',
+    expires: 'Expires {date}',
+    noExpiry: 'Never expires',
+    joinsCount: 'Joins {count}',
+    unknownInviter: 'Creator unknown',
+    usesCount: '· Uses {uses}',
+    lastJoinAt: 'Last join {at}',
+  },
+};

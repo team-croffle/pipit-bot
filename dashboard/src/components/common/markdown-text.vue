@@ -12,6 +12,7 @@
   import { computed, defineComponent, h, type VNodeChild } from 'vue';
 
   import EmojiText from '@/components/common/emoji-text.vue';
+  import { t } from '@/i18n';
   import { parseBlocks, type BlockNode, type InlineNode } from '@/lib/discord-markdown';
 
   const LINK_CLASS =
@@ -61,7 +62,7 @@
             {
               class:
                 'bg-foreground/80 text-foreground/0 hover:bg-muted hover:text-inherit rounded px-0.5 transition-colors',
-              title: '스포일러',
+              title: t('embed.spoiler'),
             },
             renderInline(node.children),
           );

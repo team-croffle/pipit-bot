@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Input } from '@/components/ui/input';
   import {
@@ -13,7 +14,7 @@
 
   /**
    * Picks a repository (`owner/name`) from the list the App is installed on, with
-   * "직접 입력" as the way out — the same shape as the role and account pickers.
+   * "Type it" as the way out — the same shape as the role and account pickers.
    *
    * WHY the escape hatch: the list is fetched lazily on first open and is not
    * authoritative. A repository can be configured before the App is installed on
@@ -32,6 +33,7 @@
   }>();
 
   const emit = defineEmits<{ 'update:modelValue': [string]; open: [] }>();
+  const { t } = useI18n();
 
   const known = computed(() => props.options.includes(props.modelValue));
 
@@ -56,17 +58,17 @@
       :id="id"
       :model-value="modelValue"
       :disabled="disabled"
-      :placeholder="placeholder ?? 'owner/name 또는 name'"
+      :placeholder="placeholder ?? t('github.repoSelect.placeholder')"
       class="font-gothic"
       autocomplete="off"
       @update:model-value="emit('update:modelValue', String($event))"
     />
     <Select v-else v-model="selected" :disabled="disabled" @update:open="onOpen">
       <SelectTrigger :id="id" class="w-full min-w-0">
-        <SelectValue placeholder="저장소 선택">
+        <SelectValue :placeholder="t('github.repoSelect.choose')">
           <span v-if="modelValue" class="font-gothic truncate">{{ modelValue }}</span>
           <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
-          <span v-else>저장소 선택</span>
+          <span v-else>{{ t('github.repoSelect.choose') }}</span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -80,7 +82,7 @@
       </SelectContent>
     </Select>
     <p v-if="manual && emptyList" class="text-muted-foreground text-xs">
-      설치된 저장소 목록이 없습니다 — 직접 입력하세요.
+      {{ t('github.repoSelect.none') }}
     </p>
     <button
       v-else-if="manual && options.length > 0"

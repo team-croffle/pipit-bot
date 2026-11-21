@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { Trash2 } from 'lucide-vue-next';
+  import { useI18n } from 'vue-i18n';
 
   import ChannelSelect from '@/components/common/channel-select.vue';
   import RepoSelect from '@/components/common/repo-select.vue';
@@ -11,7 +12,7 @@
   import type { DiscordChannel, GithubEventToggles, GithubRepoRule } from '@/types';
 
   /**
-   * The expanded editor of one "저장소별 설정" row: the repository, the channel it
+   * The expanded editor of one "Per-repository settings" row: the repository, the channel it
    * posts to, and an optional per-repository event set.
    *
    * The row never mutates the rule it was given — every change goes out as a fresh
@@ -38,6 +39,8 @@
     'open-repositories': [];
   }>();
 
+  const { t } = useI18n();
+
   function update(patch: Partial<GithubRepoRule>): void {
     emit('update:modelValue', { ...props.modelValue, ...patch });
   }
@@ -61,7 +64,7 @@
   <div class="flex flex-col gap-4" data-repo-rule>
     <div class="grid gap-3 sm:grid-cols-2">
       <div class="flex flex-col gap-1.5">
-        <Label :for="`${idPrefix}-name`">저장소</Label>
+        <Label :for="`${idPrefix}-name`">{{ t('github.repos.repo') }}</Label>
         <RepoSelect
           :id="`${idPrefix}-name`"
           :model-value="modelValue.repo"
@@ -73,12 +76,12 @@
         />
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label :for="`${idPrefix}-channel`">채널</Label>
+        <Label :for="`${idPrefix}-channel`">{{ t('github.repos.channel') }}</Label>
         <ChannelSelect
           :id="`${idPrefix}-channel`"
           :model-value="modelValue.channelId"
           :channels="channels"
-          placeholder="기본 채널 사용"
+          :placeholder="t('github.repos.useDefaultChannel')"
           :empty-value="null"
           :disabled="readOnly"
           @update:model-value="update({ channelId: $event })"
@@ -88,9 +91,9 @@
 
     <div class="flex items-center justify-between gap-4 border-t pt-4">
       <Label :for="`${idPrefix}-override`" class="flex-col items-start gap-1">
-        <span>이 저장소에서 이벤트 재정의</span>
+        <span>{{ t('github.repos.override') }}</span>
         <span class="text-muted-foreground text-xs font-normal">
-          끄면 기본 알림 이벤트를 그대로 따릅니다
+          {{ t('github.repos.overrideHint') }}
         </span>
       </Label>
       <Switch
@@ -127,7 +130,7 @@
         @click="emit('remove')"
       >
         <Trash2 />
-        저장소 삭제
+        {{ t('github.repos.remove') }}
       </Button>
     </div>
   </div>

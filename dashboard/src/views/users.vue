@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { Pencil, Plus } from 'lucide-vue-next';
   import { onMounted, ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { fetchJson, patchJson } from '@/api';
   import PageHeader from '@/components/common/page-header.vue';
@@ -18,7 +19,7 @@
   import { Switch } from '@/components/ui/switch';
   import UserAddDialog from '@/components/users/user-add-dialog.vue';
   import UserEditDialog from '@/components/users/user-edit-dialog.vue';
-  import { METHOD_LABELS, type DashboardUser } from '@/lib/users';
+  import { methodLabel, type DashboardUser } from '@/lib/users';
   import type { DashboardIdentity } from '@/types';
 
   /**
@@ -29,6 +30,7 @@
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
+  const { t } = useI18n();
 
   const users = ref<DashboardUser[] | null>(null);
   const error = ref('');
@@ -43,7 +45,7 @@
       users.value = (await fetchJson<{ users: DashboardUser[] }>('/api/users')).users;
       error.value = '';
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '사용자를 불러오지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('users.loadFailed');
     }
   }
 
@@ -55,7 +57,7 @@
         await patchJson<{ users: DashboardUser[] }>(`/api/users/${user.id}`, { admin: on })
       ).users;
     } catch (cause) {
-      failure.value = cause instanceof Error ? cause.message : '바꾸지 못했습니다.';
+      failure.value = cause instanceof Error ? cause.message : t('users.changeFailed');
     } finally {
       busy.value = null;
     }
@@ -68,10 +70,10 @@
 
   function adminLock(user: DashboardUser): string | null {
     if (user.adminByProvider) {
-      return 'ID 제공자 그룹으로 관리자 — 그쪽에서 바꿉니다';
+      return t('users.lockProvider');
     }
     if (user.id === me.userId && user.admin) {
-      return '자기 자신의 관리자 권한은 뺄 수 없습니다';
+      return t('users.lockSelf');
     }
     return null;
   }
@@ -81,23 +83,22 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader title="사용자" description="대시보드에 들어오는 사람과 로그인 방법, 권한" />
+    <PageHeader :title="t('users.title')" :description="t('users.description')" />
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
-      읽기 전용 계정입니다 — 사용자를 바꿀 수 없습니다.
+      {{ t('users.readOnly') }}
     </p>
 
     <Card>
       <CardHeader>
-        <CardTitle class="text-base">사용자</CardTitle>
+        <CardTitle class="text-base">{{ t('users.title') }}</CardTitle>
         <CardDescription>
-          관리자 권한은 그룹입니다. 여기서 주거나 빼고, SSO 그룹으로 받은 권한은 ID 제공자에서
-          바꿉니다. GitHub 로그인·디스코드 계정은 멘션과 개인 재생목록·결산에 쓰입니다.
+          {{ t('users.cardDescription') }}
         </CardDescription>
         <CardAction>
           <Button size="sm" :disabled="readOnly" data-user-add @click="adding = true">
             <Plus />
-            사용자 추가
+            {{ t('users.add') }}
           </Button>
         </CardAction>
       </CardHeader>
@@ -106,7 +107,7 @@
           :loading="!users && !error"
           :error="users ? '' : error"
           :empty="users?.length === 0"
-          empty-text="사용자가 없습니다."
+          :empty-text="t('users.empty')"
         >
           <ul class="flex flex-col">
             <li
@@ -124,8 +125,8 @@
                   >
                     @{{ user.username }}
                   </span>
-                  <Badge v-if="user.admin" data-admin-badge>관리자</Badge>
-                  <Badge v-if="user.id === me.userId" variant="outline">나</Badge>
+                  <Badge v-if="user.admin" data-admin-badge>{{ t('users.admin') }}</Badge>
+                  <Badge v-if="user.id === me.userId" variant="outline">{{ t('users.me') }}</Badge>
                 </div>
                 <div class="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
                   <Badge
@@ -134,13 +135,13 @@
                     variant="secondary"
                     class="font-normal"
                   >
-                    {{ METHOD_LABELS[method] ?? method }}
+                    {{ methodLabel(method) }}
                   </Badge>
-                  <span v-if="user.methods.length === 0">로그인 수단 없음</span>
+                  <span v-if="user.methods.length === 0">{{ t('users.noMethods') }}</span>
                   <span v-if="user.githubLogin" class="font-gothic"
                     >GitHub {{ user.githubLogin }}</span
                   >
-                  <span v-if="user.discordUserId">· 디스코드 연결됨</span>
+                  <span v-if="user.discordUserId">{{ t('users.discordLinked') }}</span>
                 </div>
               </div>
               <div class="flex shrink-0 items-center gap-3 self-end sm:self-auto">
@@ -148,9 +149,9 @@
                   class="text-muted-foreground flex items-center gap-2 text-xs"
                   :title="adminLock(user) ?? ''"
                 >
-                  관리자
+                  {{ t('users.admin') }}
                   <Switch
-                    :aria-label="`${user.name} 관리자`"
+                    :aria-label="t('users.adminAria', { name: user.name })"
                     :model-value="user.admin"
                     :disabled="readOnly || busy !== null || Boolean(adminLock(user))"
                     data-admin-switch
@@ -160,7 +161,7 @@
                 <Button
                   variant="ghost"
                   size="icon"
-                  :aria-label="`${user.name} 편집`"
+                  :aria-label="t('users.editAria', { name: user.name })"
                   :disabled="readOnly"
                   data-user-edit
                   @click="edit(user)"

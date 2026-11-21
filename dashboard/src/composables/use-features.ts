@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { fetchJson, putJson } from '@/api';
+import { t } from '@/i18n';
 
 export type Feature =
   | 'music'
@@ -11,39 +12,35 @@ export type Feature =
   | 'joinRoles'
   | 'reactionRoles';
 
-export const FEATURE_LIST: { key: Feature; label: string; help: string; to: string }[] = [
-  {
-    key: 'music',
-    label: '음악',
-    help: '끄면 재생을 멈추고 통화방에서 나가며, 음악 명령이 사라집니다.',
-    to: '/music',
-  },
-  {
-    key: 'github',
-    label: 'GitHub 알림',
-    help: 'PR·이슈 알림과 /remind. GitHub 페이지의 전체 스위치와 같습니다.',
-    to: '/github',
-  },
-  {
-    key: 'audit',
-    label: '감사 로깅',
-    help: '끄는 동안의 조작은 기록하지 않습니다(끈 사실은 남습니다).',
-    to: '/logs',
-  },
-  { key: 'invites', label: '초대 추적', help: '초대 코드별 유입과 기록 채널.', to: '/invites' },
-  {
-    key: 'memberMessages',
-    label: '입장·퇴장 메시지',
-    help: '안내 채널에 보내는 입장·퇴장 메시지.',
-    to: '/invites',
-  },
-  { key: 'joinRoles', label: '입장 역할', help: '들어온 멤버에게 주는 역할.', to: '/invites' },
-  {
-    key: 'reactionRoles',
-    label: '리액션 롤',
-    help: '끄면 패널은 그대로 두고 반응해도 역할을 주지 않습니다.',
-    to: '/reaction-roles',
-  },
+interface FeatureItem {
+  key: Feature;
+  label: string;
+  help: string;
+  to: string;
+}
+
+/** One switch; label and help are getters so they follow a change of language. */
+function featureItem(key: Feature, to: string): FeatureItem {
+  return {
+    key,
+    to,
+    get label() {
+      return t(`features.${key}.label`);
+    },
+    get help() {
+      return t(`features.${key}.help`);
+    },
+  };
+}
+
+export const FEATURE_LIST: FeatureItem[] = [
+  featureItem('music', '/music'),
+  featureItem('github', '/github'),
+  featureItem('audit', '/logs'),
+  featureItem('invites', '/invites'),
+  featureItem('memberMessages', '/invites'),
+  featureItem('joinRoles', '/invites'),
+  featureItem('reactionRoles', '/reaction-roles'),
 ];
 
 /** Which switches govern a page — the notice above it names the ones that are off. */
@@ -75,7 +72,7 @@ async function load(): Promise<void> {
     ).features;
     loadError.value = '';
   } catch (cause) {
-    loadError.value = cause instanceof Error ? cause.message : '기능 상태를 불러오지 못했습니다.';
+    loadError.value = cause instanceof Error ? cause.message : t('features.loadFailed');
   }
 }
 
@@ -90,7 +87,7 @@ async function set(feature: Feature, on: boolean): Promise<string> {
     ).features;
     return '';
   } catch (cause) {
-    return cause instanceof Error ? cause.message : '바꾸지 못했습니다.';
+    return cause instanceof Error ? cause.message : t('features.setFailed');
   }
 }
 

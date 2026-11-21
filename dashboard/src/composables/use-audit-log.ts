@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue';
 
 import { fetchJson } from '@/api';
+import { t } from '@/i18n';
 import type { AuditCategory, AuditEntry, AuditPage } from '@/types';
 
 export type AuditPeriod = 'today' | '7d' | '30d' | '90d';
@@ -67,7 +68,7 @@ export function useAuditLog() {
       error.value = '';
     } catch (cause) {
       if (!isRedirect(cause)) {
-        error.value = cause instanceof Error ? cause.message : '기록을 불러오지 못했습니다.';
+        error.value = cause instanceof Error ? cause.message : t('logs.loadFailed');
       }
     } finally {
       loading.value = false;

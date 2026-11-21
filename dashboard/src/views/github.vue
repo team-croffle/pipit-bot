@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ChevronDown, ChevronUp, Plus, RefreshCw, Trash2 } from 'lucide-vue-next';
   import { computed, onMounted, ref } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
   import { RouterLink } from 'vue-router';
 
   import { fetchJson, putJson } from '@/api';
@@ -37,6 +38,7 @@
     TableHeader,
     TableRow,
   } from '@/components/ui/table';
+  import { intlLocale } from '@/i18n';
   import { prepareTeamMappings } from '@/lib/github-teams';
   import { emptyToggles, eventGroups, eventLabels } from '@/lib/github-templates';
   import type {
@@ -54,6 +56,7 @@
 
   const { me } = defineProps<{ me: DashboardIdentity }>();
   const readOnly = !me.canWriteSettings;
+  const { t } = useI18n();
 
   const repoPattern = /^[\w.-]{1,100}\/[\w.-]{1,100}$/;
   const loginPattern = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
@@ -122,16 +125,16 @@
 
     if (!info.available) {
       return info.reason === 'no-credentials'
-        ? 'GitHub App 자격증명이 설정되어 있지 않아 계정 목록을 가져오지 않습니다 — 직접 입력하세요.'
-        : 'GitHub에서 계정 목록을 가져오지 못했습니다. 서버 로그를 확인하세요 — 직접 입력은 그대로 됩니다.';
+        ? t('github.accounts.noCredentials')
+        : t('github.accounts.fetchFailed');
     }
 
     if (info.source === 'assignees') {
-      return 'App에 조직 멤버 읽기 권한이 없어, 설치된 저장소에서 배정할 수 있는 사람으로 목록을 채웠습니다.';
+      return t('github.accounts.assignees');
     }
 
     if (info.source === 'none') {
-      return 'GitHub에서 가져온 계정이 없습니다. App에 Organization › Members 읽기 권한이 없고, 설치된 저장소에서도 배정 가능한 사람을 찾지 못했습니다 — 직접 입력하세요.';
+      return t('github.accounts.none');
     }
 
     return '';
@@ -226,7 +229,7 @@
       if (cause instanceof Error && cause.message.startsWith('Redirecting to login')) {
         return;
       }
-      loadFailed.value = cause instanceof Error ? cause.message : '설정을 불러오지 못했습니다.';
+      loadFailed.value = cause instanceof Error ? cause.message : t('github.loadFailed');
     } finally {
       loading.value = false;
     }
@@ -258,34 +261,34 @@
 
   function channelLabel(channelId: string | null): string {
     if (!channelId) {
-      return '기본 채널 사용';
+      return t('github.repos.useDefaultChannel');
     }
 
     const channel = channels.value.find((item) => item.id === channelId);
     if (!channel) {
-      return '알 수 없는 채널';
+      return t('github.repos.unknownChannel');
     }
 
-    return `${channel.category ?? '카테고리 없음'} · #${channel.name}`;
+    return `${channel.category ?? t('github.repos.noCategory')} · #${channel.name}`;
   }
 
   function eventSummary(row: GithubRepoRule): string {
     if (!row.events) {
-      return '기본값 사용';
+      return t('github.summary.defaults');
     }
 
     const on = eventLabels.filter((event) => row.events?.[event.key]);
     if (on.length === 0) {
-      return '알림 없음';
+      return t('github.summary.none');
     }
     if (on.length === eventLabels.length) {
-      return '전체 이벤트';
+      return t('github.summary.all');
     }
     if (on.length === 1) {
-      return `${on[0]?.label}만`;
+      return t('github.summary.only', { label: on[0]?.label ?? '' });
     }
 
-    return `${on.length}개 이벤트`;
+    return t('github.summary.count', { count: on.length }, on.length);
   }
 
   function setRepoRow(index: number, rule: GithubRepoRule): void {
@@ -332,7 +335,7 @@
   }
 
   function formatTime(at: string): string {
-    return new Date(at).toLocaleString();
+    return new Date(at).toLocaleString(intlLocale());
   }
 
   async function save(): Promise<void> {
@@ -346,7 +349,7 @@
       .filter((row) => row.repo);
     const badRepo = repos.find((row) => !repoPattern.test(row.repo));
     if (badRepo) {
-      error.value = `"${badRepo.repo}" 은(는) owner/name 형식이 아닙니다.`;
+      error.value = t('github.errors.repoFormat', { repo: badRepo.repo });
       return;
     }
 
@@ -355,13 +358,13 @@
       .filter((row) => row.githubLogin || row.discordUserId);
     const incomplete = accounts.find((row) => !row.githubLogin || !row.discordUserId);
     if (incomplete) {
-      error.value = '모든 매핑에는 GitHub 계정과 디스코드 사용자가 필요합니다.';
+      error.value = t('github.errors.accountIncomplete');
       return;
     }
 
     const badLogin = accounts.find((row) => !loginPattern.test(row.githubLogin));
     if (badLogin) {
-      error.value = `"${badLogin.githubLogin}" 은(는) 올바른 GitHub 계정이 아닙니다.`;
+      error.value = t('github.errors.loginInvalid', { login: badLogin.githubLogin });
       return;
     }
 
@@ -383,7 +386,7 @@
         teams: prepared.teams,
       });
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('github.saveFailed');
       return;
     }
 
@@ -394,9 +397,9 @@
       linked = (await putJson<{ accounts: GithubAccountMapping[] }>('/api/accounts', { accounts }))
         .accounts;
     } catch (cause) {
-      error.value = `알림 설정은 저장했지만 계정 연결은 저장하지 못했습니다: ${
-        cause instanceof Error ? cause.message : '알 수 없는 오류'
-      }`;
+      error.value = t('github.accountsSaveFailed', {
+        reason: cause instanceof Error ? cause.message : t('github.unknownError'),
+      });
     }
 
     settings.value = {
@@ -409,7 +412,7 @@
       teams: result.teams ?? [],
     };
     if (!error.value) {
-      saved.value = '저장했습니다.';
+      saved.value = t('github.saved');
     }
     loadError.value = '';
   }
@@ -417,33 +420,27 @@
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader
-      title="GitHub 리마인더"
-      description="GitHub App이 보낸 PR·이슈 활동을 디스코드 채널로 전달합니다"
-    >
+    <PageHeader :title="t('github.title')" :description="t('github.description')">
       <template #actions>
         <FeatureLanguageSelect feature="github" :read-only="readOnly" />
         <Badge :variant="settings.enabled ? 'default' : 'secondary'">
-          {{ settings.enabled ? '활성' : '비활성' }}
+          {{ settings.enabled ? t('github.active') : t('github.inactive') }}
         </Badge>
       </template>
     </PageHeader>
 
     <p v-if="readOnly" class="bg-muted text-muted-foreground rounded-xl border px-4 py-3 text-sm">
-      읽기 전용 계정입니다 — 설정을 변경할 수 없습니다.
+      {{ t('github.readOnly') }}
     </p>
 
     <StateBlock :loading="loading" :error="loadFailed">
       <div class="flex flex-col gap-5">
         <Alert v-if="loadError" variant="destructive">
-          <AlertTitle>저장된 설정 파일을 읽지 못했습니다</AlertTitle>
-          <AlertDescription>
-            봇이 기본값으로 동작하고 있어 알림이 꺼진 상태입니다. 지금 저장하면 기본값이 파일을
-            덮어씁니다 — 서버의 사본을 먼저 확인하세요. {{ loadError }}
-          </AlertDescription>
+          <AlertTitle>{{ t('github.fileUnreadTitle') }}</AlertTitle>
+          <AlertDescription> {{ t('github.fileUnreadBody') }} {{ loadError }} </AlertDescription>
         </Alert>
         <Alert v-if="error" variant="destructive">
-          <AlertTitle>저장하지 못했습니다</AlertTitle>
+          <AlertTitle>{{ t('github.saveFailedTitle') }}</AlertTitle>
           <AlertDescription>{{ error }}</AlertDescription>
         </Alert>
         <Alert v-else-if="saved">
@@ -452,27 +449,24 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">알림</CardTitle>
-            <CardDescription>
-              웹훅 시크릿이 서버에 설정되어 있는 동안에만 이벤트를 받습니다.
-            </CardDescription>
+            <CardTitle class="text-base">{{ t('github.notify.title') }}</CardTitle>
+            <CardDescription>{{ t('github.notify.description') }}</CardDescription>
           </CardHeader>
           <CardContent class="flex flex-col gap-4">
             <div class="flex items-center justify-between gap-4">
               <Label for="gh-enabled" class="flex-col items-start gap-1">
-                <span>알림 사용</span>
+                <span>{{ t('github.notify.enabled') }}</span>
                 <span class="text-muted-foreground text-xs font-normal">
-                  끄면 모든 저장소의 알림이 즉시 중지됩니다
+                  {{ t('github.notify.enabledHint') }}
                 </span>
               </Label>
               <Switch id="gh-enabled" v-model="settings.enabled" :disabled="readOnly" />
             </div>
             <div class="flex items-center justify-between gap-4">
               <Label for="gh-unlisted" class="flex-col items-start gap-1">
-                <span>목록에 없는 저장소도 알림</span>
+                <span>{{ t('github.notify.unlisted') }}</span>
                 <span class="text-muted-foreground text-xs font-normal">
-                  끄면 아래 저장소별 설정에 있는 저장소만 알림을 보냅니다. 나머지는 발송 결과에
-                  "목록에 없는 저장소"로 남습니다
+                  {{ t('github.notify.unlistedHint') }}
                 </span>
               </Label>
               <Switch
@@ -483,18 +477,17 @@
             </div>
             <Separator />
             <div class="flex flex-col gap-1.5">
-              <Label for="gh-channel">기본 채널</Label>
+              <Label for="gh-channel">{{ t('github.notify.channel') }}</Label>
               <ChannelSelect
                 id="gh-channel"
                 v-model="settings.channelId"
                 :channels="channels"
-                placeholder="지정 안 함"
+                :placeholder="t('github.notify.channelNone')"
                 :empty-value="null"
                 :disabled="readOnly"
               />
               <p class="text-muted-foreground text-xs">
-                저장소별 지정이 없으면 이 채널로 보냅니다. 카테고리가 함께 표시되어 이름이 같은
-                채널도 구분됩니다.
+                {{ t('github.notify.channelHint') }}
               </p>
             </div>
           </CardContent>
@@ -512,14 +505,12 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">기본 이벤트</CardTitle>
-            <CardDescription>
-              아래에서 저장소가 따로 지정하지 않는 한 모든 저장소에 적용됩니다.
-            </CardDescription>
+            <CardTitle class="text-base">{{ t('github.defaultEvents.title') }}</CardTitle>
+            <CardDescription>{{ t('github.defaultEvents.description') }}</CardDescription>
           </CardHeader>
           <CardContent>
             <div class="flex flex-col gap-4">
-              <div v-for="group in eventGroups" :key="group.name" class="flex flex-col gap-2">
+              <div v-for="group in eventGroups" :key="group.key" class="flex flex-col gap-2">
                 <p class="text-muted-foreground text-xs font-medium">{{ group.name }}</p>
                 <div class="grid gap-3 sm:grid-cols-2">
                   <div
@@ -544,16 +535,13 @@
              channel, so the section folds. -->
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">알림 문구</CardTitle>
-            <CardDescription>
-              이벤트마다 보낼 임베드를 지정합니다. 손대지 않은 이벤트는 기본 문구를 씁니다 · 행을
-              편집해서 문구와 사용 가능한 변수를 확인하세요
-            </CardDescription>
+            <CardTitle class="text-base">{{ t('github.wording.title') }}</CardTitle>
+            <CardDescription>{{ t('github.wording.description') }}</CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" @click="wordingOpen = !wordingOpen">
                 <ChevronDown v-if="!wordingOpen" />
                 <ChevronUp v-else />
-                {{ wordingOpen ? '접기' : '펼치기' }}
+                {{ wordingOpen ? t('github.collapse') : t('github.expand') }}
               </Button>
             </CardAction>
           </CardHeader>
@@ -567,28 +555,25 @@
           </CardContent>
           <CardContent v-else>
             <p class="text-muted-foreground text-sm">
-              {{ overriddenCount }}개 이벤트가 기본 문구를 재정의하고 있습니다.
+              {{ t('github.wording.overridden', { count: overriddenCount }, overriddenCount) }}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">저장소별 설정</CardTitle>
-            <CardDescription>
-              저장소마다 알림 채널과 이벤트 종류를 다르게 지정할 수 있습니다 · 행을 펼쳐서 편집 ·
-              GitHub App이 설치된 저장소가 후보로 제시됩니다
-            </CardDescription>
+            <CardTitle class="text-base">{{ t('github.repos.title') }}</CardTitle>
+            <CardDescription>{{ t('github.repos.description') }}</CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addRepoRow">
                 <Plus />
-                저장소 추가
+                {{ t('github.repos.add') }}
               </Button>
             </CardAction>
           </CardHeader>
           <CardContent>
             <p v-if="settings.repos.length === 0" class="text-muted-foreground text-sm">
-              개별 설정된 저장소가 없습니다. 모든 저장소가 기본 채널과 기본 이벤트를 사용합니다.
+              {{ t('github.repos.empty') }}
             </p>
             <!-- Below md the channel and event columns fold into the repository cell and
                  the table drops its minimum width, so the expanded editor (one cell
@@ -597,9 +582,13 @@
               <Table class="md:min-w-160">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>저장소</TableHead>
-                    <TableHead class="hidden w-56 md:table-cell">채널</TableHead>
-                    <TableHead class="hidden w-56 md:table-cell">이벤트</TableHead>
+                    <TableHead>{{ t('github.repos.repo') }}</TableHead>
+                    <TableHead class="hidden w-56 md:table-cell">{{
+                      t('github.repos.channel')
+                    }}</TableHead>
+                    <TableHead class="hidden w-56 md:table-cell">{{
+                      t('github.repos.events')
+                    }}</TableHead>
                     <TableHead class="w-28" />
                   </TableRow>
                 </TableHeader>
@@ -608,7 +597,7 @@
                     <TableRow>
                       <TableCell class="whitespace-normal md:whitespace-nowrap">
                         <span class="font-gothic font-medium break-all">
-                          {{ row.repo || '(이름 없음)' }}
+                          {{ row.repo || t('github.repos.unnamed') }}
                         </span>
                         <span class="text-muted-foreground mt-0.5 block text-xs md:hidden">
                           {{ channelLabel(row.channelId) }} · {{ eventSummary(row) }}
@@ -624,7 +613,7 @@
                       </TableCell>
                       <TableCell class="text-right">
                         <Button variant="outline" size="sm" @click="toggleOpen(index)">
-                          {{ openRepos.has(index) ? '접기' : '편집' }}
+                          {{ openRepos.has(index) ? t('github.collapse') : t('github.edit') }}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -653,24 +642,26 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">계정 매핑</CardTitle>
+            <CardTitle class="text-base">{{ t('github.accounts.title') }}</CardTitle>
             <CardDescription>
-              연결한 멤버는 담당자 배정·리뷰 요청 알림에서 멘션됩니다. 연결되지 않은 GitHub 계정은
-              일반 텍스트로 표시됩니다. GitHub App 자격증명이 설정되어 있으면 조직 멤버를 목록에서
-              고를 수 있고, 목록에 없는 계정은 "직접 입력"으로 넣습니다. 이 연결은 대시보드
-              <RouterLink to="/users" class="underline underline-offset-2">사용자</RouterLink>
-              의 일부이기도 합니다 — 로그인 수단·권한은 그쪽에서 봅니다.
+              <I18nT keypath="github.accounts.description" scope="global">
+                <template #users>
+                  <RouterLink to="/users" class="underline underline-offset-2">{{
+                    t('github.accounts.usersLink')
+                  }}</RouterLink>
+                </template>
+              </I18nT>
             </CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addAccountRow">
                 <Plus />
-                매핑 추가
+                {{ t('github.accounts.add') }}
               </Button>
             </CardAction>
           </CardHeader>
           <CardContent class="flex flex-col gap-2">
             <p v-if="settings.accounts.length === 0" class="text-muted-foreground text-sm">
-              연결된 계정이 없습니다.
+              {{ t('github.accounts.empty') }}
             </p>
             <div
               v-for="(row, index) in settings.accounts"
@@ -696,7 +687,7 @@
                 variant="ghost"
                 size="icon"
                 :disabled="readOnly"
-                aria-label="매핑 삭제"
+                :aria-label="t('github.accounts.remove')"
                 @click="removeAccountRow(index)"
               >
                 <Trash2 />
@@ -710,16 +701,12 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">팀 → 역할</CardTitle>
-            <CardDescription>
-              리뷰를 팀에 요청하면 매핑된 역할을 멘션합니다. 역할이 멘션 가능하거나 봇에 '모두 멘션'
-              권한이 있어야 실제로 알림이 갑니다. 팀은 조직/팀-슬러그 형식이며, 목록에 없는 역할은
-              "직접 입력"으로 ID를 넣습니다.
-            </CardDescription>
+            <CardTitle class="text-base">{{ t('github.teams.title') }}</CardTitle>
+            <CardDescription>{{ t('github.teams.description') }}</CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" :disabled="readOnly" @click="addTeamRow">
                 <Plus />
-                팀 추가
+                {{ t('github.teams.add') }}
               </Button>
             </CardAction>
           </CardHeader>
@@ -730,22 +717,17 @@
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-base">최근 발송</CardTitle>
-            <CardDescription>
-              봇이 처리한 최근 20건과 그 결과입니다. 봇을 재시작하면 비워집니다.
-            </CardDescription>
+            <CardTitle class="text-base">{{ t('github.deliveries.title') }}</CardTitle>
+            <CardDescription>{{ t('github.deliveries.description') }}</CardDescription>
             <CardAction>
               <Button variant="outline" size="sm" @click="refreshDeliveries">
                 <RefreshCw />
-                새로고침
+                {{ t('github.deliveries.refresh') }}
               </Button>
             </CardAction>
           </CardHeader>
           <CardContent>
-            <StateBlock
-              :empty="deliveries.length === 0"
-              empty-text="아직 없습니다 — 봇이 시작된 뒤 도착한 이벤트가 없습니다."
-            >
+            <StateBlock :empty="deliveries.length === 0" :empty-text="t('github.deliveries.empty')">
               <ul class="flex list-none flex-col gap-2 p-0">
                 <li
                   v-for="(delivery, index) in deliveries"
@@ -777,7 +759,7 @@
         <div
           class="bg-background sticky bottom-0 -mx-1 flex justify-end rounded-t-xl border-t px-1 py-3 backdrop-blur-md"
         >
-          <Button :disabled="readOnly" @click="save">저장</Button>
+          <Button :disabled="readOnly" @click="save">{{ t('github.save') }}</Button>
         </div>
       </div>
     </StateBlock>

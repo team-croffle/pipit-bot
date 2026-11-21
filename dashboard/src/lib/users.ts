@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 /** The users page's data (GET /api/users) and its labels. */
 
 export interface DashboardUser {
@@ -14,18 +16,22 @@ export interface DashboardUser {
   createdAt: string;
 }
 
-export const METHOD_LABELS: Record<string, string> = {
-  password: '비밀번호',
+const METHOD_NAMES: Record<string, string> = {
   oidc: 'SSO',
   discord: 'Discord',
   github: 'GitHub',
 };
 
+/** A sign-in method's name, in the current language (only "password" is a word). */
+export function methodLabel(method: string): string {
+  return method === 'password' ? t('users.method.password') : (METHOD_NAMES[method] ?? method);
+}
+
 /** Same rule as the server (lib/auth/password-policy.ts), for a hint before saving. */
 export function passwordHint(password: string): string | null {
   if (password.length < 8) {
-    return '8자 이상이어야 합니다.';
+    return t('users.passwordLength');
   }
   const kinds = [/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z\d]/].filter((kind) => kind.test(password));
-  return kinds.length < 2 ? '대문자·소문자·숫자·기호 중 두 종류 이상을 섞어 주세요.' : null;
+  return kinds.length < 2 ? t('users.passwordKinds') : null;
 }

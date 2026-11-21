@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Input } from '@/components/ui/input';
   import {
@@ -13,7 +14,7 @@
   import type { DiscordRole } from '@/types';
 
   /**
-   * Picks a guild role by id, with "직접 입력" as the way out — the same shape as the
+   * Picks a guild role by id, with "type it" as the way out — the same shape as the
    * account picker beside the member picker. WHY the escape hatch: the role list is
    * fetched lazily and can fail (guild not ready), and a saved mapping still has to
    * render and stay editable when it does; an id typed by hand is what the server
@@ -44,6 +45,8 @@
     requestList: () => emit('open'),
   });
 
+  const { t } = useI18n();
+
   const selected = computed({
     get: () => (current.value ? props.modelValue : EMPTY),
     set: (next: string) => emit('update:modelValue', pick(next)),
@@ -57,7 +60,7 @@
       :id="id"
       :model-value="modelValue"
       :disabled="disabled"
-      placeholder="역할 ID"
+      :placeholder="t('pickers.roleId')"
       class="font-gothic"
       autocomplete="off"
       inputmode="numeric"
@@ -65,11 +68,11 @@
     />
     <Select v-else v-model="selected" :disabled="disabled" @update:open="onOpen">
       <SelectTrigger :id="id" class="w-full min-w-0">
-        <SelectValue placeholder="역할 선택">
+        <SelectValue :placeholder="t('pickers.rolePlaceholder')">
           <span v-if="current" class="truncate">@{{ current.name }}</span>
           <span v-else-if="modelValue" class="font-gothic truncate">{{ modelValue }}</span>
           <span v-else-if="loading" class="text-muted-foreground">{{ PICKER_TEXT.loading }}</span>
-          <span v-else>역할 선택</span>
+          <span v-else>{{ t('pickers.rolePlaceholder') }}</span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -77,7 +80,7 @@
           {{ PICKER_TEXT.loading }}
         </div>
         <div v-else-if="roles.length === 0" class="text-muted-foreground px-2 py-1.5 text-sm">
-          가져온 역할이 없습니다 — 직접 입력하세요.
+          {{ t('pickers.noRoles') }}
         </div>
         <SelectItem v-for="role in roles" :key="role.id" :value="role.id">
           @{{ role.name }}

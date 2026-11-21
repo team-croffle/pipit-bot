@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import type { GithubTeamMapping } from '@/types';
 
 /**
@@ -32,19 +33,19 @@ export function prepareTeamMappings(
   const seen = new Set<string>();
   for (const row of teams) {
     if (!row.githubTeam || !row.discordRoleId) {
-      return { error: '모든 팀 매핑에는 GitHub 팀과 디스코드 역할이 필요합니다.' };
+      return { error: t('github.errors.teamIncomplete') };
     }
 
     if (!teamPattern.test(row.githubTeam)) {
-      return { error: `"${row.githubTeam}" 은(는) org/team-slug 형식이 아닙니다.` };
+      return { error: t('github.errors.teamFormat', { team: row.githubTeam }) };
     }
 
     if (seen.has(row.githubTeam)) {
-      return { error: `"${row.githubTeam}" 팀이 두 번 매핑되어 있습니다.` };
+      return { error: t('github.errors.teamDuplicate', { team: row.githubTeam }) };
     }
 
     if (!snowflake.test(row.discordRoleId)) {
-      return { error: `"${row.discordRoleId}" 은(는) 올바른 역할 ID가 아닙니다.` };
+      return { error: t('github.errors.roleIdInvalid', { role: row.discordRoleId }) };
     }
 
     seen.add(row.githubTeam);

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { RefreshCw } from 'lucide-vue-next';
   import { onMounted } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import ListPagination from '@/components/common/list-pagination.vue';
   import PageHeader from '@/components/common/page-header.vue';
@@ -13,20 +14,18 @@
 
   const { categories, period, search, entries, total, page, pageSize, loading, error, load } =
     useAuditLog();
+  const { t } = useI18n();
 
   onMounted(load);
 </script>
 
 <template>
   <div class="flex flex-col gap-5">
-    <PageHeader
-      title="로깅"
-      description="대시보드·디스코드에서 한 조작, GitHub 알림, 멤버 입장·퇴장 기록. 음악은 누가 어떤 기능을 썼는지만 남깁니다 · 90일 보관"
-    >
+    <PageHeader :title="t('logs.title')" :description="t('logs.description')">
       <template #actions>
         <Button variant="outline" size="sm" :disabled="loading" data-audit-refresh @click="load">
           <RefreshCw :class="loading ? 'animate-spin' : ''" />
-          새로고침
+          {{ t('logs.refresh') }}
         </Button>
       </template>
     </PageHeader>
@@ -42,7 +41,7 @@
           :loading="loading"
           :error="error"
           :empty="entries.length === 0"
-          empty-text="이 조건에 맞는 기록이 없습니다."
+          :empty-text="t('logs.empty')"
         >
           <AuditList :entries="entries" />
         </StateBlock>

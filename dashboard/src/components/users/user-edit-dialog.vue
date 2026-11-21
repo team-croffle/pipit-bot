@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { deleteJson, fetchJson, patchJson, postJson } from '@/api';
   import MemberSelect from '@/components/common/member-select.vue';
@@ -26,6 +27,7 @@
   const open = defineModel<boolean>('open', { required: true });
   const { user, isSelf } = defineProps<{ user: DashboardUser | null; isSelf: boolean }>();
   const emit = defineEmits<{ saved: [DashboardUser[]] }>();
+  const { t } = useI18n();
 
   const githubLogin = ref('');
   const discordUserId = ref('');
@@ -73,7 +75,7 @@
         open.value = false;
       }
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : '저장하지 못했습니다.';
+      error.value = cause instanceof Error ? cause.message : t('users.editDialog.failed');
     } finally {
       busy.value = false;
     }
@@ -97,23 +99,23 @@
       <DialogHeader>
         <DialogTitle>{{ user.name }}</DialogTitle>
         <DialogDescription>
-          GitHub 로그인과 디스코드 계정은 멘션·개인 재생목록·내 결산이 이 사람을 찾는 데 씁니다.
+          {{ t('users.editDialog.description') }}
         </DialogDescription>
       </DialogHeader>
 
       <form class="flex flex-col gap-4" @submit.prevent="saveHandles">
         <div class="flex flex-col gap-2">
-          <Label for="user-edit-github">GitHub 로그인</Label>
+          <Label for="user-edit-github">{{ t('users.editDialog.github') }}</Label>
           <Input
             id="user-edit-github"
             v-model="githubLogin"
-            placeholder="없음"
+            :placeholder="t('users.editDialog.none')"
             autocapitalize="none"
             spellcheck="false"
           />
         </div>
         <div class="flex flex-col gap-2">
-          <Label for="user-edit-discord">디스코드 계정</Label>
+          <Label for="user-edit-discord">{{ t('users.editDialog.discord') }}</Label>
           <MemberSelect
             id="user-edit-discord"
             v-model="discordUserId"
@@ -127,11 +129,11 @@
             class="text-muted-foreground hover:text-foreground self-start text-xs underline underline-offset-2"
             @click="discordUserId = ''"
           >
-            연결 해제
+            {{ t('users.editDialog.unlink') }}
           </button>
         </div>
         <Button type="submit" class="self-end" :disabled="busy" data-user-save-handles>
-          연결 저장
+          {{ t('users.editDialog.saveLinks') }}
         </Button>
       </form>
 
@@ -139,7 +141,11 @@
 
       <form class="flex flex-col gap-2" @submit.prevent="savePassword">
         <Label for="user-edit-password">
-          {{ user.methods.includes('password') ? '비밀번호 재설정' : '비밀번호 로그인 추가' }}
+          {{
+            user.methods.includes('password')
+              ? t('users.editDialog.resetPassword')
+              : t('users.editDialog.addPassword')
+          }}
         </Label>
         <div class="flex gap-2">
           <Input
@@ -150,11 +156,11 @@
             class="min-w-0 flex-1"
           />
           <Button type="submit" variant="outline" :disabled="busy || !password || Boolean(hint)">
-            설정
+            {{ t('users.editDialog.set') }}
           </Button>
         </div>
         <p :class="hint ? 'text-warning' : 'text-muted-foreground'" class="text-xs">
-          {{ hint ?? '설정하면 이 사람의 로그인 세션이 모두 끊깁니다.' }}
+          {{ hint ?? t('users.editDialog.passwordNote') }}
         </p>
       </form>
 
@@ -162,10 +168,10 @@
 
       <DialogFooter class="sm:justify-between">
         <p v-if="user.admin" class="text-muted-foreground text-xs">
-          관리자는 삭제할 수 없습니다 — 먼저 관리자 권한을 빼세요.
+          {{ t('users.editDialog.adminNoDelete') }}
         </p>
         <p v-else-if="isSelf" class="text-muted-foreground text-xs">
-          자기 자신은 삭제할 수 없습니다.
+          {{ t('users.editDialog.selfNoDelete') }}
         </p>
         <Button
           v-else-if="!confirmDelete"
@@ -174,10 +180,10 @@
           :disabled="busy"
           @click="confirmDelete = true"
         >
-          사용자 삭제
+          {{ t('users.editDialog.delete') }}
         </Button>
         <Button v-else variant="destructive" :disabled="busy" data-user-delete @click="remove">
-          정말 삭제
+          {{ t('users.editDialog.confirmDelete') }}
         </Button>
       </DialogFooter>
     </DialogContent>

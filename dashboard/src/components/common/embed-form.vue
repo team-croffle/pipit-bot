@@ -14,6 +14,7 @@
    */
   import { Plus, Trash2 } from 'lucide-vue-next';
   import { ref } from 'vue';
+  import { I18nT, useI18n } from 'vue-i18n';
 
   import EmojiPicker from '@/components/common/emoji-picker.vue';
   import { Button } from '@/components/ui/button';
@@ -24,6 +25,8 @@
   import { Switch } from '@/components/ui/switch';
   import { Textarea } from '@/components/ui/textarea';
   import type { EmbedTemplate } from '@/types';
+
+  const { t } = useI18n();
 
   const props = defineProps<{
     draft: EmbedTemplate;
@@ -84,7 +87,7 @@
     <slot name="chips" :insert="insert" />
 
     <div class="flex flex-col gap-1.5">
-      <Label :for="`${idPrefix}-content`">알림 줄 (임베드 위 평문)</Label>
+      <Label :for="`${idPrefix}-content`">{{ t('embed.content') }}</Label>
       <div class="flex gap-2">
         <Input
           :id="`${idPrefix}-content`"
@@ -98,12 +101,15 @@
       </div>
       <slot name="content-hint">
         <p class="text-muted-foreground text-xs">
-          디스코드는 임베드 안의 멘션으로 알림을 울리지 않습니다. 실제로 사람을 부르려면 멘션은 이
-          줄에 있어야 합니다.
+          {{ t('embed.contentHint') }}
         </p>
       </slot>
       <p class="text-muted-foreground text-xs">
-        서버 이모지는 <code>:이름:</code> 으로 들어가고, 발송할 때 실제 이모지로 바뀝니다.
+        <I18nT keypath="embed.emojiHint" scope="global">
+          <template #code>
+            <code>{{ t('embed.emojiName') }}</code>
+          </template>
+        </I18nT>
       </p>
     </div>
 
@@ -111,7 +117,7 @@
 
     <div class="grid gap-4 sm:grid-cols-[1fr_auto]">
       <div class="flex flex-col gap-1.5">
-        <Label :for="`${idPrefix}-title`">제목</Label>
+        <Label :for="`${idPrefix}-title`">{{ t('embed.title') }}</Label>
         <div class="flex gap-2">
           <Input
             :id="`${idPrefix}-title`"
@@ -125,7 +131,7 @@
         <p v-if="titleHint" class="text-muted-foreground text-xs">{{ titleHint }}</p>
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label :for="`${idPrefix}-color`">색</Label>
+        <Label :for="`${idPrefix}-color`">{{ t('embed.color') }}</Label>
         <div class="flex items-center gap-2">
           <input
             :id="`${idPrefix}-color`"
@@ -141,14 +147,14 @@
             :disabled="readOnly || !draft.color"
             @click="draft.color = ''"
           >
-            지우기
+            {{ t('embed.clear') }}
           </Button>
         </div>
       </div>
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <Label :for="`${idPrefix}-desc`">내용</Label>
+      <Label :for="`${idPrefix}-desc`">{{ t('embed.description') }}</Label>
       <div class="flex gap-2">
         <Textarea
           :id="`${idPrefix}-desc`"
@@ -164,7 +170,7 @@
 
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between gap-3">
-        <Label>필드</Label>
+        <Label>{{ t('embed.fields') }}</Label>
         <Button
           variant="outline"
           size="sm"
@@ -172,11 +178,11 @@
           @click="addField"
         >
           <Plus />
-          필드 추가
+          {{ t('embed.addField') }}
         </Button>
       </div>
       <p v-if="draft.fields.length === 0" class="text-muted-foreground text-sm">
-        필드가 없습니다. 인라인으로 두면 여러 개가 한 줄에 나란히 놓입니다.
+        {{ t('embed.noFields') }}
       </p>
       <div
         v-for="(field, index) in draft.fields"
@@ -186,28 +192,28 @@
         <Input
           v-model="field.name"
           class="font-gothic"
-          placeholder="이름"
+          :placeholder="t('embed.fieldName')"
           :disabled="readOnly"
-          :aria-label="`필드 ${index + 1} 이름`"
+          :aria-label="t('embed.fieldNameN', { n: index + 1 })"
           @focus="onFocus"
         />
         <Input
           v-model="field.value"
           class="font-gothic"
-          placeholder="값"
+          :placeholder="t('embed.fieldValue')"
           :disabled="readOnly"
-          :aria-label="`필드 ${index + 1} 값`"
+          :aria-label="t('embed.fieldValueN', { n: index + 1 })"
           @focus="onFocus"
         />
         <label class="flex items-center gap-2 text-sm">
           <Checkbox v-model="field.inline" :disabled="readOnly" />
-          인라인
+          {{ t('embed.inline') }}
         </label>
         <Button
           variant="ghost"
           size="icon"
           :disabled="readOnly"
-          :aria-label="`필드 ${index + 1} 삭제`"
+          :aria-label="t('embed.deleteFieldN', { n: index + 1 })"
           @click="removeField(index)"
         >
           <Trash2 />
@@ -217,7 +223,7 @@
 
     <div class="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
       <div class="flex flex-col gap-1.5">
-        <Label :for="`${idPrefix}-footer`">꼬리말</Label>
+        <Label :for="`${idPrefix}-footer`">{{ t('embed.footer') }}</Label>
         <div class="flex gap-2">
           <Input
             :id="`${idPrefix}-footer`"
@@ -230,7 +236,7 @@
         </div>
       </div>
       <div class="flex items-center gap-3 pb-1">
-        <Label :for="`${idPrefix}-time`" class="font-normal">시간 표시</Label>
+        <Label :for="`${idPrefix}-time`" class="font-normal">{{ t('embed.timestamp') }}</Label>
         <Switch :id="`${idPrefix}-time`" v-model="draft.showTimestamp" :disabled="readOnly" />
       </div>
     </div>

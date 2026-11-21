@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import {
     Select,
@@ -29,13 +30,12 @@
 
   const emit = defineEmits<{ 'update:modelValue': [string]; open: [] }>();
 
-  const UNCATEGORIZED = '카테고리 없음';
-  const PLACEHOLDER = '통화방 선택';
+  const { t } = useI18n();
 
   const groups = computed(() => {
     const result: { category: string; channels: DiscordVoiceChannel[] }[] = [];
     for (const channel of props.channels) {
-      const category = channel.category ?? UNCATEGORIZED;
+      const category = channel.category ?? t('pickers.uncategorized');
       const last = result.at(-1);
       if (last?.category === category) {
         last.channels.push(channel);
@@ -55,7 +55,7 @@
 
   const label = computed(() => {
     if (!props.modelValue) {
-      return props.loading ? PICKER_TEXT.loading : PLACEHOLDER;
+      return props.loading ? PICKER_TEXT.loading : t('pickers.voicePlaceholder');
     }
 
     // Before the list arrives the id is all there is; show it rather than a blank.
@@ -74,7 +74,7 @@
 <template>
   <Select v-model="selected" :disabled="disabled" @update:open="onOpen">
     <SelectTrigger :id="id" class="w-full min-w-0">
-      <SelectValue :placeholder="PLACEHOLDER">
+      <SelectValue :placeholder="t('pickers.voicePlaceholder')">
         <span class="truncate">{{ label }}</span>
       </SelectValue>
     </SelectTrigger>
@@ -83,7 +83,7 @@
         {{ PICKER_TEXT.loading }}
       </p>
       <p v-else-if="!channels.length" class="text-muted-foreground px-2 py-1.5 text-sm">
-        이 서버에 통화방이 없습니다.
+        {{ t('pickers.noVoice') }}
       </p>
       <SelectGroup v-for="group in groups" :key="group.category">
         <SelectLabel>{{ group.category }}</SelectLabel>
@@ -95,7 +95,8 @@
         >
           <span class="truncate">{{ channel.name }}</span>
           <span class="text-muted-foreground tnum text-xs">
-            {{ channel.memberCount }}명{{ channel.canJoin ? '' : ' — 봇이 참여할 수 없음' }}
+            {{ t('pickers.voiceMembers', { count: channel.memberCount }, channel.memberCount)
+            }}{{ channel.canJoin ? '' : t('pickers.cannotJoin') }}
           </span>
         </SelectItem>
       </SelectGroup>
