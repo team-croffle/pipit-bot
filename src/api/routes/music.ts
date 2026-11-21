@@ -28,33 +28,34 @@ import { joinVoiceChannel, leaveVoiceChannel } from '../../lib/music/voice-conne
 import { volumeFrom } from '../../lib/music/volume.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import type { ApiVariables } from '../context.js';
+import { localized, sayTo } from '../localized.js';
 
 export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   app.get('/api/music/playback', dashboardViewer, (c) => c.json(getPlaybackState()));
 
   app.post('/api/music/playback/pause', dashboardViewer, (c) => {
     const result = pausePlayback();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/resume', dashboardViewer, (c) => {
     const result = resumePlayback();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/skip', dashboardViewer, (c) => {
     const result = skipPlayback();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/stop', dashboardViewer, (c) => {
     const result = stopPlayback();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/clear', dashboardViewer, (c) => {
     const result = clearQueue();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/loop', dashboardViewer, async (c) => {
@@ -65,7 +66,7 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = setLoopMode(mode as LoopMode);
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/remove', dashboardViewer, async (c) => {
@@ -75,7 +76,7 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = removeQueuedTrack({ id: body.trackId });
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/skipto', dashboardViewer, async (c) => {
@@ -85,7 +86,7 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = skipToQueuedTrack({ id: body.trackId });
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/move', dashboardViewer, async (c) => {
@@ -95,12 +96,12 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = moveQueuedTrack({ id: body.trackId }, body.to);
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/shuffle', dashboardViewer, (c) => {
     const result = shuffleQueue();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.get('/api/music/playback/history', dashboardViewer, (c) =>
@@ -109,7 +110,7 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
 
   app.post('/api/music/playback/back', dashboardViewer, async (c) => {
     const result = await playPrevious();
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/volume', dashboardViewer, async (c) => {
@@ -121,7 +122,7 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
     }
 
     const result = setVolume(volume);
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 
   app.post('/api/music/playback/options', dashboardViewer, async (c) => {
@@ -131,15 +132,15 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
       repeatDefault?: unknown;
     }>();
     if (typeof body.mono === 'boolean') {
-      return c.json(setMono(body.mono));
+      return c.json(localized(c, setMono(body.mono)));
     }
     if (typeof body.autoplay === 'boolean') {
       const result = setAutoplay(body.autoplay);
-      return c.json(result, result.ok ? 200 : 400);
+      return c.json(localized(c, result), result.ok ? 200 : 400);
     }
 
     if (isRepeatDefault(body.repeatDefault)) {
-      return c.json(setRepeatDefault(body.repeatDefault));
+      return c.json(localized(c, setRepeatDefault(body.repeatDefault)));
     }
 
     return c.json(
@@ -156,18 +157,18 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
 
     const guild = getConfiguredGuild();
     if (!guild) {
-      return c.json({ error: 'Discord guild is not ready.' }, 503);
+      return c.json({ error: sayTo(c, 'discordNotReady') }, 503);
     }
 
     const channel = guild.channels.cache.get(body.channelId);
     if (!channel?.isVoiceBased()) {
-      return c.json({ ok: false, message: 'That is not a voice channel in this server.' }, 400);
+      return c.json({ ok: false, message: sayTo(c, 'notVoiceChannel') }, 400);
     }
 
     const me = guild.members.me;
     if (me && !channel.permissionsFor(me).has(['ViewChannel', 'Connect', 'Speak'])) {
       return c.json(
-        { ok: false, message: `The bot cannot connect and speak in ${channel.name}.` },
+        { ok: false, message: sayTo(c, 'cannotSpeakIn', { channel: channel.name }) },
         400,
       );
     }
@@ -178,11 +179,12 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
       // rather than have the bot vanish half a minute later with no explanation.
       const empty = channel.members.every((member) => member.user.bot);
       const seconds = Math.round(PLAYER_NODE_OPTIONS.leaveOnEmptyCooldown / 1000);
+      const answer = localized(c, result);
       const message =
         result.ok && empty
-          ? `${result.message} Nobody is there, so the bot leaves after ${seconds} seconds.`
-          : result.message;
-      return c.json({ ...result, message }, result.ok ? 200 : 400);
+          ? `${answer.message} ${sayTo(c, 'leavesWhenEmpty', { seconds })}`
+          : answer.message;
+      return c.json({ ...answer, message }, result.ok ? 200 : 400);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to join the voice channel.';
       return c.json({ ok: false, message }, 503);
@@ -192,10 +194,10 @@ export function mountMusicRoutes(app: Hono<{ Variables: ApiVariables }>): void {
   app.post('/api/music/voice/leave', dashboardViewer, (c) => {
     const guild = getConfiguredGuild();
     if (!guild) {
-      return c.json({ error: 'Discord guild is not ready.' }, 503);
+      return c.json({ error: sayTo(c, 'discordNotReady') }, 503);
     }
 
     const result = leaveVoiceChannel(guild.id);
-    return c.json(result, result.ok ? 200 : 400);
+    return c.json(localized(c, result), result.ok ? 200 : 400);
   });
 }

@@ -7,7 +7,7 @@ import {
   schedulePlayWhenReady,
   submitMusicJob,
 } from '../../lib/music/prepare-track.js';
-import { getCandidate, PICK_PROBLEM_MESSAGE } from '../../lib/music/search-results.js';
+import { getCandidate, PICK_PROBLEM_KEY } from '../../lib/music/search-results.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import { internalAuth } from '../auth/internal.js';
 import type { ApiVariables } from '../context.js';
@@ -20,6 +20,7 @@ import {
   resolveReady,
   type TrackMeta,
 } from '../jobs/pending-registry.js';
+import { sayTo } from '../localized.js';
 import { dashboardOwner } from './music-search.js';
 
 /** The music jobs: the dashboard's list and actions, and the worker's callbacks. */
@@ -54,7 +55,7 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
       const found = getCandidate(body.searchId, Number(body.index ?? -1), dashboardOwner(c));
       if ('problem' in found) {
         return c.json(
-          { error: PICK_PROBLEM_MESSAGE[found.problem] },
+          { error: sayTo(c, PICK_PROBLEM_KEY[found.problem]) },
           found.problem === 'not-yours' ? 403 : 410,
         );
       }
@@ -67,7 +68,7 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
     }
 
     if (!canEnqueuePlayback()) {
-      return c.json({ error: 'Bot is not in a voice channel.' }, 400);
+      return c.json({ error: sayTo(c, 'botNotInVoice') }, 400);
     }
 
     try {
@@ -109,7 +110,7 @@ export function mountMusicJobRoutes(app: Hono<{ Variables: ApiVariables }>): voi
     }
 
     if (!canEnqueuePlayback()) {
-      return c.json({ error: 'Bot is not in a voice channel.' }, 400);
+      return c.json({ error: sayTo(c, 'botNotInVoice') }, 400);
     }
 
     try {

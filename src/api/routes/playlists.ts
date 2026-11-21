@@ -19,6 +19,7 @@ import {
 } from '../../lib/music/playlists/store.js';
 import { dashboardViewer } from '../auth/dashboard.js';
 import type { ApiVariables } from '../context.js';
+import { errorText, localized, sayTo } from '../localized.js';
 import { dashboardPlaylistViewer } from '../viewer.js';
 import { dashboardOwner } from './music-search.js';
 
@@ -27,7 +28,7 @@ async function guarded(c: Context, work: () => Promise<Response> | Response): Pr
     return await work();
   } catch (error) {
     if (error instanceof PlaylistError) {
-      return c.json({ error: error.message }, error.status);
+      return c.json({ error: errorText(c, error) }, error.status);
     }
     throw error;
   }
@@ -196,11 +197,11 @@ export function mountPlaylistRoutes(app: Hono<{ Variables: ApiVariables }>): voi
     guarded(c, async () => {
       const playlist = getPlaylist(c.req.param('id'), dashboardPlaylistViewer(c));
       if (!canEnqueuePlayback()) {
-        return c.json({ error: 'Bot is not in a voice channel.' }, 400);
+        return c.json({ error: sayTo(c, 'botNotInVoice') }, 400);
       }
       const body = await c.req.json<{ shuffle?: unknown }>().catch(() => ({ shuffle: false }));
       const notice = playPlaylist(playlist, { shuffle: body.shuffle === true });
-      return c.json(notice, notice.ok ? 200 : 400);
+      return c.json(localized(c, notice), notice.ok ? 200 : 400);
     }),
   );
 }
